@@ -1,8 +1,11 @@
 export default function Footer() {
   return (
-    <footer className="bg-[#E9E2D6]">
-      <div className="mx-auto max-w-6xl px-6 py-8 text-xs text-[#3B434B]">
-        © {new Date().getFullYear()} Blue Ridge Homes • Asheville, NC
+    <footer className="br-footer">
+      <div className="br-footer-inner">
+        <div className="br-footer-brand">Blue Ridge Homes</div>
+        <div className="br-footer-meta">
+          &copy; {new Date().getFullYear()} Blue Ridge Homes &middot; Asheville, NC
+        </div>
       </div>
     </footer>
   );

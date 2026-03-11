@@ -1,321 +1,306 @@
-export default function Home() {
+import Image from "next/image";
+import Link from "next/link";
+
+type StatValue = { kind: "value"; value: string; lines: [string, string] };
+type StatMeta = { kind: "meta"; meta: [string, string]; sub: string };
+type Stat = StatValue | StatMeta;
+
+const stats: Stat[] = [
+  { kind: "value", value: "30+", lines: ["Years", "Experience"] },
+  { kind: "value", value: "400+", lines: ["Custom", "Projects"] },
+  { kind: "value", value: "98%", lines: ["Client", "Satisfaction"] },
+  { kind: "meta", meta: ["Fully Licensed", "& Insured"], sub: "NC #56328" },
+  { kind: "meta", meta: ["Custom Homes", "& Remodeling"], sub: "Since 1994" },
+];
+
+const commitments = [
+  {
+    title: "A Transparent Process",
+    body: "A building experience shaped around clear communication, practical guidance, and fewer surprises. With over 1,000 building inspections behind us, we know what quality looks like \u2014 and we hold every project to that standard.",
+  },
+  {
+    title: "Clear Timelines",
+    body: "Reliable communication and realistic schedules you can understand and trust from start to finish.",
+  },
+  {
+    title: "Dedicated Leadership",
+    body: "Direct collaboration with our experienced team throughout the design and construction process. We\u2019ve been a licensed NC general contractor since 2004 with zero complaints on record.",
+  },
+];
+
+const processSteps = [
+  {
+    number: "01",
+    title: "Discover",
+    body: "We begin by understanding your property, priorities, budget, and the way you want your home to live.",
+  },
+  {
+    number: "02",
+    title: "Build",
+    body: "Craftsmanship, communication, and steady project management bring the vision into a beautifully executed home.",
+  },
+  {
+    number: "03",
+    title: "Deliver",
+    body: "The finished result is a lasting home with timeless materials, strong detailing, and enduring value.",
+  },
+];
+
+const portfolioCards = [
+  {
+    title: "Modern Mountain Retreat",
+    image: "/optimized/crown-point/open-kitchen-with-island-and-stone-fireplace-1200.webp",
+  },
+  {
+    title: "Luxury Craftsman Home",
+    image: "/optimized/green-river/modern-house-with-trees-and-stone-path-1200.webp",
+  },
+];
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "HomeAndConstructionBusiness",
+  name: "Blue Ridge Homes",
+  description:
+    "Custom home builder and remodeling contractor serving Asheville and Western North Carolina for over 30 years.",
+  url: "https://www.brhomesnc.com",
+  telephone: "(828) 712-2867",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Asheville",
+    addressRegion: "NC",
+    postalCode: "28801",
+    addressCountry: "US",
+  },
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: 35.5951,
+    longitude: -82.5515,
+  },
+  areaServed: {
+    "@type": "GeoCircle",
+    geoMidpoint: {
+      "@type": "GeoCoordinates",
+      latitude: 35.5951,
+      longitude: -82.5515,
+    },
+    geoRadius: "80000",
+  },
+  priceRange: "$",
+  foundingDate: "1994",
+  knowsAbout: [
+    "Custom Home Building",
+    "Home Remodeling",
+    "Kitchen Renovation",
+    "Bathroom Renovation",
+    "Home Additions",
+    "Mountain Home Construction",
+  ],
+};
+
+export default function Page() {
   return (
-    <main className="min-h-screen bg-[#F3EFE7] text-[#1D232A]">
-      {/* HERO */}
-      <section className="relative overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0">
-          <div className="h-[78vh] w-full bg-[radial-gradient(ellipse_at_top,rgba(12,32,54,0.45),rgba(12,32,54,0.10)_45%,rgba(243,239,231,0)_75%)]" />
-          <div className="absolute inset-0 h-[78vh] w-full bg-[linear-gradient(to_bottom,rgba(12,32,54,0.48),rgba(12,32,54,0.08),rgba(243,239,231,1))]" />
-          {/* Temporary hero image placeholder */}
-          <div className="absolute inset-0 h-[78vh] w-full bg-[url('/hero-placeholder.jpg')] bg-cover bg-center opacity-90" />
-        </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
-        {/* Hero Content */}
-        <div className="relative z-10 mx-auto max-w-6xl px-6 pb-10 pt-16 md:pb-14 md:pt-20">
-          <div className="grid items-end gap-10 md:grid-cols-12">
-            <div className="md:col-span-7">
-              <h1 className="mb-4 max-w-2xl font-serif text-5xl font-normal leading-[1.05] tracking-[-0.02em] text-white/95 md:text-7xl">
-                Modern Mountain Living,
-                <span className="block font-semibold text-white">Built with Integrity.</span>
-              </h1>
-              <p className="mt-3 max-w-xl text-base leading-relaxed text-white/90 md:text-lg">
-                Custom homes and remodels across Western North Carolina—crafted with clear communication,
-                careful planning, and exceptional finish work.
-              </p>
-
-              <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <a
-                  href="#contact"
-                  className="inline-flex items-center justify-center rounded-[999px] bg-[#C7A15B] px-6 py-3 text-sm font-semibold text-[#1D232A] shadow-md transition-all duration-300 hover:scale-[1.02] hover:brightness-105"
-                >
-                  Request a Consultation
-                </a>
-                <a
-                  href="#portfolio"
-                  className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition-all duration-300 hover:bg-white/20 hover:scale-[1.02]"
-                >
-                  View Portfolio
-                </a>
-              </div>
-
-              <ul className="mt-8 grid gap-3 text-sm text-white/85 sm:grid-cols-2">
-                <li className="flex items-center gap-2">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#C7A15B]" />
-                  30+ Years in Western NC
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#C7A15B]" />
-                  Fully Licensed & Insured
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#C7A15B]" />
-                  Transparent Process
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#C7A15B]" />
-                  Craftsmanship-First Finish
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-[#F3EFE7]">
-          <div className="mx-auto max-w-6xl px-6">
-            <div className="rounded-3xl bg-white/70 shadow-sm ring-1 ring-black/10">
-              <div className="grid grid-cols-2 gap-4 p-4 text-[#0C2036] md:grid-cols-5 md:p-5">
-                <div className="text-sm font-semibold">30+ Years Experience</div>
-                <div className="text-sm font-semibold">400+ Projects Completed</div>
-                <div className="text-sm font-semibold">98% Client Satisfaction</div>
-                <div className="text-sm font-semibold">Fully Licensed & Insured</div>
-                <div className="text-sm font-semibold">NC License #56328</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* COMMITMENT */}
-      <section id="services" className="mx-auto max-w-6xl px-6 pb-16 pt-12">
-        <div className="grid gap-10 md:grid-cols-12">
-          <div className="md:col-span-5">
-            <h2 className="font-serif text-3xl text-[#0C2036] md:text-4xl">Our Commitment</h2>
-            <p className="mt-4 text-[#3B434B]">
-              A modern build experience with old-world accountability: clear scope, clear schedules, and clean work sites.
-            </p>
-
-            <ul className="mt-8 space-y-4">
-              <li className="flex items-center gap-3">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#C7A15B]/20 ring-1 ring-[#C7A15B]/40">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#C7A15B]" />
-                </span>
-                <span className="text-sm font-semibold text-[#0C2036]">Transparent Process</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#C7A15B]/20 ring-1 ring-[#C7A15B]/40">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#C7A15B]" />
-                </span>
-                <span className="text-sm font-semibold text-[#0C2036]">Clear Timelines</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#C7A15B]/20 ring-1 ring-[#C7A15B]/40">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#C7A15B]" />
-                </span>
-                <span className="text-sm font-semibold text-[#0C2036]">Dedicated Leadership</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="md:col-span-7">
-            <div className="grid gap-5">
-              <div className="aspect-[16/9] rounded-3xl bg-[linear-gradient(135deg,rgba(12,32,54,0.14),rgba(199,161,91,0.10))] shadow-sm ring-1 ring-black/5" />
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div className="aspect-[4/3] rounded-3xl bg-[linear-gradient(135deg,rgba(12,32,54,0.10),rgba(199,161,91,0.08))] shadow-sm ring-1 ring-black/5" />
-                <div className="aspect-[4/3] rounded-3xl bg-[linear-gradient(135deg,rgba(12,32,54,0.08),rgba(199,161,91,0.12))] shadow-sm ring-1 ring-black/5" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* PROCESS */}
-      <section id="process" className="bg-[#E9E2D6]">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <div className="flex items-end justify-between gap-6">
-            <div>
-              <h2 className="font-serif text-3xl text-[#0C2036] md:text-4xl">Our Proven Process</h2>
-              <p className="mt-3 max-w-2xl text-[#3B434B]">
-                A straightforward path from vision to completion—built around communication, craftsmanship, and care.
-              </p>
-            </div>
-            <a
-              href="#contact"
-              className="hidden rounded-full bg-[#0C2036] px-5 py-2 text-sm font-semibold text-white hover:brightness-110 md:inline-flex"
-            >
-              Get a Quote
-            </a>
-          </div>
-
-          <div className="mt-10 grid gap-5 md:grid-cols-4">
-            <Step n="01" title="Vision" text="Talk goals, budget range, and timeline. We align expectations early." />
-            <Step n="02" title="Design" text="Plans, selections, and scope clarity—so there are no surprises." />
-            <Step n="03" title="Build" text="Trade coordination, inspections, and quality checks throughout." />
-            <Step n="04" title="Deliver" text="Punch list, walkthrough, and handoff you can feel great about." />
-          </div>
-        </div>
-      </section>
-
-      {/* PORTFOLIO PREVIEW */}
-      <section id="portfolio" className="mx-auto max-w-6xl px-6 py-16">
-        <div className="flex items-end justify-between gap-6">
-          <div>
-            <h2 className="font-serif text-3xl text-[#0C2036] md:text-4xl">Featured Work</h2>
-            <p className="mt-3 max-w-2xl text-[#3B434B]">
-              A selection of recent custom homes and remodels across Asheville and Western North Carolina.
-            </p>
-          </div>
-          <a
-            href="#"
-            className="rounded-full border border-[#0C2036]/20 bg-white px-5 py-2 text-sm font-semibold text-[#0C2036] hover:bg-[#0C2036]/5"
-          >
-            View Full Portfolio
-          </a>
-        </div>
-
-        <div className="mt-10 grid gap-5 md:grid-cols-12">
-          <PortfolioCard className="md:col-span-7" title="Modern Mountain Retreat" subtitle="Asheville, NC" />
-          <PortfolioCard className="md:col-span-5" title="Kitchen Remodel" subtitle="Weaverville, NC" />
-          <PortfolioCard className="md:col-span-5" title="Lakeside Addition" subtitle="Lake Lure, NC" />
-          <PortfolioCard className="md:col-span-7" title="Craftsman Exterior" subtitle="Black Mountain, NC" />
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section id="contact" className="bg-[#0C2036]">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <div className="grid gap-10 md:grid-cols-12 md:items-center">
-            <div className="md:col-span-7">
-              <h2 className="font-serif text-3xl text-white md:text-5xl">Let’s Build Something Enduring.</h2>
-              <p className="mt-4 max-w-xl text-white/80">
-                Tell us about your project and we’ll follow up to schedule a consultation. No pressure—just clarity.
-              </p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href="tel:+18285551234"
-                  className="inline-flex items-center justify-center rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur hover:bg-white/15"
-                >
-                  Call (828) 555-1234
-                </a>
-                <a
-                  href="mailto:info@brhomesnc.com"
-                  className="inline-flex items-center justify-center rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur hover:bg-white/15"
-                >
-                  Email info@brhomesnc.com
-                </a>
-              </div>
-            </div>
-
-            <div className="md:col-span-5">
-              <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/10">
-                <div className="text-sm font-semibold text-[#0C2036]">Request a Consultation</div>
-                <p className="mt-1 text-sm text-[#3B434B]">We’ll respond within 1 business day.</p>
-
-                <form className="mt-5 space-y-3">
-                  <input
-                    className="w-full rounded-xl border border-black/10 bg-[#F7F4EF] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C7A15B]/60"
-                    placeholder="Full Name"
-                  />
-                  <input
-                    className="w-full rounded-xl border border-black/10 bg-[#F7F4EF] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C7A15B]/60"
-                    placeholder="Phone"
-                  />
-                  <input
-                    className="w-full rounded-xl border border-black/10 bg-[#F7F4EF] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C7A15B]/60"
-                    placeholder="Email"
-                  />
-                  <textarea
-                    className="h-24 w-full rounded-xl border border-black/10 bg-[#F7F4EF] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C7A15B]/60"
-                    placeholder="Briefly describe your project"
-                  />
-                  <button
-                    type="button"
-                    className="w-full rounded-xl bg-[#C7A15B] px-4 py-3 text-sm font-semibold text-[#1D232A] hover:brightness-105"
-                  >
-                    Send Request
-                  </button>
-                  <div className="text-xs text-[#6B7280]">
-                    By submitting, you agree to be contacted about your project.
+      <main className="br-page">
+        <div className="br-shell br-marble">
+          <div className="br-content">
+            <section className="br-hero-wrap">
+              <div className="br-hero-full">
+                {/* Full-width hero image */}
+                <div className="br-hero-media">
+                  <div className="br-hero-image-wrap">
+                    <Image
+                      src="/optimized/dads/195-meadow-creek-dr-001.webp"
+                      alt="Charming mountain home with stone chimney and covered porch in Western North Carolina"
+                      fill
+                      priority
+                      className="br-hero-image"
+                      sizes="(max-width: 768px) 100vw, 100vw"
+                    />
                   </div>
-                </form>
+                </div>
+
+                {/* Text overlay on left */}
+                <div className="br-hero-overlay-gradient" />
+                <div className="br-hero-copy">
+                  <h1 className="br-hero-title">
+                    Modern Mountain Living,
+                    <br />
+                    Built with Integrity.
+                  </h1>
+
+                  <p className="br-hero-subtitle">
+                    Custom Homes &amp; Remodels
+                    <br />
+                    in Asheville &amp; Western North Carolina
+                  </p>
+
+                  <div className="br-button-row">
+                    <Link href="/contact" className="br-button br-button-primary">
+                      Start the Conversation &rarr;
+                    </Link>
+                  </div>
+                </div>
               </div>
+
+              <div className="br-stats-band">
+                <div className="br-stats-grid">
+                  {stats.map((item, index) => (
+                    <div
+                      className={`br-stat ${item.kind === "meta" ? "br-stat-card" : "br-stat-value-card"}`}
+                      key={index}
+                    >
+                      {item.kind === "value" ? (
+                        <>
+                          <div className="br-stat-value">{item.value}</div>
+                          <div className="br-stat-label">
+                            {item.lines[0]}
+                            <br />
+                            {item.lines[1]}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="br-stat-meta">
+                            <span>{item.meta[0]}</span>
+                            <span>{item.meta[1]}</span>
+                          </div>
+                          <div className="br-stat-sub">{item.sub}</div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="br-section br-commitment-section">
+              <div className="br-container">
+                <div className="br-grid-2 br-commitment-grid">
+                  <div className="br-commitment-copy">
+                    <h2 className="br-title">Our Commitment</h2>
+
+                    <p className="br-lead">
+                      For over 30 years, a better customer experience has been at
+                      the heart of everything we do. Here&apos;s our promise to you:
+                    </p>
+
+                    <div className="br-commitment-list">
+                      {commitments.map((item) => (
+                        <div className="br-commitment-item" key={item.title}>
+                          <span className="br-commitment-icon">✓</span>
+                          <div>
+                            <h3 className="br-commitment-title">{item.title}</h3>
+                            <p className="br-commitment-body">{item.body}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="br-image-stack br-commitment-visuals">
+                    <div className="br-frame br-frame-tall">
+                      <Image
+                        src="/optimized/23-woodbine-rd/IMG_20250902_143142038_HDR-1200.webp"
+                        alt="Charming stone and wood porch detail on a Blue Ridge Homes project"
+                        fill
+                        className="br-frame-image"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                      />
+                    </div>
+
+                    <div className="br-frame br-frame-wide">
+                      <Image
+                        src="/optimized/23-woodbine-rd/IMG_20250902_143932078_HDR-1200.webp"
+                        alt="Mountain view from stone patio at a luxury Blue Ridge home"
+                        fill
+                        className="br-frame-image"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="process" className="br-section-tight br-process-section">
+              <div className="br-container">
+                <div className="br-process-intro">
+                  <div className="br-process-heading">
+                    <h2 className="br-title br-title-center">Our Proven Process</h2>
+                  </div>
+
+                  <p className="br-process-subtitle">
+                    A seamless journey to your dream home
+                  </p>
+                </div>
+
+                <div className="br-process-row">
+                  {processSteps.map((step) => (
+                    <div className="br-process-step" key={step.number}>
+                      <div className="br-process-number">{step.number}</div>
+                      <h3 className="br-process-title">{step.title}</h3>
+                      <p className="br-process-body">{step.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <div className="br-closing-sequence">
+              <section id="portfolio" className="br-section-tight br-closing-portfolio">
+                <div className="br-container">
+                  <div className="br-portfolio-grid">
+                    {portfolioCards.map((card) => (
+                      <Link href="/portfolio" className="br-portfolio-card" key={card.title}>
+                        <div className="br-portfolio-media">
+                          <Image
+                            src={card.image}
+                            alt={card.title}
+                            fill
+                            className="br-portfolio-image"
+                            sizes="(max-width: 768px) 100vw, 50vw"
+                          />
+                          <div className="br-portfolio-overlay" />
+                          <h3 className="br-portfolio-title">{card.title}</h3>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <section id="contact" className="br-section br-cta br-closing-cta">
+                <div className="br-container">
+                  <h2 className="br-title br-title-center">
+                    Let&apos;s Build Something Enduring
+                  </h2>
+
+                  <p className="br-lead br-cta-copy">
+                    Custom craftsmanship, thoughtful process, and a home designed to
+                    feel timeless from the day you move in. Serving Asheville,
+                    Buncombe County, Henderson County, and Haywood County.
+                  </p>
+
+                  <div className="br-cta-actions">
+                    <Link href="/contact" className="br-button br-button-primary">
+                      Start the Conversation &rarr;
+                    </Link>
+                    <a href="tel:18287122867" className="br-button br-button-secondary">
+                      Call (828) 712-2867
+                    </a>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
-
-          <div className="mt-12 border-t border-white/10 pt-6 text-xs text-white/60">
-            © {new Date().getFullYear()} Blue Ridge Homes • Asheville, NC
-          </div>
         </div>
-      </section>
-    </main>
+      </main>
+    </>
   );
 }
-
-function Feature({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5">
-      <div className="text-sm font-semibold text-[#0C2036]">{title}</div>
-      <div className="mt-2 text-sm leading-relaxed text-[#3B434B]">{text}</div>
-    </div>
-  );
-}
-
-function ImageCard({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <div className="group relative overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5">
-      <div className="aspect-[4/3] w-full bg-[linear-gradient(135deg,rgba(12,32,54,0.08),rgba(199,161,91,0.08))]" />
-      <div className="absolute inset-x-0 bottom-0 p-5">
-        <div className="text-sm font-semibold text-[#0C2036]">{title}</div>
-        <div className="mt-1 text-sm text-[#3B434B]">{subtitle}</div>
-      </div>
-      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-        <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(12,32,54,0.10),transparent_45%)]" />
-      </div>
-    </div>
-  );
-}
-
-function Step({ n, title, text }: { n: string; title: string; text: string }) {
-  return (
-    <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5">
-      <div className="flex items-center justify-between">
-        <div className="text-xs font-semibold tracking-wide text-[#C7A15B]">{n}</div>
-        <div className="h-1.5 w-1.5 rounded-full bg-[#0C2036]/30" />
-      </div>
-      <div className="mt-3 text-lg font-semibold text-[#0C2036]">{title}</div>
-      <div className="mt-2 text-sm leading-relaxed text-[#3B434B]">{text}</div>
-    </div>
-  );
-}
-
-function PortfolioCard({
-  title,
-  subtitle,
-  className,
-}: {
-  title: string;
-  subtitle: string;
-  className?: string;
-}) {
-  return (
-    <div
-      className={[
-        "group relative overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5",
-        className ?? "",
-      ].join(" ")}
-    >
-      <div className="aspect-[16/10] w-full bg-[linear-gradient(135deg,rgba(12,32,54,0.12),rgba(199,161,91,0.10))]" />
-      <div className="absolute inset-x-0 bottom-0 p-6">
-        <div className="text-lg font-semibold text-[#0C2036]">{title}</div>
-        <div className="mt-1 text-sm text-[#3B434B]">{subtitle}</div>
-      </div>
-      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-        <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(12,32,54,0.16),transparent_55%)]" />
-      </div>
-    </div>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-

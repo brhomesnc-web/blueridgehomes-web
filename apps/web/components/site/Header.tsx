@@ -1,35 +1,59 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function Header() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
-    <header className="absolute inset-x-0 top-0 z-20">
-      <div className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 pt-6 backdrop-blur-sm">
-        <Link href="/" aria-label="Blue Ridge Homes home">
+    <header className="br-header">
+      <div className="br-container br-header-inner">
+        <Link href="/" className="br-logo" aria-label="Blue Ridge Homes home">
           <Image
-            src="/brand/logo.png"
+            src="/brand/logo-clean.png"
             alt="Blue Ridge Homes"
-            width={220}
-            height={72}
-            className="h-12 w-auto brightness-0 invert"
+            width={292}
+            height={88}
+            className="br-logo-img"
+            sizes="(max-width: 900px) 182px, 292px"
             priority
           />
         </Link>
 
-        <nav className="hidden items-center gap-8 text-sm text-white/80 md:flex">
-          <a className="hover:text-white" href="#services">Services</a>
-          <Link className="hover:text-white" href="/portfolio">Portfolio</Link>
-          <a className="hover:text-white" href="#process">Process</a>
-          <Link className="hover:text-white" href="/contact">Contact</Link>
+        <nav className="br-nav" aria-label="Primary">
+          <Link href="/services">Custom Homes</Link>
+          <Link href="/services">Remodeling</Link>
+          <Link href="/portfolio">Portfolio</Link>
         </nav>
 
-        <Link
-          href="/contact"
-          className="rounded-full bg-[#C7A15B] px-5 py-2 text-sm font-semibold text-[#1D232A] shadow-sm hover:brightness-105"
-        >
+        <Link href="/contact" className="br-header-cta">
           Start the Conversation
         </Link>
+
+        <button
+          className="br-menu-toggle"
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
+        >
+          <span className={`br-menu-icon ${menuOpen ? "br-menu-icon-open" : ""}`} />
+        </button>
       </div>
+
+      {menuOpen && (
+        <div className="br-mobile-menu">
+          <nav className="br-mobile-nav">
+            <Link href="/services" onClick={() => setMenuOpen(false)}>Custom Homes</Link>
+            <Link href="/services" onClick={() => setMenuOpen(false)}>Remodeling</Link>
+            <Link href="/portfolio" onClick={() => setMenuOpen(false)}>Portfolio</Link>
+            <Link href="/contact" onClick={() => setMenuOpen(false)} className="br-mobile-cta">
+              Start the Conversation
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

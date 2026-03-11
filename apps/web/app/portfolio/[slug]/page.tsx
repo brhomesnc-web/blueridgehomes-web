@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PageWrapper from "@/components/site/PageWrapper";
+import Gallery from "@/components/Gallery";
 
 type PortfolioDetailPageProps = {
   params: {
