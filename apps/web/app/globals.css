@@ -122,13 +122,13 @@ img {
 
 .br-section {
   position: relative;
-  padding-top: 40px;
-  padding-bottom: 40px;
+  padding-top: 44px;
+  padding-bottom: 44px;
 }
 
 .br-section-tight {
-  padding-top: 28px;
-  padding-bottom: 28px;
+  padding-top: 18px;
+  padding-bottom: 18px;
 }
 
 .br-section-large {
@@ -399,7 +399,7 @@ img {
 /* ── Hero (full-width overlay layout) ── */
 
 .br-hero-wrap {
-  padding: 0 0 12px;
+  padding: 0 0 0;
   margin-top: -10px;
 }
 
@@ -563,13 +563,13 @@ img {
 /* ── Stats band ── */
 
 .br-stats-band {
-  background: rgba(248, 243, 237, 0.5);
+  background: rgba(248, 243, 237, 0.4);
   border-top: 1px solid rgba(169, 155, 138, 0.2);
   border-bottom: 1px solid rgba(169, 155, 138, 0.2);
   box-shadow: 0 12px 32px rgba(60, 40, 20, 0.22), 0 4px 10px rgba(60, 40, 20, 0.1);
   border-left: 0;
   border-right: 0;
-  padding: 14px 0 12px;
+  padding: 10px 0 8px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.56),
     inset 0 -1px 0 rgba(165, 148, 128, 0.06);
@@ -659,8 +659,8 @@ img {
 }
 
 .br-commitment-section {
-  padding-top: 32px;
-  padding-bottom: 28px;
+  padding-top: 44px;
+  padding-bottom: 44px;
 }
 
 .br-commitment-grid {
@@ -795,15 +795,15 @@ img {
 }
 
 .br-process-section {
-  padding-top: 8px;
-  padding-bottom: 16px;
+  padding-top: 28px;
+  padding-bottom: 28px;
 }
 
 .br-process-row {
   display: grid;
   gap: 22px;
   max-width: 980px;
-  margin: 30px auto 0;
+  margin: 26px auto 0;
   padding-top: 26px;
   border-top: 1px solid rgba(175, 159, 140, 0.34);
 }
@@ -841,7 +841,7 @@ img {
 
 .br-portfolio-grid {
   display: grid;
-  gap: 32px;
+  gap: 42px;
   max-width: 900px;
   margin: 0 auto;
 }
@@ -849,22 +849,16 @@ img {
 .br-closing-sequence {
   position: relative;
   padding: 0;
+  margin: 0;
 }
 
 .br-closing-sequence::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: min(900px, calc(100% - 40px));
-  height: 1px;
-  transform: translateX(-50%);
-  background: rgba(176, 160, 140, 0.2);
+  display: none;
 }
 
 .br-closing-portfolio {
-  padding-top: 20px;
-  padding-bottom: 24px;
+  padding-top: 28px;
+  padding-bottom: 20px;
 }
 
 .br-portfolio-card {
@@ -948,7 +942,7 @@ img {
 /* ── Footer ── */
 
 .br-footer {
-  padding: 22px 20px 38px;
+  padding: 8px 20px 24px;
   text-align: center;
   color: var(--br-text-soft);
   font-size: 14px;
@@ -957,7 +951,7 @@ img {
 .br-footer-inner {
   max-width: 1180px;
   margin: 0 auto;
-  padding-top: 20px;
+  padding-top: 10px;
   border-top: 1px solid rgba(170, 154, 136, 0.22);
 }
 
@@ -1218,27 +1212,42 @@ img {
 .br-closing-cta {
   position: relative;
   background-image: url('/backgrounds/mountain-footer.jpg');
-  background-size: cover;
-  background-position: center top;
+  background-size: 100% auto;
+  background-position: center bottom;
   background-repeat: no-repeat;
-  padding-top: 64px !important;
-  padding-bottom: 80px !important;
+  padding-top: 44px !important;
+  padding-bottom: 60px !important;
   text-align: left;
-  overflow: hidden;
+  overflow: visible;
+}
+
+.br-closing-cta-bg {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 1180px;
+  height: auto;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .br-closing-cta::before {
+  display: none;
   content: "";
   position: absolute;
-  top: -2px;
+  top: 0;
   left: 0;
   right: 0;
-  height: 200px;
+  height: 50%;
   background: linear-gradient(180deg,
     rgba(244, 238, 231, 1) 0%,
-    rgba(244, 238, 231, 0.95) 25%,
-    rgba(244, 238, 231, 0.7) 50%,
-    rgba(244, 238, 231, 0.3) 75%,
+    rgba(244, 238, 231, 1) 20%,
+    rgba(244, 238, 231, 0.97) 35%,
+    rgba(244, 238, 231, 0.88) 50%,
+    rgba(244, 238, 231, 0.6) 65%,
+    rgba(244, 238, 231, 0.25) 80%,
     rgba(244, 238, 231, 0) 100%);
   z-index: 1;
   pointer-events: none;
@@ -1247,6 +1256,15 @@ img {
 .br-closing-cta .br-container {
   position: relative;
   z-index: 2;
+}
+
+.br-closing-cta .br-title {
+  text-shadow: 0 1px 4px rgba(255, 255, 255, 0.7);
+}
+
+.br-closing-cta .br-lead,
+.br-closing-cta .br-cta-copy {
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.6);
 }
 
 .br-closing-cta .br-title,
