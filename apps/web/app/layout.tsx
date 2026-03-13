@@ -34,11 +34,16 @@ export const metadata: Metadata = {
     "Asheville home builder",
     "Western NC contractor",
   ],
+  metadataBase: new URL("https://www.brhomesnc.com"),
+  alternates: {
+    canonical: "./",
+  },
   openGraph: {
     title: "Blue Ridge Homes | Custom Home Builder in Asheville, NC",
     description:
       "Modern Mountain Living, Built with Integrity. Custom homes and remodels in Western North Carolina.",
     type: "website",
+    images: ["/optimized/dividers/divider-blueridge-sunset.jpg"],
     locale: "en_US",
     siteName: "Blue Ridge Homes",
   },

@@ -3,276 +3,269 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title:
-    "ICF Construction — Insulated Concrete Forms in Asheville, NC | Blue Ridge Homes",
+  title: "ICF Construction in Asheville, NC | Blue Ridge Homes",
   description:
-    "ICF home construction in Asheville and Western NC using BuildBlock insulated concrete forms. Energy-efficient, storm-resistant custom homes. Blue Ridge Homes — ICF experience since 2006.",
-  openGraph: {
-    title:
-      "ICF Construction — Insulated Concrete Forms in Asheville, NC | Blue Ridge Homes",
-    description:
-      "ICF home construction in Asheville and Western NC using BuildBlock insulated concrete forms. Energy-efficient, storm-resistant custom homes.",
-    url: "https://www.blueridgehomesnc.com/services/icf-construction",
-    siteName: "Blue Ridge Homes",
-    locale: "en_US",
-    type: "website",
-  },
-};
-
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Service",
-  name: "ICF Construction — Insulated Concrete Forms",
-  provider: {
-    "@type": "HomeAndConstructionBusiness",
-    name: "Blue Ridge Homes",
-    telephone: "(828) 712-2867",
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Asheville",
-      addressRegion: "NC",
-      addressCountry: "US",
-    },
-    hasCredential: {
-      "@type": "EducationalOccupationalCredential",
-      credentialCategory: "license",
-      name: "NC General Contractor License #56328",
-    },
-  },
-  areaServed: [
-    { "@type": "City", name: "Asheville, NC" },
-    { "@type": "AdministrativeArea", name: "Buncombe County, NC" },
-    { "@type": "AdministrativeArea", name: "Henderson County, NC" },
-    { "@type": "AdministrativeArea", name: "Haywood County, NC" },
-  ],
-  description:
-    "Insulated Concrete Form (ICF) construction using the BuildBlock system. Energy-efficient, storm-resistant, and quieter homes for Asheville and Western North Carolina homeowners.",
+    "Blue Ridge Homes has been building with insulated concrete forms (ICF) since 2006. Stronger, quieter, more energy-efficient homes in Asheville and Western NC. NC License #56328.",
 };
 
 export default function ICFConstructionPage() {
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+    <main className="br-page">
+      <div className="br-shell br-marble">
+        <div className="br-content">
 
-      {/* Hero */}
-      <section className="service-hero">
-        <div className="service-hero-bg">
-          <Image
-            src="/optimized/icf/icf-wall-construction-in-progress-1600.webp"
-            alt="Insulated concrete form wall construction in progress — Blue Ridge Homes ICF build in Western NC"
-            fill
-            priority
-            style={{ objectFit: "cover", objectPosition: "center" }}
-          />
-        </div>
-        <div className="container">
-          <div className="service-hero-content">
-            <p className="hero-label">ICF Construction</p>
-            <h1>
-              ICF Construction — Insulated Concrete Forms in Asheville, NC
-            </h1>
-            <p className="service-hero-subtitle">
-              Stronger walls, lower energy bills, and a quieter home — built
-              with the BuildBlock ICF system.
-            </p>
-            <Link href="/contact" className="btn-primary">
-              Learn About ICF
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M3 8h10M9 4l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Content */}
-      <section className="service-content marble-bg">
-        <div className="container">
-          <div className="service-content-grid">
-            <div className="service-text">
-              <h2>One of the Few ICF Builders in Western North Carolina</h2>
-              <p>
-                Insulated Concrete Forms represent one of the most significant
-                advances in residential construction over the past two decades,
-                yet very few builders in the Asheville area have real experience
-                with the technology. Blue Ridge Homes has been building with ICF
-                since 2006, using the BuildBlock system to construct walls that
-                are stronger, quieter, and dramatically more energy-efficient
-                than traditional wood framing.
-              </p>
-              <p>
-                The concept is straightforward: interlocking insulated foam
-                blocks are stacked to form the wall shape, reinforced with steel
-                rebar, and then filled with concrete. The foam stays in place
-                permanently, creating a continuous insulation envelope with no
-                gaps, no thermal bridging, and no settling over time. The result
-                is a solid concrete wall sandwiched between two layers of rigid
-                insulation — a structure that outperforms stick-built walls by
-                every measurable standard.
-              </p>
-
-              <h3>Why Choose ICF for Your WNC Home</h3>
-              <p>
-                Western North Carolina has temperature swings that test any
-                building envelope. Summer highs in the valleys, winter cold at
-                elevation, and persistent moisture throughout the year make
-                energy efficiency and durability more than selling points — they
-                are practical necessities. ICF walls typically reduce heating and
-                cooling costs by 30 to 50 percent compared to conventional
-                framing, and the thermal mass of the concrete core helps
-                stabilize indoor temperatures even during the most volatile
-                mountain weather.
-              </p>
-              <p>
-                Beyond energy savings, ICF homes offer measurable advantages in
-                structural resilience. Reinforced concrete walls resist high
-                winds, are naturally fire-resistant, and stand up to the kind of
-                storm damage that can compromise a stick-built home. They also
-                reduce exterior noise significantly — a benefit homeowners often
-                do not expect but immediately notice once they move in.
-              </p>
-
-              <h3>Our ICF Experience</h3>
-              <p>
-                Building with insulated concrete forms requires specific
-                knowledge that general contractors typically do not have. Bracing
-                must be precisely calculated for the concrete pour. Window and
-                door bucks need to be integrated before the walls go up.
-                Electrical and plumbing runs must be planned in advance because
-                you cannot cut into a concrete wall the way you would a stud
-                wall. Brian Barrett has managed ICF projects from foundation to
-                finish for nearly twenty years and understands the sequencing,
-                the subcontractor coordination, and the inspection requirements
-                specific to this building method.
-              </p>
-              <p>
-                If you are considering a new home in Asheville, Buncombe County,
-                Henderson County, or Haywood County and want to explore whether
-                ICF construction is the right fit, we are happy to walk you
-                through the costs, timelines, and long-term benefits.
-              </p>
-            </div>
-
-            <aside className="service-sidebar">
-              <div className="service-sidebar-card">
-                <h3>ICF Advantages</h3>
-                <ul className="service-checklist">
-                  <li>30–50% lower heating and cooling costs</li>
-                  <li>Superior storm and wind resistance</li>
-                  <li>Natural fire resistance</li>
-                  <li>Dramatically reduced exterior noise</li>
-                  <li>No thermal bridging or insulation settling</li>
-                  <li>Stable indoor temperatures year-round</li>
-                </ul>
-              </div>
-              <div className="service-sidebar-card">
-                <h3>BuildBlock System</h3>
-                <p>
-                  We use the BuildBlock ICF system — interlocking EPS blocks with
-                  integrated rebar channels, filled with reinforced concrete for
-                  maximum structural integrity.
-                </p>
-              </div>
-            </aside>
-          </div>
-        </div>
-      </section>
-
-      {/* Gallery */}
-      <section className="service-gallery">
-        <div className="container">
-          <h2>ICF Construction Process</h2>
-          <div className="service-gallery-grid">
-            <div className="service-gallery-item service-gallery-item--wide">
-              <Image
-                src="/optimized/icf/icf-blocks-stacked-for-wall-1600.webp"
-                alt="ICF blocks stacked and ready for concrete pour — insulated concrete form wall construction"
-                width={800}
-                height={500}
-                style={{ objectFit: "cover", width: "100%", height: "100%" }}
-              />
-              <div className="service-gallery-caption">
-                <span>ICF Wall Assembly</span>
-              </div>
-            </div>
-            <div className="service-gallery-item">
-              <Image
-                src="/optimized/icf/icf-foundation-with-rebar-1600.webp"
-                alt="ICF foundation with steel rebar reinforcement before concrete pour"
-                width={600}
-                height={400}
-                style={{ objectFit: "cover", width: "100%", height: "100%" }}
-              />
-              <div className="service-gallery-caption">
-                <span>Rebar &amp; Reinforcement</span>
-              </div>
-            </div>
-            <div className="service-gallery-item">
-              <Image
-                src="/optimized/icf/icf-concrete-pour-in-progress-1600.webp"
-                alt="Concrete being poured into ICF forms on a residential build site"
-                width={600}
-                height={400}
-                style={{ objectFit: "cover", width: "100%", height: "100%" }}
-              />
-              <div className="service-gallery-caption">
-                <span>Concrete Pour</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="service-cta marble-bg">
-        <div className="container">
-          <div className="service-cta-inner">
-            <h2>Interested in an ICF Home?</h2>
-            <p>
-              We will walk you through the costs, the process, and the long-term
-              savings so you can decide if ICF is the right fit for your build.
-            </p>
-            <div className="service-cta-actions">
-              <Link href="/contact" className="btn-primary">
-                Start the Conversation
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M3 8h10M9 4l4 4-4 4"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+          {/* Hero */}
+          <section className="br-hero-wrap">
+            <div className="br-hero-full">
+              <div className="br-hero-media">
+                <div className="br-hero-image-wrap">
+                  <Image
+                    src="/optimized/breezeway/modern-house-with-wood-and-blue-exterior.jpg"
+                    alt="Modern ICF-built home with wood and blue exterior by Blue Ridge Homes"
+                    fill
+                    priority
+                    className="br-hero-image"
+                    sizes="(max-width: 768px) 100vw, 100vw"
                   />
-                </svg>
-              </Link>
-              <a href="tel:8287122867" className="btn-outline">
-                Call (828) 712-2867
-              </a>
+                </div>
+              </div>
+              <div className="br-hero-overlay-gradient" />
+              <div className="br-hero-copy">
+                <h1 className="br-hero-title">
+                  ICF Construction
+                  <br />
+                  in Asheville, NC
+                </h1>
+                <p className="br-hero-subtitle">
+                  {"Insulated concrete form homes \u2014 stronger, quieter, and more energy-efficient than conventional framing."}
+                </p>
+                <div className="br-button-row">
+                  <Link href="/contact" className="br-button br-button-primary">
+                    {"Learn About ICF \u2192"}
+                  </Link>
+                </div>
+              </div>
             </div>
+          </section>
+
+          {/* Intro */}
+          <section className="br-section">
+            <div className="br-container">
+              <h2 className="br-title br-title-center">
+                Building Stronger Homes in Western North Carolina
+              </h2>
+              <p className="br-lead" style={{ maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
+                {"Insulated concrete forms create a continuous shell of reinforced concrete wrapped in rigid foam insulation. The result is a home that uses significantly less energy, resists severe weather, and stays remarkably quiet. Blue Ridge Homes has been building with ICF since 2006 \u2014 we were one of the first residential builders in the Asheville area to adopt the system."}
+              </p>
+            </div>
+          </section>
+
+          {/* Section 1: What Is ICF */}
+          <section className="br-section br-section-alt br-commitment-section">
+            <div className="br-container">
+              <div className="br-grid-2 br-commitment-grid">
+                <div className="br-commitment-copy">
+                  <h2 className="br-title">How ICF Works</h2>
+                  <p className="br-lead">
+                    {"ICF walls are built by stacking hollow foam blocks, reinforcing them with steel rebar, and filling the cores with concrete. Once cured, you have a solid concrete wall with built-in insulation on both sides \u2014 no separate framing, no fiberglass batts, no gaps."}
+                  </p>
+                  <div className="br-commitment-list">
+                    <div className="br-commitment-item">
+                      <span className="br-commitment-icon">{"\u2713"}</span>
+                      <div>
+                        <h3 className="br-commitment-title">Continuous Insulation</h3>
+                        <p className="br-commitment-body">
+                          No thermal bridging from studs. The foam-concrete-foam sandwich eliminates the weak points found in conventional framing.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="br-commitment-item">
+                      <span className="br-commitment-icon">{"\u2713"}</span>
+                      <div>
+                        <h3 className="br-commitment-title">Reinforced Concrete Core</h3>
+                        <p className="br-commitment-body">
+                          {"Steel-reinforced concrete walls rated for wind speeds well above what Western North Carolina requires \u2014 built to last generations."}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="br-commitment-item">
+                      <span className="br-commitment-icon">{"\u2713"}</span>
+                      <div>
+                        <h3 className="br-commitment-title">Any Exterior Finish</h3>
+                        <p className="br-commitment-body">
+                          ICF accepts stone, siding, stucco, and brick. From the outside, an ICF home looks like any other custom build.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="br-image-stack br-commitment-visuals">
+                  <div className="br-frame br-frame-tall">
+                    <Image
+                      src="/optimized/icf/construction-site-with-white-foundation-blocks.jpg"
+                      alt="ICF foundation blocks stacked and ready for concrete pour"
+                      fill
+                      className="br-frame-image"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                  <div className="br-frame br-frame-wide">
+                    <Image
+                      src="/optimized/icf/construction-site-with-insulated-forms.jpg"
+                      alt="ICF wall construction with insulated forms and rebar"
+                      fill
+                      className="br-frame-image"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Divider */}
+          <div className="br-divider-strip">
+            <img
+              src="/optimized/dividers/divider-turtleback-falls.jpg"
+              alt="Turtleback Falls in Western North Carolina"
+            />
           </div>
+
+          {/* Section 2: Why ICF */}
+          <section className="br-section br-commitment-section">
+            <div className="br-container">
+              <div className="br-grid-2 br-commitment-grid" style={{ direction: "rtl" }}>
+                <div style={{ direction: "ltr" }} className="br-commitment-copy">
+                  <h2 className="br-title">Why Build With ICF</h2>
+                  <p className="br-lead">
+                    {"Homeowners who choose ICF are usually thinking long term. They want lower energy bills, a home that can handle severe weather, and walls that block outside noise almost entirely. In the mountains, where temperatures swing and storms hit hard, those advantages compound."}
+                  </p>
+                  <p className="br-lead">
+                    {"ICF homes typically use 40 to 60 percent less energy for heating and cooling compared to conventional wood-frame construction. The concrete mass also moderates temperature swings, so your HVAC system runs less and lasts longer."}
+                  </p>
+                  <p className="br-lead">
+                    {"We have built ICF homes from full basement foundations to entire above-grade wall systems. Whether you want the full envelope or just a concrete-core first floor, we can design the approach that fits your site and your budget."}
+                  </p>
+                </div>
+                <div style={{ direction: "ltr" }} className="br-image-stack br-commitment-visuals">
+                  <div className="br-frame br-frame-tall">
+                    <Image
+                      src="/optimized/icf/foundation-construction-with-workers-on-site.jpg"
+                      alt="ICF foundation construction with crew on site"
+                      fill
+                      className="br-frame-image"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                  <div className="br-frame br-frame-wide">
+                    <Image
+                      src="/optimized/icf/close-up-of-interlocking-construction-blocks.jpg"
+                      alt="Close-up of interlocking ICF blocks before concrete pour"
+                      fill
+                      className="br-frame-image"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Divider */}
+          <div className="br-divider-strip">
+            <img
+              src="/optimized/dividers/divider-blueridge-sunset.jpg"
+              alt="Blue Ridge Mountains sunset over Western North Carolina"
+            />
+          </div>
+
+          {/* Section 3: The Finished Product */}
+          <section className="br-section br-section-alt br-commitment-section">
+            <div className="br-container">
+              <div className="br-grid-2 br-commitment-grid">
+                <div className="br-commitment-copy">
+                  <h2 className="br-title">The Finished Product</h2>
+                  <p className="br-lead">
+                    {"From the inside, an ICF home feels different before you know why. The walls are solid and quiet. There are no drafts. The temperature stays even from room to room. Visitors notice it immediately \u2014 they just cannot always put their finger on what is different."}
+                  </p>
+                  <div className="br-commitment-list">
+                    <div className="br-commitment-item">
+                      <span className="br-commitment-icon">{"\u2713"}</span>
+                      <div>
+                        <h3 className="br-commitment-title">Energy Savings</h3>
+                        <p className="br-commitment-body">
+                          40 to 60 percent reduction in heating and cooling costs compared to conventional wood-frame construction.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="br-commitment-item">
+                      <span className="br-commitment-icon">{"\u2713"}</span>
+                      <div>
+                        <h3 className="br-commitment-title">Sound Reduction</h3>
+                        <p className="br-commitment-body">
+                          {"Concrete walls block outside noise far more effectively than wood framing \u2014 ideal for properties near roads or in exposed locations."}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="br-commitment-item">
+                      <span className="br-commitment-icon">{"\u2713"}</span>
+                      <div>
+                        <h3 className="br-commitment-title">Storm and Fire Resistance</h3>
+                        <p className="br-commitment-body">
+                          {"Reinforced concrete walls rated for extreme wind and fire exposure. ICF homes have survived hurricanes and wildfires that destroyed neighboring wood-frame structures."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="br-image-stack br-commitment-visuals">
+                  <div className="br-frame br-frame-tall">
+                    <Image
+                      src="/optimized/green-river/living-room-with-large-windows-and-forest-view.jpg"
+                      alt="Living room with floor-to-ceiling windows in ICF-built Green River home"
+                      fill
+                      className="br-frame-image"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                  <div className="br-frame br-frame-wide">
+                    <Image
+                      src="/optimized/green-river/stone-accented-house-with-trees-and-landscaping.jpg"
+                      alt="Finished ICF home with stone accents in Green River NC"
+                      fill
+                      className="br-frame-image"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* CTA */}
+          <div className="br-closing-sequence">
+            <section className="br-section br-cta br-closing-cta">
+              <div className="br-container">
+                <h2 className="br-title br-title-center">
+                  Interested in ICF?
+                </h2>
+                <p className="br-lead br-cta-copy">
+                  {"Whether you are comparing wall systems or ready to build, we are happy to walk you through what ICF can do for your project."}
+                </p>
+                <div className="br-cta-actions">
+                  <Link href="/contact" className="br-button br-button-primary">
+                    {"Start the Conversation \u2192"}
+                  </Link>
+                  <a href="tel:18287122867" className="br-button br-button-secondary">
+                    Call (828) 712-2867
+                  </a>
+                </div>
+              </div>
+            </section>
+          </div>
+
         </div>
-      </section>
-    </>
+      </div>
+    </main>
   );
 }

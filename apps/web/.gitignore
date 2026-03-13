@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+public/optimized/
+public/optimized-OLD/
+public/brand/brian-barrett.jpg
+app/globals.css.backup.*

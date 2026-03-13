@@ -19,31 +19,31 @@ const services = [
     title: "Custom Homes",
     body: "From modern mountain retreats to craftsman-style estates, we design and build custom homes tailored to Asheville\u2019s terrain and your lifestyle.",
     href: "/services/custom-homes",
-    image: "/optimized/green-river/modern-house-with-trees-and-stone-path-1200.webp",
+    image: "/optimized/green-river/modern-house-with-trees-and-stone-path.jpg",
   },
   {
     title: "Remodeling",
     body: "Kitchens, bathrooms, and whole-home renovations that modernize your space while preserving its character.",
     href: "/services/remodeling",
-    image: "/optimized/crown-point/open-kitchen-with-island-and-stone-fireplace-1200.webp",
+    image: "/optimized/crown-point/open-kitchen-with-island-and-stone-fireplace.jpg",
   },
   {
     title: "Home Additions",
     body: "Seamless expansions \u2014 extra bedrooms, sunrooms, second stories \u2014 that blend naturally with your existing home.",
     href: "/services/additions",
-    image: "/optimized/23-woodbine-rd/IMG_20250902_143142038_HDR-1200.webp",
+    image: "/optimized/23-woodbine-rd/modern-kitchen-with-island-and-staircase.jpg",
   },
   {
     title: "ICF Construction",
     body: "One of the few ICF-experienced builders in Western NC. Stronger walls, lower energy bills, and superior comfort.",
     href: "/services/icf-construction",
-    image: "/optimized/breezeway/contemporary-house-exterior-with-large-windows-1200.webp",
+    image: "/optimized/breezeway/modern-house-with-large-windows-at-dusk.jpg",
   },
   {
     title: "Construction Consulting",
     body: "Expert guidance on budgeting, site evaluation, permitting, and project planning before you break ground.",
     href: "/services/consulting",
-    image: "/optimized/dads/195-meadow-creek-dr-003.webp",
+    image: "/optimized/195-meadow-creek/house-with-stone-facade-and-small-porch.jpg",
   },
 ];
 
@@ -86,56 +86,56 @@ const projects = [
     location: "Weaverville",
     type: "Custom Home",
     slug: "meadow-creek",
-    image: "/optimized/dads/195-meadow-creek-dr-001.webp",
+    image: "/optimized/195-meadow-creek/exterior-view-of-a-cozy-house-with-a-porch.jpg",
   },
   {
     title: "The Breezeway",
     location: "South Asheville",
     type: "Custom Home",
     slug: "breezeway",
-    image: "/optimized/breezeway/contemporary-house-exterior-with-large-windows-1200.webp",
+    image: "/optimized/breezeway/modern-house-with-large-windows-at-dusk.jpg",
   },
   {
     title: "Green River Modern",
     location: "Green River, NC",
     type: "Custom Home",
     slug: "green-river",
-    image: "/optimized/green-river/modern-house-with-trees-and-stone-path-1200.webp",
+    image: "/optimized/green-river/modern-house-with-trees-and-stone-path.jpg",
   },
   {
     title: "Crown Pointe Remodel",
     location: "Asheville",
     type: "Whole Home Remodel",
     slug: "crown-pointe",
-    image: "/optimized/crown-point/open-kitchen-with-island-and-stone-fireplace-1200.webp",
+    image: "/optimized/crown-point/open-kitchen-with-island-and-stone-fireplace.jpg",
   },
   {
     title: "Woodbine Road",
     location: "Asheville",
     type: "Custom Spec",
     slug: "woodbine-road",
-    image: "/optimized/23-woodbine-rd/23-Woodbine-Rd-1200.webp",
+    image: "/optimized/23-woodbine-rd/modern-home-with-wooden-accents-and-large-windows.jpg",
   },
   {
     title: "Preston Court",
     location: "Weaverville",
     type: "Whole Home Remodel",
     slug: "preston-court",
-    image: "/optimized/preston-ct/EA_03795-Medium-1200.webp",
+    image: "/optimized/preston-ct/EA_03795-Medium.jpg",
   },
   {
     title: "Duck Drive",
     location: "Mars Hill",
     type: "Spec Home",
     slug: "duck-drive",
-    image: "/optimized/duck-dr/cozy-cottage-with-wooden-porch-and-lush-greenery-1200.webp",
+    image: "/optimized/duck-dr/cozy-cottage-with-wooden-porch-and-lush-greenery.jpg",
   },
   {
     title: "Covey Drive",
     location: "Weaverville",
     type: "Custom Home",
     slug: "covey-drive",
-    image: "/optimized/90-covey-dr/stone-exterior-house-with-gabled-roof-1200.webp",
+    image: "/optimized/90-covey-dr/stone-exterior-house-with-gabled-roof.jpg",
   },
 ];
 
@@ -209,7 +209,7 @@ export default function Page() {
                 <div className="br-hero-media">
                   <div className="br-hero-image-wrap">
                     <Image
-                      src="/optimized/dads/195-meadow-creek-dr-001.webp"
+                      src="/optimized/195-meadow-creek/exterior-view-of-a-cozy-house-with-a-porch.jpg"
                       alt="Custom mountain home with stone chimney and covered porch built by Blue Ridge Homes in Weaverville NC"
                       fill
                       priority
@@ -350,7 +350,7 @@ export default function Page() {
                   <div className="br-image-stack br-commitment-visuals">
                     <div className="br-frame br-frame-tall">
                       <Image
-                        src="/optimized/23-woodbine-rd/IMG_20250902_143142038_HDR-1200.webp"
+                        src="/optimized/23-woodbine-rd/modern-kitchen-with-island-and-staircase.jpg"
                         alt="Stone and wood porch detail on a Blue Ridge Homes project"
                         fill
                         className="br-frame-image"
@@ -359,7 +359,7 @@ export default function Page() {
                     </div>
                     <div className="br-frame br-frame-wide">
                       <Image
-                        src="/optimized/23-woodbine-rd/IMG_20250902_143932078_HDR-1200.webp"
+                        src="/optimized/23-woodbine-rd/rooftop-deck-with-seating-and-trees.jpg"
                         alt="Mountain view from stone patio at a Blue Ridge home"
                         fill
                         className="br-frame-image"
