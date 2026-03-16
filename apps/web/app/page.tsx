@@ -139,67 +139,9 @@ const projects = [
   },
 ];
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "HomeAndConstructionBusiness",
-  name: "Blue Ridge Homes",
-  description:
-    "Custom home builder, remodeling contractor, and ICF construction specialist serving Asheville, Buncombe County, Henderson County, and Haywood County for over 30 years.",
-  url: "https://www.brhomesnc.com",
-  telephone: "(828) 712-2867",
-  address: {
-    "@type": "PostalAddress",
-    addressLocality: "Asheville",
-    addressRegion: "NC",
-    postalCode: "28801",
-    addressCountry: "US",
-  },
-  geo: {
-    "@type": "GeoCoordinates",
-    latitude: 35.5951,
-    longitude: -82.5515,
-  },
-  areaServed: [
-    { "@type": "AdministrativeArea", name: "Buncombe County, NC" },
-    { "@type": "AdministrativeArea", name: "Henderson County, NC" },
-    { "@type": "AdministrativeArea", name: "Haywood County, NC" },
-    { "@type": "City", name: "Asheville, NC" },
-  ],
-  priceRange: "$$",
-  foundingDate: "2004",
-  founder: { "@type": "Person", name: "Brian Barrett" },
-  numberOfEmployees: { "@type": "QuantitativeValue", minValue: 1, maxValue: 10 },
-  knowsAbout: [
-    "Custom Home Building",
-    "Home Remodeling",
-    "ICF Construction",
-    "Home Additions",
-    "Kitchen Renovation",
-    "Bathroom Renovation",
-    "Construction Consulting",
-    "Mountain Home Construction",
-  ],
-  hasOfferCatalog: {
-    "@type": "OfferCatalog",
-    name: "Services",
-    itemListElement: [
-      { "@type": "Offer", itemOffered: { "@type": "Service", name: "Custom Home Building" } },
-      { "@type": "Offer", itemOffered: { "@type": "Service", name: "Home Remodeling" } },
-      { "@type": "Offer", itemOffered: { "@type": "Service", name: "ICF Construction" } },
-      { "@type": "Offer", itemOffered: { "@type": "Service", name: "Home Additions" } },
-      { "@type": "Offer", itemOffered: { "@type": "Service", name: "Construction Consulting" } },
-    ],
-  },
-};
-
 export default function Page() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-
       <main className="br-page">
         <div className="br-shell br-marble">
           <div className="br-content">

@@ -53,6 +53,101 @@ export const metadata: Metadata = {
   },
 };
 
+const businessJsonLd = {
+  "@context": "https://schema.org",
+  "@type": ["HomeBuilder", "GeneralContractor"],
+  name: "Blue Ridge Homes",
+  url: "https://brhomesnc.com",
+  telephone: "+1-828-712-2867",
+  email: "brhomesnc@gmail.com",
+  description:
+    "Custom home builder, remodeling contractor, and licensed general contractor serving Asheville and Western North Carolina. Over 30 years of construction experience.",
+  image: "https://brhomesnc.com/brand/logo-clean.png",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Asheville",
+    addressRegion: "NC",
+    postalCode: "28804",
+    addressCountry: "US",
+  },
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: 35.5951,
+    longitude: -82.5515,
+  },
+  areaServed: [
+    { "@type": "AdministrativeArea", name: "Buncombe County, NC" },
+    { "@type": "AdministrativeArea", name: "Henderson County, NC" },
+    { "@type": "AdministrativeArea", name: "Haywood County, NC" },
+    { "@type": "City", name: "Asheville, NC" },
+    { "@type": "City", name: "Weaverville, NC" },
+    { "@type": "City", name: "Hendersonville, NC" },
+    { "@type": "City", name: "Black Mountain, NC" },
+    { "@type": "City", name: "Mills River, NC" },
+    { "@type": "City", name: "Brevard, NC" },
+  ],
+  foundingDate: "2004",
+  priceRange: "$$",
+  openingHoursSpecification: {
+    "@type": "OpeningHoursSpecification",
+    dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    opens: "08:00",
+    closes: "17:00",
+  },
+  hasCredential: {
+    "@type": "EducationalOccupationalCredential",
+    credentialCategory: "license",
+    name: "NC General Contractor License #56328",
+  },
+  hasOfferCatalog: {
+    "@type": "OfferCatalog",
+    name: "Services",
+    itemListElement: [
+      {
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name: "Custom Homes",
+          url: "https://brhomesnc.com/services/custom-homes",
+        },
+      },
+      {
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name: "Remodeling",
+          url: "https://brhomesnc.com/services/remodeling",
+        },
+      },
+      {
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name: "Home Additions",
+          url: "https://brhomesnc.com/services/additions",
+        },
+      },
+      {
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name: "ICF Construction",
+          url: "https://brhomesnc.com/services/icf-construction",
+        },
+      },
+      {
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name: "Construction Consulting",
+          url: "https://brhomesnc.com/services/consulting",
+        },
+      },
+    ],
+  },
+  sameAs: [],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -61,6 +156,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${cormorantGaramond.variable} ${inter.variable} font-sans antialiased`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(businessJsonLd) }}
+        />
         <SiteShell>{children}</SiteShell>
       </body>
     </html>
