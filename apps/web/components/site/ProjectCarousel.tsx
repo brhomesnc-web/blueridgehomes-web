@@ -75,7 +75,7 @@ export default function ProjectCarousel({ projects }: { projects: Project[] }) {
               fill
               className="br-coverflow-image"
               sizes="(max-width: 768px) 70vw, 420px"
-              priority={i === 0}
+              loading="lazy"
             />
             <div className="br-coverflow-overlay" />
             <div className="br-coverflow-caption">

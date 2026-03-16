@@ -15,7 +15,7 @@ export default function Header() {
             height={88}
             className="br-logo-img"
             sizes="(max-width: 900px) 182px, 292px"
-            priority
+            fetchPriority="low"
           />
         </Link>
         <nav className="br-nav" aria-label="Primary">
