@@ -394,6 +394,22 @@ export default function Page() {
               </div>
             </section>
 
+            {/* ── Areas We Serve ── */}
+            <section className="br-section">
+              <div className="br-container" style={{ textAlign: "center" }}>
+                <h2 className="br-title br-title-center">Areas We Serve</h2>
+                <p className="br-lead" style={{ maxWidth: 720, margin: "14px auto 0" }}>
+                  We build custom homes and handle remodeling projects across Western North Carolina, including{" "}
+                  <Link href="/service-areas/weaverville">Weaverville</Link>,{" "}
+                  <Link href="/service-areas/hendersonville">Hendersonville</Link>,{" "}
+                  <Link href="/service-areas/black-mountain">Black Mountain</Link>,{" "}
+                  <Link href="/service-areas/mills-river">Mills River</Link>, and{" "}
+                  <Link href="/service-areas/brevard">Brevard</Link>.{" "}
+                  <Link href="/service-areas">View all service areas &rarr;</Link>
+                </p>
+              </div>
+            </section>
+
             {/* ── Footer CTA ── */}
             <div className="br-closing-sequence">
               <section id="contact" className="br-section br-cta br-closing-cta">

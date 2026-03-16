@@ -1,8 +1,4 @@
-import fs from "fs";
-import path from "path";
-import matter from "gray-matter";
-
-const postsDirectory = path.join(process.cwd(), "content/blog");
+import getDb from "./db";
 
 export type BlogPost = {
   slug: string;
@@ -14,48 +10,52 @@ export type BlogPost = {
   content: string;
 };
 
-export function getAllPosts(): BlogPost[] {
-  if (!fs.existsSync(postsDirectory)) return [];
-  const files = fs.readdirSync(postsDirectory);
-  return files
-    .filter((f) => f.endsWith(".md"))
-    .map((f) => {
-      const slug = f.replace(/\.md$/, "");
-      const raw = fs.readFileSync(path.join(postsDirectory, f), "utf8");
-      const { data, content } = matter(raw);
-      return {
-        slug,
-        title: data.title || "",
-        date: data.date || "",
-        description: data.description || "",
-        featuredImage: data.featuredImage || "",
-        tags: data.tags || [],
-        content,
-      };
-    })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-}
+type DbPost = {
+  slug: string;
+  title: string;
+  date: string;
+  description: string;
+  content: string;
+  featured_image: string;
+  tags: string;
+  published: number;
+};
 
-export function getPostBySlug(slug: string): BlogPost | null {
-  const filePath = path.join(postsDirectory, `${slug}.md`);
-  if (!fs.existsSync(filePath)) return null;
-  const raw = fs.readFileSync(filePath, "utf8");
-  const { data, content } = matter(raw);
+function toPost(row: DbPost): BlogPost {
+  let tags: string[] = [];
+  try { tags = JSON.parse(row.tags); } catch {}
   return {
-    slug,
-    title: data.title || "",
-    date: data.date || "",
-    description: data.description || "",
-    featuredImage: data.featuredImage || "",
-    tags: data.tags || [],
-    content,
+    slug: row.slug,
+    title: row.title,
+    date: row.date,
+    description: row.description,
+    featuredImage: row.featured_image,
+    tags,
+    content: row.content,
   };
 }
 
+export function getAllPosts(): BlogPost[] {
+  const db = getDb();
+  const rows = db.prepare(
+    "SELECT * FROM blog_posts WHERE published = 1 ORDER BY date DESC"
+  ).all() as DbPost[];
+  return rows.map(toPost);
+}
+
+export function getPostBySlug(slug: string): BlogPost | null {
+  const db = getDb();
+  const row = db.prepare(
+    "SELECT * FROM blog_posts WHERE slug = ? AND published = 1"
+  ).get(slug) as DbPost | undefined;
+  if (!row) return null;
+  return toPost(row);
+}
+
 export function getAllSlugs(): string[] {
-  if (!fs.existsSync(postsDirectory)) return [];
-  return fs
-    .readdirSync(postsDirectory)
-    .filter((f) => f.endsWith(".md"))
-    .map((f) => f.replace(/\.md$/, ""));
+  const db = getDb();
+  const rows = db.prepare(
+    "SELECT slug FROM blog_posts WHERE published = 1"
+  ).all() as { slug: string }[];
+  return rows.map((r) => r.slug);
 }

@@ -43,9 +43,14 @@ export default function Footer() {
               <span>Buncombe County</span>
               <span>Henderson County</span>
               <span>Haywood County</span>
-              <span>Asheville &bull; Weaverville &bull; Black Mountain</span>
-              <span>Hendersonville &bull; Brevard &bull; Waynesville</span>
             </div>
+            <nav className="br-footer-nav" style={{ marginTop: 8 }}>
+              <Link href="/service-areas/weaverville">Weaverville</Link>
+              <Link href="/service-areas/hendersonville">Hendersonville</Link>
+              <Link href="/service-areas/black-mountain">Black Mountain</Link>
+              <Link href="/service-areas/mills-river">Mills River</Link>
+              <Link href="/service-areas/brevard">Brevard</Link>
+            </nav>
           </div>
         </div>
 

@@ -242,6 +242,21 @@ export default function AdditionsPage() {
             </div>
           </section>
 
+          {/* Service Areas */}
+          <section className="br-section" style={{ paddingBottom: 0 }}>
+            <div className="br-container">
+              <p className="br-lead" style={{ textAlign: "center", maxWidth: 760, margin: "0 auto" }}>
+                We build home additions in{" "}
+                <Link href="/service-areas/weaverville">Weaverville</Link>,{" "}
+                <Link href="/service-areas/hendersonville">Hendersonville</Link>,{" "}
+                <Link href="/service-areas/black-mountain">Black Mountain</Link>,{" "}
+                <Link href="/service-areas/mills-river">Mills River</Link>,{" "}
+                <Link href="/service-areas/brevard">Brevard</Link>,{" "}
+                and throughout Western North Carolina.
+              </p>
+            </div>
+          </section>
+
           {/* CTA */}
           <div className="br-closing-sequence">
             <section className="br-section br-cta br-closing-cta">

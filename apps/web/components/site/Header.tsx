@@ -24,10 +24,9 @@ export default function Header() {
           <Link href="/portfolio">Portfolio</Link>
           <Link href="/blog">Blog</Link>
           <Link href="/about">About</Link>
-          <Link href="/contact">Contact Us</Link>
         </nav>
         <Link href="/contact" className="br-header-cta">
-          Start the Conversation
+          Contact Us
         </Link>
         <button
           className="br-menu-toggle"
