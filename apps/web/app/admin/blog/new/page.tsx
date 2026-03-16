@@ -1,6 +1,7 @@
 "use client";
 import ImagePicker from "@/components/admin/ImagePicker";
-import { useState } from "react";
+import Markdown from "react-markdown";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function AdminBlogNew() {
@@ -15,6 +16,10 @@ export default function AdminBlogNew() {
   const [published, setPublished] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [inlineImage, setInlineImage] = useState("");
+  const [showInlinePicker, setShowInlinePicker] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   function generateSlug(t: string) {
     return t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -25,6 +30,26 @@ export default function AdminBlogNew() {
     if (!slug || slug === generateSlug(title)) {
       setSlug(generateSlug(val));
     }
+  }
+
+  function insertImageAtCursor(path: string) {
+    const ta = textareaRef.current;
+    if (!ta) {
+      setContent((prev) => prev + `\n![image description](${path})\n`);
+      return;
+    }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const tag = `![image description](${path})`;
+    const before = content.slice(0, start);
+    const after = content.slice(end);
+    const newContent = before + tag + after;
+    setContent(newContent);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + tag.length;
+      ta.setSelectionRange(pos, pos);
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -61,6 +86,10 @@ export default function AdminBlogNew() {
     padding: "12px 24px", borderRadius: 4, border: "none",
     background: "#6b4226", color: "#fff", cursor: "pointer", fontSize: 15, fontWeight: 500,
   };
+  const toolbarBtn: React.CSSProperties = {
+    padding: "6px 14px", borderRadius: 4, border: "1px solid #d8cdc0",
+    background: "#fff", cursor: "pointer", fontSize: 13, color: "#3d3228",
+  };
 
   return (
     <div style={containerStyle}>
@@ -95,8 +124,40 @@ export default function AdminBlogNew() {
           <input style={inputStyle} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="custom homes, asheville, cost guide" />
         </div>
         <div style={fieldStyle}>
-          <label style={labelStyle}>Content (Markdown)</label>
-          <textarea style={{ ...inputStyle, minHeight: 400, fontFamily: "monospace", lineHeight: 1.6 }} value={content} onChange={(e) => setContent(e.target.value)} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Content (Markdown)</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" style={toolbarBtn} onClick={() => setShowInlinePicker(true)}>
+                Insert Image
+              </button>
+              <button type="button" style={{ ...toolbarBtn, background: showPreview ? "#6b4226" : "#fff", color: showPreview ? "#fff" : "#3d3228" }} onClick={() => setShowPreview(!showPreview)}>
+                {showPreview ? "Hide Preview" : "Preview"}
+              </button>
+            </div>
+          </div>
+          <textarea ref={textareaRef} style={{ ...inputStyle, minHeight: 400, fontFamily: "monospace", lineHeight: 1.6 }} value={content} onChange={(e) => setContent(e.target.value)} />
+          {showInlinePicker && (
+            <div style={{ marginTop: 8, padding: 12, border: "1px solid #d8cdc0", borderRadius: 4, background: "#faf7f4" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "#3d3228" }}>Pick an image to insert</span>
+                <button type="button" onClick={() => { setShowInlinePicker(false); setInlineImage(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#999", fontSize: 16 }}>×</button>
+              </div>
+              <ImagePicker value={inlineImage} onChange={(path) => {
+                setInlineImage(path);
+                insertImageAtCursor(path);
+                setShowInlinePicker(false);
+                setInlineImage("");
+              }} />
+            </div>
+          )}
+          {showPreview && (
+            <div style={{ marginTop: 12, padding: "20px 24px", border: "1px solid #d8cdc0", borderRadius: 4, background: "#fff", minHeight: 200 }}>
+              <div style={{ fontSize: 11, color: "#a89a8c", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>Preview</div>
+              <div className="br-blog-prose" style={{ fontSize: 15, lineHeight: 1.8, color: "#1e1812" }}>
+                {content ? <Markdown>{content}</Markdown> : <p style={{ color: "#a89a8c", fontStyle: "italic" }}>Start typing to see preview...</p>}
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ ...fieldStyle, display: "flex", alignItems: "center", gap: 8 }}>
           <input type="checkbox" id="published" checked={published} onChange={(e) => setPublished(e.target.checked)} />

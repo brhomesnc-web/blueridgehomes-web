@@ -114,12 +114,7 @@ export default function ContactPage() {
           {/* Two-column: Form + Contact Info */}
           <section className="br-section">
             <div className="br-container">
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 360px",
-                gap: 48,
-                alignItems: "start",
-              }}>
+              <div className="br-contact-grid">
 
                 {/* Form */}
                 <div>
@@ -192,11 +187,7 @@ export default function ContactPage() {
                 </div>
 
                 {/* Contact Info Sidebar */}
-                <div style={{
-                  background: "var(--br-stone)",
-                  padding: "32px 28px",
-                  borderTop: "3px solid var(--br-gold)",
-                }}>
+                <div className="br-contact-sidebar">
                   <h3 style={{
                     fontFamily: "var(--font-serif)",
                     fontSize: "1.3rem",

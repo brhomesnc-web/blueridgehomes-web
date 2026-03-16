@@ -68,12 +68,7 @@ function notificationHtml(name: string, email: string, phone: string, projectTyp
 
           <table cellpadding="0" cellspacing="0" style="margin-top:8px;">
             <tr>
-              <td style="background:#6b4226;border-radius:4px;padding:0;">
-                <a href="mailto:${email}" style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-size:14px;font-family:Arial,sans-serif;font-weight:600;">
-                  Reply to ${name}
-                </a>
-              </td>
-              <td style="padding-left:12px;">
+              <td>
                 <a href="https://brhomesnc.com/admin/submissions" style="display:inline-block;padding:12px 24px;color:#6b4226;text-decoration:none;font-size:14px;font-family:Arial,sans-serif;border:1px solid #d8cdc0;border-radius:4px;">
                   View in Admin
                 </a>
