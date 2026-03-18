@@ -50,6 +50,14 @@ export default function ContactPage() {
       }
 
       setState("success");
+
+      if (typeof window.gtag === "function") {
+        window.gtag("event", "generate_lead", {
+          event_category: "Contact",
+          event_label: "Contact Form Submission",
+          value: 1,
+        });
+      }
     } catch (err) {
       setState("error");
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");

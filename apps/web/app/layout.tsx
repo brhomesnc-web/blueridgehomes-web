@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import SiteShell from "@/components/site/SiteShell";
 import "./globals.css";
+
+const GA_MEASUREMENT_ID = "G-5J428WDEE8";
 
 const cormorantGaramond = Cormorant_Garamond({
   subsets: ["latin"],
@@ -161,6 +164,18 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(businessJsonLd) }}
         />
         <SiteShell>{children}</SiteShell>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
       </body>
     </html>
   );
