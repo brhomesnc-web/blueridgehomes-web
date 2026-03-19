@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { query } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import nodemailer from "nodemailer";
 
@@ -13,7 +13,7 @@ function replyHtml(customerName: string, replyText: string): string {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4eee7;padding:32px 16px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-        
+
         <!-- Header -->
         <tr><td style="background:#1e1812;padding:24px 32px;">
           <h1 style="margin:0;color:#c9a96e;font-size:20px;font-weight:600;font-family:Georgia,serif;letter-spacing:0.02em;">
@@ -28,7 +28,7 @@ function replyHtml(customerName: string, replyText: string): string {
           <p style="margin:0 0 24px;color:#1e1812;font-size:15px;line-height:1.7;font-family:Arial,sans-serif;">
             Thank you for reaching out to Blue Ridge Homes. Here's a response to your inquiry:
           </p>
-          
+
           <div style="background:#faf7f4;border-left:3px solid #c9a96e;padding:16px 20px;border-radius:0 4px 4px 0;margin-bottom:24px;">
             <p style="margin:0;color:#1e1812;font-size:15px;line-height:1.7;font-family:Arial,sans-serif;">${escapedReply}</p>
           </div>
@@ -83,14 +83,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!reply_text?.trim()) {
     return NextResponse.json({ error: "Reply text is required" }, { status: 400 });
   }
-  const db = getDb();
-  const submission = db.prepare("SELECT * FROM submissions WHERE id = ?").get(id) as Record<string, unknown> | undefined;
-  if (!submission) {
+  const { rows } = await query("SELECT * FROM submissions WHERE id = $1", [id]);
+  if (rows.length === 0) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  const submission = rows[0];
 
   // Save reply to DB
-  db.prepare("UPDATE submissions SET reply_text = ?, replied_at = datetime('now'), status = 'replied' WHERE id = ?").run(reply_text, id);
+  await query("UPDATE submissions SET reply_text = $1, replied_at = NOW(), status = 'replied' WHERE id = $2", [reply_text, id]);
 
   // Send email
   let emailSent = false;

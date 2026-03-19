@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { query } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
@@ -8,24 +8,33 @@ export async function GET(request: NextRequest) {
   }
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
-  const db = getDb();
-  let query = "SELECT id, name, email, phone, project_type, message, created_at, read, status, replied_at FROM submissions";
+
+  let sql = "SELECT id, name, email, phone, project_type, message, created_at, read, status, replied_at FROM submissions";
   const params: string[] = [];
+
   if (status && status !== "all") {
-    query += " WHERE status = ?";
+    sql += " WHERE status = $1";
     params.push(status);
   }
-  query += " ORDER BY created_at DESC";
-  const submissions = db.prepare(query).all(...params);
+  sql += " ORDER BY created_at DESC";
+
+  const { rows: submissions } = await query(sql, params);
+
+  const countResult = await Promise.all([
+    query("SELECT COUNT(*) as c FROM submissions"),
+    query("SELECT COUNT(*) as c FROM submissions WHERE status = 'new'"),
+    query("SELECT COUNT(*) as c FROM submissions WHERE status = 'read'"),
+    query("SELECT COUNT(*) as c FROM submissions WHERE status = 'replied'"),
+    query("SELECT COUNT(*) as c FROM submissions WHERE status = 'archived'"),
+  ]);
+
   const counts = {
-    all: db.prepare("SELECT COUNT(*) as c FROM submissions").get() as { c: number },
-    new: db.prepare("SELECT COUNT(*) as c FROM submissions WHERE status = 'new'").get() as { c: number },
-    read: db.prepare("SELECT COUNT(*) as c FROM submissions WHERE status = 'read'").get() as { c: number },
-    replied: db.prepare("SELECT COUNT(*) as c FROM submissions WHERE status = 'replied'").get() as { c: number },
-    archived: db.prepare("SELECT COUNT(*) as c FROM submissions WHERE status = 'archived'").get() as { c: number },
+    all: Number(countResult[0].rows[0].c),
+    new: Number(countResult[1].rows[0].c),
+    read: Number(countResult[2].rows[0].c),
+    replied: Number(countResult[3].rows[0].c),
+    archived: Number(countResult[4].rows[0].c),
   };
-  return NextResponse.json({
-    submissions,
-    counts: { all: counts.all.c, new: counts.new.c, read: counts.read.c, replied: counts.replied.c, archived: counts.archived.c },
-  });
+
+  return NextResponse.json({ submissions, counts });
 }

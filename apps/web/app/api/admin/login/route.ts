@@ -10,7 +10,7 @@ import {
 } from "@/lib/auth";
 
 export async function POST(request: Request) {
-  if (!isSetupComplete()) {
+  if (!(await isSetupComplete())) {
     return NextResponse.json({ error: "Admin not set up yet" }, { status: 403 });
   }
 
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Password and authenticator code required" }, { status: 400 });
   }
 
-  const config = getAdminConfig();
+  const config = await getAdminConfig();
   if (!config) {
     return NextResponse.json({ error: "Admin not configured" }, { status: 500 });
   }

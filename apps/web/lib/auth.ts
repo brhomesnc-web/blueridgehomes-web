@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { generateSecret, generateURI, verifySync } from "otplib";
-import getDb from "./db";
+import { query } from "./db";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET || "brh-admin-secret-change-in-production-2026"
@@ -58,19 +58,25 @@ export async function getSession(): Promise<boolean> {
   return verifySession(session.value);
 }
 
-export function getAdminConfig() {
-  const db = getDb();
-  return db.prepare("SELECT * FROM admin_config WHERE id = 1").get() as {
+export async function getAdminConfig() {
+  const { rows } = await query<{
     id: number;
     password_hash: string;
     totp_secret: string;
-    setup_complete: number;
+    setup_complete: boolean;
+    created_at: string;
+  }>("SELECT * FROM admin_config WHERE id = 1");
+  return rows[0] as {
+    id: number;
+    password_hash: string;
+    totp_secret: string;
+    setup_complete: boolean;
   } | undefined;
 }
 
-export function isSetupComplete(): boolean {
-  const config = getAdminConfig();
-  return config?.setup_complete === 1;
+export async function isSetupComplete(): Promise<boolean> {
+  const config = await getAdminConfig();
+  return config?.setup_complete === true;
 }
 
 export { SESSION_COOKIE, SESSION_DURATION };

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import getDb from "@/lib/db";
+import { query } from "@/lib/db";
 
 function notificationHtml(name: string, email: string, phone: string, projectType: string, message: string): string {
   return `
@@ -11,7 +11,7 @@ function notificationHtml(name: string, email: string, phone: string, projectTyp
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4eee7;padding:32px 16px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-        
+
         <!-- Header -->
         <tr><td style="background:#1e1812;padding:24px 32px;">
           <h1 style="margin:0;color:#c9a96e;font-size:20px;font-weight:600;font-family:Georgia,serif;letter-spacing:0.02em;">
@@ -25,7 +25,7 @@ function notificationHtml(name: string, email: string, phone: string, projectTyp
           <h2 style="margin:0 0 20px;color:#1e1812;font-size:18px;font-family:Georgia,serif;">
             ${name} sent a message
           </h2>
-          
+
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
             <tr>
               <td style="padding:10px 0;border-bottom:1px solid #e8e0d6;width:120px;vertical-align:top;">
@@ -99,19 +99,58 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const { name, email, phone, projectType, message } = body;
+  // Honeypot: silently accept if bot filled the hidden field
+  if (body.website) {
+    return NextResponse.json({ success: true });
+  }
+
+  const { name, email, phone, projectType, message, cfTurnstileToken } = body;
   if (!name || !email || !projectType || !message) {
     return NextResponse.json(
       { error: "Name, email, project type, and message are required." },
       { status: 400 }
     );
   }
+
+  // Verify Cloudflare Turnstile token
+  if (!cfTurnstileToken) {
+    return NextResponse.json(
+      { error: "Verification failed. Please try again." },
+      { status: 400 }
+    );
+  }
+  try {
+    const turnstileRes = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          secret: process.env.TURNSTILE_SECRET_KEY,
+          response: cfTurnstileToken,
+        }),
+      }
+    );
+    const turnstileData = await turnstileRes.json();
+    if (!turnstileData.success) {
+      return NextResponse.json(
+        { error: "Verification failed. Please try again." },
+        { status: 400 }
+      );
+    }
+  } catch (err) {
+    console.error("Turnstile verification error:", err);
+    return NextResponse.json(
+      { error: "Verification failed. Please try again." },
+      { status: 400 }
+    );
+  }
   // Store in database
   try {
-    const db = getDb();
-    db.prepare(
-      "INSERT INTO submissions (name, email, phone, project_type, message) VALUES (?, ?, ?, ?, ?)"
-    ).run(name, email, phone || "", projectType, message);
+    await query(
+      "INSERT INTO submissions (name, email, phone, project_type, message) VALUES ($1, $2, $3, $4, $5)",
+      [name, email, phone || "", projectType, message]
+    );
   } catch (err) {
     console.error("Database error:", err);
     return NextResponse.json(

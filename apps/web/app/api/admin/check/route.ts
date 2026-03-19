@@ -3,7 +3,7 @@ import { getSession, isSetupComplete } from "@/lib/auth";
 
 export async function GET() {
   return NextResponse.json({
-    setupComplete: isSetupComplete(),
+    setupComplete: await isSetupComplete(),
     authenticated: await getSession(),
   });
 }

@@ -1,19 +1,57 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import Script from "next/script";
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: string | HTMLElement, options: Record<string, unknown>) => string;
+      reset: (widgetId: string) => void;
+    };
+  }
+}
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
 export default function ContactPage() {
   const [state, setState] = useState<FormState>("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileWidgetId = useRef<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const turnstileReady = useRef(false);
   const timestampRef = useRef("");
 
   useEffect(() => {
     timestampRef.current = Date.now().toString();
   }, []);
+
+  const renderTurnstile = useCallback(() => {
+    if (
+      !turnstileReady.current ||
+      !turnstileRef.current ||
+      turnstileWidgetId.current !== null ||
+      !window.turnstile
+    )
+      return;
+    turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
+      sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+      appearance: "managed",
+      callback: (token: string) => setTurnstileToken(token),
+      "expired-callback": () => setTurnstileToken(""),
+    });
+  }, []);
+
+  useEffect(() => {
+    // If the script loaded before the component mounted
+    if (window.turnstile) {
+      turnstileReady.current = true;
+      renderTurnstile();
+    }
+  }, [renderTurnstile]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,6 +66,7 @@ export default function ContactPage() {
       projectType: (form.elements.namedItem("projectType") as HTMLSelectElement).value,
       message: (form.elements.namedItem("message") as HTMLTextAreaElement).value.trim(),
       website: (form.elements.namedItem("website") as HTMLInputElement).value,
+      cfTurnstileToken: turnstileToken,
       _t: timestampRef.current,
     };
 
@@ -61,6 +100,11 @@ export default function ContactPage() {
     } catch (err) {
       setState("error");
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      // Reset Turnstile so user can retry
+      setTurnstileToken("");
+      if (window.turnstile && turnstileWidgetId.current !== null) {
+        window.turnstile.reset(turnstileWidgetId.current);
+      }
     }
   }
 
@@ -183,10 +227,12 @@ export default function ContactPage() {
                       <textarea id="message" name="message" required className="br-form-textarea" placeholder="Tell us about your project, your property, your timeline..." />
                     </div>
 
+                    <div ref={turnstileRef} style={{ marginTop: 8, marginBottom: 8 }} />
+
                     <button
                       type="submit"
                       className="br-button br-button-primary"
-                      disabled={state === "submitting"}
+                      disabled={state === "submitting" || !turnstileToken}
                       style={{ marginTop: 8, width: "100%" }}
                     >
                       {state === "submitting" ? "Sending..." : "Send Message"}
@@ -271,6 +317,14 @@ export default function ContactPage() {
 
         </div>
       </div>
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+        strategy="afterInteractive"
+        onReady={() => {
+          turnstileReady.current = true;
+          renderTurnstile();
+        }}
+      />
     </main>
   );
 }

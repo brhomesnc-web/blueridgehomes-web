@@ -2,8 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { getAllPosts } from "@/lib/blog";
 
-export default function BlogPage() {
-  const posts = getAllPosts();
+export default async function BlogPage() {
+  const posts = await getAllPosts();
 
   return (
     <main>
@@ -67,7 +67,7 @@ export default function BlogPage() {
                 </time>
                 <h2 className="br-blog-card-title">{post.title}</h2>
                 <p className="br-blog-card-desc">{post.description}</p>
-                <span className="br-blog-read-more">Read more \u2192</span>
+                <span className="br-blog-read-more">Read more →</span>
               </div>
             </Link>
           ))}

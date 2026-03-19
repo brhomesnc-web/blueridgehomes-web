@@ -1,4 +1,4 @@
-import getDb from "./db";
+import { query } from "./db";
 
 export type BlogPost = {
   slug: string;
@@ -17,13 +17,18 @@ type DbPost = {
   description: string;
   content: string;
   featured_image: string;
-  tags: string;
-  published: number;
+  tags: string | string[];
+  published: boolean;
 };
 
 function toPost(row: DbPost): BlogPost {
+  // pg driver returns JSONB as parsed object; handle both for safety
   let tags: string[] = [];
-  try { tags = JSON.parse(row.tags); } catch {}
+  if (Array.isArray(row.tags)) {
+    tags = row.tags;
+  } else if (typeof row.tags === "string") {
+    try { tags = JSON.parse(row.tags); } catch {}
+  }
   return {
     slug: row.slug,
     title: row.title,
@@ -35,27 +40,25 @@ function toPost(row: DbPost): BlogPost {
   };
 }
 
-export function getAllPosts(): BlogPost[] {
-  const db = getDb();
-  const rows = db.prepare(
-    "SELECT * FROM blog_posts WHERE published = 1 ORDER BY date DESC"
-  ).all() as DbPost[];
+export async function getAllPosts(): Promise<BlogPost[]> {
+  const { rows } = await query<DbPost>(
+    "SELECT * FROM blog_posts WHERE published = TRUE ORDER BY date DESC"
+  );
   return rows.map(toPost);
 }
 
-export function getPostBySlug(slug: string): BlogPost | null {
-  const db = getDb();
-  const row = db.prepare(
-    "SELECT * FROM blog_posts WHERE slug = ? AND published = 1"
-  ).get(slug) as DbPost | undefined;
-  if (!row) return null;
-  return toPost(row);
+export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
+  const { rows } = await query<DbPost>(
+    "SELECT * FROM blog_posts WHERE slug = $1 AND published = TRUE",
+    [slug]
+  );
+  if (rows.length === 0) return null;
+  return toPost(rows[0]);
 }
 
-export function getAllSlugs(): string[] {
-  const db = getDb();
-  const rows = db.prepare(
-    "SELECT slug FROM blog_posts WHERE published = 1"
-  ).all() as { slug: string }[];
+export async function getAllSlugs(): Promise<string[]> {
+  const { rows } = await query<{ slug: string }>(
+    "SELECT slug FROM blog_posts WHERE published = TRUE"
+  );
   return rows.map((r) => r.slug);
 }

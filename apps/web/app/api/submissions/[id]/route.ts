@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { query } from "@/lib/db";
 
 export async function DELETE(
   _request: NextRequest,
@@ -7,9 +7,8 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    const db = getDb();
-    const result = db.prepare("DELETE FROM submissions WHERE id = ?").run(id);
-    if (result.changes === 0) {
+    const { rowCount } = await query("DELETE FROM submissions WHERE id = $1", [id]);
+    if (rowCount === 0) {
       return NextResponse.json({ error: "Submission not found." }, { status: 404 });
     }
     return NextResponse.json({ success: true });

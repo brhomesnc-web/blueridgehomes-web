@@ -1,4 +1,4 @@
-import getDb from "./db";
+import { query } from "./db";
 
 export type PortfolioProject = {
   id: number;
@@ -11,34 +11,29 @@ export type PortfolioProject = {
   cover: string;
   images: string[];
   sort_order: number;
-  published: number;
+  published: boolean;
   created_at: string;
   updated_at: string;
 };
 
-type RawProject = Omit<PortfolioProject, "images"> & { images: string };
-
-export function getPublishedProjects(): PortfolioProject[] {
-  const db = getDb();
-  const rows = db.prepare(
-    "SELECT * FROM portfolio_projects WHERE published = 1 ORDER BY sort_order ASC"
-  ).all() as RawProject[];
-  return rows.map((r) => ({ ...r, images: JSON.parse(r.images) }));
+export async function getPublishedProjects(): Promise<PortfolioProject[]> {
+  const result = await query<PortfolioProject>(
+    "SELECT * FROM portfolio_projects WHERE published = true ORDER BY sort_order ASC"
+  );
+  return result.rows;
 }
 
-export function getAllProjects(): PortfolioProject[] {
-  const db = getDb();
-  const rows = db.prepare(
+export async function getAllProjects(): Promise<PortfolioProject[]> {
+  const result = await query<PortfolioProject>(
     "SELECT * FROM portfolio_projects ORDER BY sort_order ASC"
-  ).all() as RawProject[];
-  return rows.map((r) => ({ ...r, images: JSON.parse(r.images) }));
+  );
+  return result.rows;
 }
 
-export function getProjectBySlug(slug: string): PortfolioProject | null {
-  const db = getDb();
-  const row = db.prepare(
-    "SELECT * FROM portfolio_projects WHERE slug = ?"
-  ).get(slug) as RawProject | undefined;
-  if (!row) return null;
-  return { ...row, images: JSON.parse(row.images) };
+export async function getProjectBySlug(slug: string): Promise<PortfolioProject | null> {
+  const result = await query<PortfolioProject>(
+    "SELECT * FROM portfolio_projects WHERE slug = $1",
+    [slug]
+  );
+  return result.rows[0] ?? null;
 }

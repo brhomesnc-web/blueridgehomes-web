@@ -32,6 +32,10 @@ export default function AdminDashboard() {
           <h3 style={{ margin: "0 0 8px", color: "#1e1812" }}>Contact Submissions</h3>
           <p style={{ margin: 0, color: "#a89a8c", fontSize: 14 }}>View messages from the contact form</p>
         </div>
+        <div style={cardStyle} onClick={() => window.location.href = "/marketing/"}>
+          <h3 style={{ margin: "0 0 8px", color: "#1e1812" }}>Marketing Platform</h3>
+          <p style={{ margin: 0, color: "#a89a8c", fontSize: 14 }}>Marketing operations dashboard</p>
+        </div>
         <div style={cardStyle} onClick={() => router.push("/admin/portfolio")}>
           <h3 style={{ margin: "0 0 8px", color: "#1e1812" }}>Portfolio</h3>
           <p style={{ margin: 0, color: "#a89a8c", fontSize: 14 }}>Add, edit, and manage portfolio projects</p>

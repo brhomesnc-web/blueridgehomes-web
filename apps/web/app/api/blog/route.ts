@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { query } from "@/lib/db";
 
 function checkApiKey(request: Request): boolean {
   const key = request.headers.get("x-api-key") || request.headers.get("authorization")?.replace("Bearer ", "");
@@ -10,10 +10,9 @@ function checkApiKey(request: Request): boolean {
 
 // GET /api/blog — list published posts (public, no auth)
 export async function GET() {
-  const db = getDb();
-  const posts = db.prepare(
-    "SELECT slug, title, date, description, featured_image, tags, published FROM blog_posts WHERE published = 1 ORDER BY date DESC"
-  ).all();
+  const { rows: posts } = await query(
+    "SELECT slug, title, date, description, featured_image, tags, published FROM blog_posts WHERE published = TRUE ORDER BY date DESC"
+  );
   return NextResponse.json({ posts });
 }
 
@@ -33,15 +32,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const db = getDb();
-  const existing = db.prepare("SELECT id FROM blog_posts WHERE slug = ?").get(slug);
-  if (existing) {
+  const { rows: existing } = await query("SELECT id FROM blog_posts WHERE slug = $1", [slug]);
+  if (existing.length > 0) {
     return NextResponse.json({ error: "A post with this slug already exists" }, { status: 409 });
   }
 
-  db.prepare(
-    "INSERT INTO blog_posts (slug, title, date, description, content, featured_image, tags, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-  ).run(slug, title, date, description || "", content, featuredImage || "", JSON.stringify(tags || []), published ? 1 : 0);
+  await query(
+    "INSERT INTO blog_posts (slug, title, date, description, content, featured_image, tags, published) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)",
+    [slug, title, date, description || "", content, featuredImage || "", JSON.stringify(tags || []), published ? true : false]
+  );
 
   return NextResponse.json({ success: true, slug, url: `/blog/${slug}` });
 }

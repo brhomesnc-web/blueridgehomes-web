@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getAllSlugs } from "@/lib/blog";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://www.brhomesnc.com";
   const now = new Date().toISOString();
   const pages = [
@@ -33,7 +33,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
     lastModified: now,
   }));
-  const blogSlugs = getAllSlugs();
+  const blogSlugs = await getAllSlugs();
   const blogPages = blogSlugs.map((slug) => ({
     url: `${base}/blog/${slug}`,
     changeFrequency: "monthly" as const,
