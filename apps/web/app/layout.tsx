@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     "Asheville home builder",
     "Western NC contractor",
   ],
-  metadataBase: new URL("https://www.brhomesnc.com"),
+  metadataBase: new URL("https://brhomesnc.com"),
   alternates: {
     canonical: "./",
   },
