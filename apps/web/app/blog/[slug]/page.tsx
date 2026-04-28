@@ -43,14 +43,14 @@ export default async function BlogPostPage({ params }: Props) {
     author: {
       "@type": "Organization",
       name: "Blue Ridge Homes",
-      url: "https://brhomesnc.com",
+      url: "https://blueridgehomesnc.com",
     },
     publisher: {
       "@type": "Organization",
       name: "Blue Ridge Homes",
     },
     image: post.featuredImage
-      ? `https://brhomesnc.com${post.featuredImage}`
+      ? `https://blueridgehomesnc.com${post.featuredImage}`
       : undefined,
   };
 

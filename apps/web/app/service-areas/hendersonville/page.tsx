@@ -5,7 +5,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Custom Home Builder in Hendersonville, NC | Blue Ridge Homes",
   description: "Blue Ridge Homes builds custom homes and manages remodeling projects in Hendersonville and Henderson County, NC. 30+ years experience. NC License #56328.",
-  alternates: { canonical: "https://brhomesnc.com/service-areas/hendersonville" },
+  alternates: { canonical: "https://blueridgehomesnc.com/service-areas/hendersonville" },
 };
 
 export default function HendersonvillePage() {

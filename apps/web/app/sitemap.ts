@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { getAllSlugs } from "@/lib/blog";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = "https://brhomesnc.com";
+  const base = "https://blueridgehomesnc.com";
   const now = new Date().toISOString();
   const pages = [
     { url: base, changeFrequency: "weekly" as const, priority: 1.0 },

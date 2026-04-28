@@ -48,7 +48,7 @@ function replyHtml(customerName: string, replyText: string): string {
                 <p style="margin:8px 0 0;font-size:13px;font-family:Arial,sans-serif;">
                   <a href="tel:8287122867" style="color:#6b4226;text-decoration:none;">(828) 712-2867</a>
                   &nbsp;&middot;&nbsp;
-                  <a href="https://brhomesnc.com" style="color:#6b4226;text-decoration:none;">brhomesnc.com</a>
+                  <a href="https://blueridgehomesnc.com" style="color:#6b4226;text-decoration:none;">blueridgehomesnc.com</a>
                 </p>
                 <p style="margin:4px 0 0;color:#a89a8c;font-size:12px;font-family:Arial,sans-serif;">
                   NC License #56328 · Asheville, NC
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         to: submission.email as string,
         replyTo: "brhomesnc@gmail.com",
         subject: `Re: Your inquiry to Blue Ridge Homes`,
-        text: `Hi ${submission.name},\n\nThank you for reaching out to Blue Ridge Homes.\n\n${reply_text}\n\nFeel free to reply to this email or call us anytime.\n\n--\nBrian\nBlue Ridge Homes\n(828) 712-2867\nbrhomesnc.com\nNC License #56328`,
+        text: `Hi ${submission.name},\n\nThank you for reaching out to Blue Ridge Homes.\n\n${reply_text}\n\nFeel free to reply to this email or call us anytime.\n\n--\nBrian\nBlue Ridge Homes\n(828) 712-2867\nblueridgehomesnc.com\nNC License #56328`,
         html: replyHtml(submission.name as string, reply_text),
       });
       emailSent = true;

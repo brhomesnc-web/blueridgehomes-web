@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     "Asheville home builder",
     "Western NC contractor",
   ],
-  metadataBase: new URL("https://brhomesnc.com"),
+  metadataBase: new URL("https://blueridgehomesnc.com"),
   alternates: {
     canonical: "./",
   },
@@ -60,12 +60,12 @@ const businessJsonLd = {
   "@context": "https://schema.org",
   "@type": ["HomeBuilder", "GeneralContractor"],
   name: "Blue Ridge Homes",
-  url: "https://brhomesnc.com",
+  url: "https://blueridgehomesnc.com",
   telephone: "+1-828-712-2867",
   email: "brhomesnc@gmail.com",
   description:
     "Custom home builder, remodeling contractor, and licensed general contractor serving Asheville and Western North Carolina. Over 30 years of construction experience.",
-  image: "https://brhomesnc.com/brand/logo-clean.png",
+  image: "https://blueridgehomesnc.com/brand/logo-clean.png",
   address: {
     "@type": "PostalAddress",
     addressLocality: "Asheville",
@@ -111,7 +111,7 @@ const businessJsonLd = {
         itemOffered: {
           "@type": "Service",
           name: "Custom Homes",
-          url: "https://brhomesnc.com/services/custom-homes",
+          url: "https://blueridgehomesnc.com/services/custom-homes",
         },
       },
       {
@@ -119,7 +119,7 @@ const businessJsonLd = {
         itemOffered: {
           "@type": "Service",
           name: "Remodeling",
-          url: "https://brhomesnc.com/services/remodeling",
+          url: "https://blueridgehomesnc.com/services/remodeling",
         },
       },
       {
@@ -127,7 +127,7 @@ const businessJsonLd = {
         itemOffered: {
           "@type": "Service",
           name: "Home Additions",
-          url: "https://brhomesnc.com/services/additions",
+          url: "https://blueridgehomesnc.com/services/additions",
         },
       },
       {
@@ -135,7 +135,7 @@ const businessJsonLd = {
         itemOffered: {
           "@type": "Service",
           name: "ICF Construction",
-          url: "https://brhomesnc.com/services/icf-construction",
+          url: "https://blueridgehomesnc.com/services/icf-construction",
         },
       },
       {
@@ -143,7 +143,7 @@ const businessJsonLd = {
         itemOffered: {
           "@type": "Service",
           name: "Construction Consulting",
-          url: "https://brhomesnc.com/services/consulting",
+          url: "https://blueridgehomesnc.com/services/consulting",
         },
       },
     ],

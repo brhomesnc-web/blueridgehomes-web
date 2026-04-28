@@ -69,7 +69,7 @@ function notificationHtml(name: string, email: string, phone: string, projectTyp
           <table cellpadding="0" cellspacing="0" style="margin-top:8px;">
             <tr>
               <td>
-                <a href="https://brhomesnc.com/admin/submissions" style="display:inline-block;padding:12px 24px;color:#6b4226;text-decoration:none;font-size:14px;font-family:Arial,sans-serif;border:1px solid #d8cdc0;border-radius:4px;">
+                <a href="https://blueridgehomesnc.com/admin/submissions" style="display:inline-block;padding:12px 24px;color:#6b4226;text-decoration:none;font-size:14px;font-family:Arial,sans-serif;border:1px solid #d8cdc0;border-radius:4px;">
                   View in Admin
                 </a>
               </td>
@@ -80,7 +80,7 @@ function notificationHtml(name: string, email: string, phone: string, projectTyp
         <!-- Footer -->
         <tr><td style="background:#faf7f4;padding:16px 32px;border-top:1px solid #e8e0d6;">
           <p style="margin:0;font-size:12px;color:#a89a8c;font-family:Arial,sans-serif;">
-            This message was sent from the contact form at brhomesnc.com<br>
+            This message was sent from the contact form at blueridgehomesnc.com<br>
             You can reply directly to this email to respond to ${name}.
           </p>
         </td></tr>
@@ -178,7 +178,7 @@ export async function POST(request: Request) {
         replyTo: `"${name}" <${email}>`,
         subject: `New Inquiry: ${name} — ${projectType}`,
         text: [
-          `New contact form submission from brhomesnc.com`,
+          `New contact form submission from blueridgehomesnc.com`,
           ``,
           `Name: ${name}`,
           `Email: ${email}`,
@@ -190,7 +190,7 @@ export async function POST(request: Request) {
           ``,
           `---`,
           `Reply directly to this email to respond to ${name}.`,
-          `Or manage in admin: https://brhomesnc.com/admin/submissions`,
+          `Or manage in admin: https://blueridgehomesnc.com/admin/submissions`,
         ].join("\n"),
         html: notificationHtml(name, email, phone || "", projectType, message),
       });
