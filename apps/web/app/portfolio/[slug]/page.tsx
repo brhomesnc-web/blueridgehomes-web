@@ -1,80 +1,52 @@
-"use client";
-import { useState, useCallback, useEffect, use } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getProjectBySlug, getPublishedProjects } from "@/lib/portfolio";
+import ProjectGallery from "./ProjectGallery";
 
-type Project = {
-  title: string;
-  location: string;
-  type: string;
-  description: string;
-  cover: string;
-  images: string[];
-};
+type Params = { slug: string };
 
-export default function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params);
-  const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+export async function generateStaticParams() {
+  const projects = await getPublishedProjects();
+  return projects.map((p) => ({ slug: p.slug }));
+}
 
-  useEffect(() => {
-    fetch(`/api/portfolio/${slug}`)
-      .then((r) => r.json())
-      .then((d) => { setProject(d.project || null); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [slug]);
-
-  const prev = useCallback(() => {
-    if (!project) return;
-    setActiveIndex((i) => (i === 0 ? project.images.length - 1 : i - 1));
-  }, [project]);
-  const next = useCallback(() => {
-    if (!project) return;
-    setActiveIndex((i) => (i === project.images.length - 1 ? 0 : i + 1));
-  }, [project]);
-
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setLightboxOpen(false);
-      if (e.key === "ArrowLeft") prev();
-      if (e.key === "ArrowRight") next();
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [prev, next]);
-
-  if (loading) {
-    return (
-      <main className="br-page">
-        <div className="br-shell br-marble">
-          <div className="br-content">
-            <section className="br-section">
-              <div className="br-container">
-                <p style={{ color: "#a89a8c" }}>Loading...</p>
-              </div>
-            </section>
-          </div>
-        </div>
-      </main>
-    );
+export async function generateMetadata(
+  { params }: { params: Promise<Params> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const project = await getProjectBySlug(slug);
+  if (!project) {
+    return { title: "Project Not Found" };
   }
 
+  const city = project.location.split(",")[0].trim();
+  const title = `${project.title} in ${city}`;
+  const description = project.description
+    ? project.description.slice(0, 155)
+    : `${project.type} project by Blue Ridge Homes in ${project.location}.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/portfolio/${slug}` },
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      images: project.cover ? [{ url: project.cover }] : [],
+    },
+  };
+}
+
+export default async function ProjectPage(
+  { params }: { params: Promise<Params> }
+) {
+  const { slug } = await params;
+  const project = await getProjectBySlug(slug);
+
   if (!project) {
-    return (
-      <main className="br-page">
-        <div className="br-shell br-marble">
-          <div className="br-content">
-            <section className="br-section">
-              <div className="br-container">
-                <Link href="/portfolio" className="br-project-back">{"\u2190 Back to Portfolio"}</Link>
-                <h1 className="br-title">Project Not Found</h1>
-              </div>
-            </section>
-          </div>
-        </div>
-      </main>
-    );
+    notFound();
   }
 
   return (
@@ -85,7 +57,7 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
           {/* Header */}
           <section className="br-section" style={{ paddingBottom: 0 }}>
             <div className="br-container">
-              <Link href="/portfolio" className="br-project-back">{"\u2190 Back to Portfolio"}</Link>
+              <Link href="/portfolio" className="br-project-back">{"← Back to Portfolio"}</Link>
               <h1 className="br-title" style={{ marginBottom: 4 }}>{project.title}</h1>
               <p className="br-project-meta">{project.location} &middot; {project.type}</p>
               <p className="br-project-desc" style={{ marginTop: 12 }}>{project.description}</p>
@@ -95,28 +67,7 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
           {/* Gallery Viewer */}
           <section className="br-section">
             <div className="br-container">
-              <div className="br-gallery-viewer">
-                <div className="br-gallery-main" onClick={() => setLightboxOpen(true)}>
-                  <img
-                    src={project.images[activeIndex]}
-                    alt={`${project.title} \u2014 image ${activeIndex + 1} of ${project.images.length}`}
-                  />
-                </div>
-                <div className="br-gallery-thumbs">
-                  {project.images.map((src, i) => (
-                    <div
-                      key={i}
-                      className={`br-gallery-thumb ${i === activeIndex ? "br-gallery-thumb-active" : ""}`}
-                      onClick={() => setActiveIndex(i)}
-                    >
-                      <img src={src} alt={`Thumbnail ${i + 1}`} loading="lazy" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="br-gallery-counter">
-                {activeIndex + 1} of {project.images.length} photos
-              </div>
+              <ProjectGallery title={project.title} images={project.images} />
             </div>
           </section>
 
@@ -130,7 +81,7 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
                 </p>
                 <div className="br-cta-actions">
                   <Link href="/contact" className="br-button br-button-primary">
-                    {"Start the Conversation \u2192"}
+                    {"Start the Conversation →"}
                   </Link>
                   <a href="tel:18287122867" className="br-button br-button-secondary">
                     Call (828) 712-2867
@@ -142,21 +93,6 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
 
         </div>
       </div>
-
-      {/* Lightbox */}
-      {lightboxOpen && (
-        <div className="br-lightbox" onClick={() => setLightboxOpen(false)}>
-          <button className="br-lightbox-close" onClick={() => setLightboxOpen(false)}>{"\u00D7"}</button>
-          <button className="br-lightbox-nav br-lightbox-prev" onClick={(e) => { e.stopPropagation(); prev(); }}>{"\u2039"}</button>
-          <img
-            src={project.images[activeIndex]}
-            alt={`${project.title} \u2014 image ${activeIndex + 1}`}
-            onClick={(e) => e.stopPropagation()}
-          />
-          <button className="br-lightbox-nav br-lightbox-next" onClick={(e) => { e.stopPropagation(); next(); }}>{"\u203A"}</button>
-          <div className="br-lightbox-counter">{activeIndex + 1} / {project.images.length}</div>
-        </div>
-      )}
     </main>
   );
 }

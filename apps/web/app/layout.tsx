@@ -22,8 +22,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Blue Ridge Homes | Custom Home Builder & Remodeling in Asheville, NC",
-    template: "%s | Blue Ridge Homes - Asheville, NC",
+    default: "Blue Ridge Homes | Custom Home Builder in Asheville, NC",
+    template: "%s | Blue Ridge Homes",
   },
   description:
     "Blue Ridge Homes is Asheville's premier custom home builder and remodeling contractor. 30+ years of experience building custom homes in Western North Carolina. NC License #56328.",

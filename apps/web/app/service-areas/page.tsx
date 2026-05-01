@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 export const metadata: Metadata = {
-  title: "Service Areas | Blue Ridge Homes – Custom Homes & Remodeling in Western NC",
+  title: "Service Areas in Western NC",
   description: "Blue Ridge Homes serves Asheville, Weaverville, Hendersonville, Black Mountain, Mills River, and Brevard. Custom homes, remodeling, and additions across Western North Carolina.",
 };
 

@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Custom Home Builder in Weaverville, NC | Blue Ridge Homes",
+  title: "Custom Home Builder in Weaverville, NC",
   description: "Blue Ridge Homes builds custom homes and manages remodeling projects in Weaverville, NC. 30+ years experience in Buncombe County. NC License #56328.",
   alternates: { canonical: "https://blueridgehomesnc.com/service-areas/weaverville" },
 };

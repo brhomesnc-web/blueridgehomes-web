@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Custom Home Builder in Black Mountain, NC | Blue Ridge Homes",
+  title: "Custom Home Builder in Black Mountain, NC",
   description: "Blue Ridge Homes builds custom homes and manages remodeling projects in Black Mountain and Swannanoa, NC. 30+ years experience. NC License #56328.",
   alternates: { canonical: "https://blueridgehomesnc.com/service-areas/black-mountain" },
 };

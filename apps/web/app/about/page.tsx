@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "About Blue Ridge Homes | Brian Barrett, Owner & Builder",
+  title: "About Brian Barrett",
   description:
     "Blue Ridge Homes is owned and operated by Brian Barrett, a licensed NC general contractor with over 30 years of building experience in Asheville and Western North Carolina. NC License #56328.",
 };
