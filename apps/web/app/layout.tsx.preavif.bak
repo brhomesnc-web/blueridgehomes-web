@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Cormorant_Garamond, Inter } from "next/font/google";
-import ReactDOM from "react-dom";
 import SiteShell from "@/components/site/SiteShell";
 import "./globals.css";
 
@@ -157,10 +156,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  ReactDOM.preload("/backgrounds/page-stone-texture.avif", {
-    as: "image",
-    type: "image/avif",
-  });
   return (
     <html lang="en">
       <body className={`${cormorantGaramond.variable} ${inter.variable} font-sans antialiased`}>

@@ -47,6 +47,11 @@ body {
   margin: 0;
   background-color: #f4eee7;
   background-image: url("/backgrounds/page-stone-texture.jpg");
+  background-image: image-set(
+    url("/backgrounds/page-stone-texture.avif") type("image/avif"),
+    url("/backgrounds/page-stone-texture.webp") type("image/webp"),
+    url("/backgrounds/page-stone-texture.jpg") type("image/jpeg")
+  );
   background-position: center top;
   background-size: 1200px auto;
   background-repeat: repeat;
