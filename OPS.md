@@ -2,6 +2,14 @@
 
 This document describes how to operate the Blue Ridge Homes website on the production VPS without affecting existing production apps.
 
+## Related Docs
+
+- Marketing platform — architecture, module status, data model, agent surface: `MARKETING_PLATFORM.md`
+
+The marketing platform runs inside this same app, service, and port, so it needs no operations of its own. Only the cross-cutting facts it depends on live here: environment keys, the schema convention, and the old marketing SPA artifact.
+
+---
+
 ## Scope
 
 This guide applies only to:
@@ -236,6 +244,77 @@ Current contents:
             proxy_read_timeout 60s;
         }
     }
+
+Important: the snippet above is the original pre-cutover config and has since diverged from what is live. The running config also contains the SSL server block added by certbot and the `location /marketing/*` blocks serving the old static SPA (see "VPS Artifacts — Pending Decommission"). Never edit from this snippet — inspect the live file first:
+
+    sudo nginx -T | grep -n -A 30 -B 5 "brhomesnc.com"
+
+---
+
+## Environment Variables
+
+The app reads configuration directly from `process.env` — there is no config module.
+
+Values live in one file on the VPS:
+
+    /var/www/brhomes/apps/web/.env.local
+
+This file is gitignored and is **not** in the repo. It is loaded automatically by Next.js from the service's `WorkingDirectory`. Note the systemd unit has **no `EnvironmentFile=`** — it sets only `NODE_ENV`; everything else comes from `.env.local`. `deploy.sh` also copies this file into `.next/standalone/`, which is vestigial under the current unit (it runs `npm run start`, not the standalone server).
+
+Key names in use (names only — never commit values):
+
+    ADMIN_JWT_SECRET                 admin session JWT signing secret
+    DATABASE_URL                     Postgres connection string (:5433)
+    BLOG_AGENT_API_KEY               blog agent write auth
+    MARKETING_AGENT_API_KEY          marketing agent write auth (see below)
+    TURNSTILE_SECRET_KEY             Cloudflare Turnstile server-side verify
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY   Turnstile client site key (public)
+    SMTP_HOST / SMTP_PORT            mail transport
+    SMTP_USER / SMTP_PASS            mail credentials
+    CONTACT_EMAIL                    contact-form notification recipient
+    PUBLIC_DIR                       public asset directory override
+
+`MARKETING_AGENT_API_KEY` — marketing agent auth, consumed by `apps/web/lib/agentAuth.ts`. Add it to `.env.local` when the first agent producer lands; nothing reads it before then. **Write it unquoted.** Unlike `SMTP_PASS`, which the code defensively strips surrounding quotes from, this key is compared byte-for-byte as-is — surrounding quotes become part of the key and auth will fail.
+
+After changing `.env.local`, restart the service to pick it up:
+
+    sudo systemctl restart brhomes-web
+
+---
+
+## Repo Conventions
+
+### Database schema
+
+`apps/web/db/schema/*.sql` is the checked-in schema convention, introduced with the marketing platform's `approval_queue` table. It is the first version-controlled schema in this repo — every table before it was created ad-hoc directly on the VPS and exists only implicitly in query strings.
+
+There is **no migration runner**. These files are the record of intent, not executable migrations. Applying them is a manual, deliberate step:
+
+    psql -p 5433 -d <db> -f /var/www/brhomes/apps/web/db/schema/<file>.sql
+
+Deploys never run DDL. Adding a table means committing the `.sql` file and applying it by hand.
+
+---
+
+## VPS Artifacts — Pending Decommission
+
+### Old marketing SPA
+
+A static marketing dashboard predating the current platform is **still live** on this VPS:
+
+    Files    /var/www/brhomes-marketing/
+    Nginx    location /marketing/*  — 13 blocks in the brhomesnc.com site file
+    Auth     .htpasswd-marketing (HTTP basic auth)
+    Since    ~Apr 28
+
+Status: **superseded** by the marketing platform at `/admin/marketing` (see `MARKETING_PLATFORM.md`), **pending decommission**.
+
+Notes before tearing it down:
+
+- Nothing in the app links to it any more. The admin dashboard card labeled "Marketing Platform" now routes to `/admin/marketing`; it previously pointed at `/marketing/`.
+- The database is clean — this SPA left no stale tables behind, so decommissioning is an nginx + filesystem job only.
+- Teardown is done by hand and is separate from any build or deploy. It means removing the 13 `location /marketing/*` blocks, then `sudo nginx -t` before any reload (see "Nginx Safety Procedure"), and removing `/var/www/brhomes-marketing/` and `.htpasswd-marketing`.
+- Until this is done, `/marketing/` and `/admin/marketing` both resolve to different systems. Do not confuse them.
 
 ---
 
