@@ -6,6 +6,11 @@ This document describes how to operate the Blue Ridge Homes website on the produ
 
 - Marketing platform — architecture, module status, data model, agent surface: `MARKETING_PLATFORM.md`
 
+Note: `docs/OPS.md` is a **local-only untracked shadow** of this file — it has never been
+committed and never reaches the VPS. **This root `OPS.md` is the tracked source of truth; edit
+this one.** Resolve the duplicate (promote `docs/OPS.md` by committing it as canonical, or delete
+it) — decision pending.
+
 The marketing platform runs inside this same app, service, and port, so it needs no operations of its own. Only the cross-cutting facts it depends on live here: environment keys, the schema convention, and the old marketing SPA artifact.
 
 ---
@@ -159,25 +164,46 @@ Note: this may behave differently until final HTTPS config and DNS cutover are c
 
 ## Standard Update / Redeploy Procedure
 
-Run these commands when deploying a new version of the Blue Ridge Homes app:
-
-    cd /var/www/brhomes
-    git pull
+There is **one deploy path**: `apps/web/deploy.sh`. Deploying is one command:
 
     cd /var/www/brhomes/apps/web
-    npm ci
-    npm run build
-
-    sudo systemctl restart brhomes-web
+    ./deploy.sh
     curl -I http://127.0.0.1:3001
+
+Do not deploy by running the individual steps by hand — the script owns them precisely so none
+can be skipped.
 
 ### What this does
 
-- pulls the latest code
-- installs locked dependencies
-- builds the Next.js app
-- restarts only the Blue Ridge Homes service
-- verifies the app is healthy locally
+The script itself runs, in order:
+
+- pulls the latest code — `git pull origin main`, before the service stop, so a failed pull
+  aborts (`set -e`) while the site is still up
+- installs dependencies — `npm install`
+- stops `brhomes-web`, removes `.next`, and rebuilds
+- copies `public/` and `.next/static` into `.next/standalone`, and relinks
+  `public/optimized` — all load-bearing; the standalone bundle includes none of them
+- starts `brhomes-web`
+
+You then verify health with the `curl` above.
+
+### Bootstrap — the first run after `deploy.sh` itself changes
+
+The script pulls itself, so it cannot fetch its own update: a run started from the old script
+pulls the new one but has already loaded the old one into memory. When `deploy.sh` has changed
+upstream, bootstrap once by hand:
+
+    cd /var/www/brhomes && git pull origin main && cd apps/web && ./deploy.sh
+
+Every run after that is the short form above. This is only needed when the script itself changed.
+
+### History
+
+Until Jul 16 there were **two** deploy scripts. A root `/var/www/brhomes/deploy.sh` stopped the
+app with `pkill -f next` and restarted it as a backgrounded `npm run start ... &` — which brought
+the app up **outside** the `brhomes-web` cgroup, as a detached child of the SSH session: systemd
+believed the service was stopped, the process died on disconnect, and it never came back on
+reboot. That script is deleted. If you find a copy on the box, it is stale — remove it.
 
 ### What it does not do
 
@@ -208,14 +234,34 @@ Current contents:
     [Service]
     Type=simple
     User=brian
-    WorkingDirectory=/var/www/brhomes/apps/web
+    WorkingDirectory=/var/www/brhomes/apps/web/.next/standalone
+    EnvironmentFile=/var/www/brhomes/apps/web/.env.local
     Environment=NODE_ENV=production
-    ExecStart=/usr/bin/npm run start -- --hostname 127.0.0.1 --port 3001
+    Environment=HOSTNAME=127.0.0.1
+    Environment=PORT=3001
+    ExecStart=/usr/bin/node /var/www/brhomes/apps/web/.next/standalone/server.js
     Restart=always
     RestartSec=5
 
     [Install]
     WantedBy=multi-user.target
+
+**The unit runs the standalone server, not `next start`.** This has been the live configuration
+since ~Jul 7. `npm run start` (`next start`) is not part of the running system — `package.json`
+still defines that script, but nothing invokes it in production.
+
+Consequences that follow from this, and that the rest of this doc depends on:
+
+- `WorkingDirectory` is the **standalone tree**, not the app root.
+- Env comes from `EnvironmentFile`, not from Next's own `.env.local` discovery (see
+  "Environment Variables").
+- The standalone tree does **not** bundle `public/` or `.next/static`, so `deploy.sh` must copy
+  them in. Those copies are load-bearing, not vestigial.
+
+The `[Unit]`/`[Install]` sections and `User=` are reproduced from the original setup. The
+`[Service]` fields above were verified live. As with the nginx snippet, inspect before editing:
+
+    sudo systemctl cat brhomes-web
 
 ### nginx site
 
@@ -259,7 +305,20 @@ Values live in one file on the VPS:
 
     /var/www/brhomes/apps/web/.env.local
 
-This file is gitignored and is **not** in the repo. It is loaded automatically by Next.js from the service's `WorkingDirectory`. Note the systemd unit has **no `EnvironmentFile=`** — it sets only `NODE_ENV`; everything else comes from `.env.local`. `deploy.sh` also copies this file into `.next/standalone/`, which is vestigial under the current unit (it runs `npm run start`, not the standalone server).
+This file is gitignored and is **not** in the repo. The systemd unit loads it via
+`EnvironmentFile=/var/www/brhomes/apps/web/.env.local`, so the values are injected into the
+process environment from this source path — regardless of what the standalone tree contains. This
+matters because the unit's `WorkingDirectory` is `.next/standalone`, so Next's own `.env.local`
+discovery would look in the wrong place; `EnvironmentFile` is what actually supplies env.
+
+That is why `deploy.sh` no longer copies `.env.local` into `.next/standalone/`. That copy was the
+**one genuinely vestigial step** in the deploy and has been removed — `EnvironmentFile` supersedes
+it. Do not reintroduce it.
+
+**The other standalone copies are load-bearing — do not remove them.** The standalone bundle does
+not include `public/` or `.next/static`, and the server serves from its own tree, so `deploy.sh`
+must copy both in. The `optimized` symlink is likewise required: it points the standalone tree's
+`public/optimized` at the real uploads directory, so new uploads appear without a redeploy.
 
 Key names in use (names only — never commit values):
 
@@ -315,6 +374,71 @@ Notes before tearing it down:
 - The database is clean — this SPA left no stale tables behind, so decommissioning is an nginx + filesystem job only.
 - Teardown is done by hand and is separate from any build or deploy. It means removing the 13 `location /marketing/*` blocks, then `sudo nginx -t` before any reload (see "Nginx Safety Procedure"), and removing `/var/www/brhomes-marketing/` and `.htpasswd-marketing`.
 - Until this is done, `/marketing/` and `/admin/marketing` both resolve to different systems. Do not confuse them.
+
+---
+
+## Repo Hygiene — Exposed Material in Git History
+
+### Dead SQLite artifact: `data/submissions.db`
+
+A pre-Postgres SQLite database was tracked in this repo. It is **dead code**: `lib/db.ts` is
+Postgres-only (`pg` Pool on `DATABASE_URL`), `better-sqlite3` is not a dependency, and no
+`.ts`/`.tsx` imports it. The only references left are the one-shot `apps/web/deploy-*.sh`
+migration scripts, which are historical.
+
+**Untracked Jul 16 (commit `a3e94d4`)** — `git rm --cached` plus gitignore rules `data/*.db`,
+`*.sqlite`, `*.sqlite3`. This was an **index-only** removal:
+
+- The file remains on local disk and **remains in git history**.
+- The VPS copy is deleted by the next `git pull` — intended, as it removes a copy of customer
+  PII from a public-facing server.
+
+### What that blob contains
+
+More than PII. Verified this session by reading field lengths and populated state only:
+
+- `submissions` — 5 rows of real customer inquiries (names, emails, phones, messages),
+  2026-03-14 → 2026-03-19.
+- `admin_config` — a bcrypt `password_hash` **and a plaintext `totp_secret`**.
+
+**The TOTP seed is confirmed live**: its prefix matches the seed in the live Postgres
+`admin_config` (verified Jul 16 by comparing a 4-char prefix, not the value). A TOTP seed is a
+shared secret, not a hash — anyone with this blob can generate valid `/admin` 2FA codes
+indefinitely. Paired with the offline-crackable bcrypt hash, that is a credible path to full
+admin access. The seed value is deliberately **not** recorded here.
+
+### Data-loss risk — 3 inquiries exist only outside live Postgres
+
+Live Postgres holds **only 2 of the blob's 5** submission rows. Three real customer inquiries
+(2026-03-14 after 01:27 → 2026-03-19) exist **only** in git history and in a local backup at
+`C:\Users\wncre\brhomes-backups\submissions.db.2026-07-16.bak` on the maintainer's machine.
+
+**This constrains the purge ordering:** the filter-repo pass destroys the history copy, so the
+recover-or-drop decision on those 3 rows must be made **before** the purge, not after. Do not
+delete the local backup until then — it is currently the only non-history copy.
+
+### Outstanding owner-actions (NOT done — pending)
+
+These are deliberate operator actions. Nothing in a deploy performs them.
+
+- [ ] **(a) Rotate the admin TOTP seed and admin password.** Burned and confirmed live. Requires
+      re-enrolling the authenticator. **Rotation is what revokes — the purge does not.** Anyone
+      who already cloned the repo has this material regardless of what happens to history.
+- [ ] **(b) Rotate the Gmail app password** hardcoded at `apps/web/deploy-email.sh:14`, committed
+      in plaintext since `01e0acb`. Same reasoning: rotate now, independent of the purge.
+- [ ] **(c) filter-repo purge** of both the `submissions.db` blob and the Gmail password blob —
+      **one deliberate pass**, its own session. History surgery is done once.
+
+      Mandatory tail: the rewrite requires a force push, which leaves the VPS on divergent
+      history. Its `git pull origin main` will then fail — and because `deploy.sh` runs the pull
+      under `set -e`, the deploy aborts at that step (safely, before the service stop). Re-sync
+      the box before the next deploy:
+
+          cd /var/www/brhomes
+          git fetch origin && git reset --hard origin/main
+
+      `.env.local` is gitignored and `reset --hard` does not touch untracked files, so env and
+      uploads survive.
 
 ---
 
@@ -404,26 +528,55 @@ If results do not show this VPS public IP, public traffic is not yet on this ser
 
 If a new deploy breaks Blue Ridge Homes:
 
+**Do not roll back with `git checkout <commit>`.** It leaves the box on a detached HEAD, and
+`deploy.sh` opens with `git pull origin main` under `set -e` — so the next deploy aborts at the
+pull, for a reason that looks unrelated to the rollback that caused it. **Roll back by moving
+`main` itself, then deploy normally.**
+
 ### 1. Check logs
 
     sudo journalctl -u brhomes-web -n 200 --no-pager
 
-### 2. Roll back code to prior known-good commit
+### 2. Move `main` back, on the box
 
     cd /var/www/brhomes
     git log --oneline -n 10
-    git checkout <known-good-commit>
 
-### 3. Rebuild
+**This procedure assumes the VPS has PUSH access to origin, not just pull. That has NOT been
+verified** — read-only deploy keys are common. Check once, on a calm day, before you need it:
+
+    git push --dry-run origin main
+
+If the box cannot push, do **not** use this procedure mid-incident. Instead: revert on your local
+machine, push from there, and let the box take the corrected history:
+
+    # on the box, after you have pushed the revert from your machine
+    cd /var/www/brhomes
+    git pull origin main            # or: git fetch origin && git reset --hard origin/main
+
+Default — revert forward:
+
+    git revert --no-edit <bad-commit>
+    git push origin main
+
+Only if the bad commit was never pulled or cloned anywhere else:
+
+    git reset --hard <known-good-commit>
+    git push --force-with-lease origin main
+
+`git revert` is the default because it is forward-only and cannot make the box and origin
+diverge. `git reset --hard` is cleaner history but rewrites it, which means a force push and the
+same divergence problem documented in the filter-repo purge tail — fine when the box and origin
+are the only two copies, wrong the moment they are not. When unsure, revert.
+
+### 3. Redeploy through the one path
 
     cd /var/www/brhomes/apps/web
-    npm ci
-    npm run build
-
-### 4. Restart only Blue Ridge Homes
-
-    sudo systemctl restart brhomes-web
+    ./deploy.sh
     curl -I http://127.0.0.1:3001
+
+Do not hand-roll `npm ci && npm run build && systemctl restart` — that skips the standalone asset
+copies (see "Standard Update / Redeploy Procedure").
 
 Do not change PerfectBike or Ledger during a Blue Ridge Homes rollback.
 

@@ -195,12 +195,18 @@ When these flip to done, tick them here — that is the only doc follow-up a dep
 The platform ships as **ordinary routes in the existing Next app**. There are:
 
 - **No nginx changes** — it is served through the existing `proxy_pass` to `127.0.0.1:3001`.
-- **No systemd changes** — same `brhomes-web` service, same port.
+- **No systemd changes** — same `brhomes-web` service, same port. That service runs the
+  **standalone** server (`node .next/standalone/server.js`), not `next start`; these routes ship
+  inside the standalone bundle like any other page and need nothing unit-specific.
 - **No new service, no new port.**
 
-Deploy is the standard procedure — see `OPS.md` → "Standard Update / Redeploy Procedure".
-The only build-relevant change is the added `recharts` dependency, which `npm ci` picks up from
-the committed `package-lock.json`.
+Deploy is one command — `cd /var/www/brhomes/apps/web && ./deploy.sh`. That script is the only
+deploy path and owns the pull, install, build, standalone asset copies, and restart. See
+`OPS.md` → "Standard Update / Redeploy Procedure", including the bootstrap note for when
+`deploy.sh` itself changes.
+
+The only build-relevant change is the added `recharts` dependency, which the script's
+`npm install` picks up from the committed `package-lock.json`.
 
 **Local builds do not complete, and that is expected.** `next build` compiles and typechecks
 cleanly, then fails at `Collecting page data` with `ECONNREFUSED` on `/portfolio/[slug]`. That
