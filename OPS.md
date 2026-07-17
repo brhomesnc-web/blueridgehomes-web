@@ -61,6 +61,31 @@ unless there is a very specific reason.
 
 ---
 
+## Working Principles
+
+How work gets done here, as distinct from the Safety Rules above (which are about not breaking
+the box). These are about not breaking the work.
+
+1. **No half-builds, no quick wins.** A module is not shipped until its stated function works
+   end-to-end. We do not split a target to ship the easy half, defer the hard half, or leave a
+   pipeline stubbed. Correct code and full functionality of the thing under work — or it is not
+   done. When a target has a genuine architectural fork, decide the fork and build through it;
+   do not ship around it.
+
+2. **Diagnose before fixing.** Read the live state before changing it. This file has twice
+   described infrastructure that had not existed for weeks (see the systemd unit block's history),
+   and both times the stale premise produced confidently wrong conclusions downstream. Verify,
+   then act.
+
+3. **Never record what you have not verified.** If a value, shape, or config is inferred rather
+   than observed, label it as inferred. A doc that quietly guesses is worse than one that admits
+   a gap, because the next reader cannot tell the difference. Recollection is not verification.
+
+4. **Deploy is `apps/web/deploy.sh`, always.** Never hand-roll the steps. See "Standard Update /
+   Redeploy Procedure".
+
+---
+
 ## Deployment Layout
 
 ### Repo
@@ -439,6 +464,45 @@ These are deliberate operator actions. Nothing in a deploy performs them.
 
       `.env.local` is gitignored and `reset --hard` does not touch untracked files, so env and
       uploads survive.
+
+---
+
+## Horizon — Known, Not Scheduled
+
+Real issues, deliberately not being fixed right now. Recorded so they are found on purpose rather
+than rediscovered mid-incident. Neither has an owner or a date.
+
+### middleware → proxy convention
+
+Next 16.1 deprecates the `middleware.ts` convention; the build emits the warning. The `/admin`
+session gate lives there (`middleware.ts`, matcher `["/admin/:path*"]`). Migration is its own
+recon-and-build item — not yet scheduled. Note the gate is narrower than it looks: it matches
+`/admin/*` pages only, never `/api/admin/*`, which is why every admin API route calls
+`getSession()` itself.
+
+### Blog SSG delete gap
+
+`/blog/[slug]` is statically generated via `generateStaticParams()`. Deleting a `blog_posts` row
+does **not** invalidate the prerendered page — it keeps serving a 200 with stale content until the
+next deploy or a revalidation. Pre-existing property of the blog, surfaced during Content
+smoke-test cleanup; not introduced by the Content module. Not yet addressed.
+
+The same staleness applies to edits, not just deletes: `PUT /api/blog/[slug]` updates the row, and
+the prerendered page keeps serving the old copy. Anything that needs to disappear or change
+promptly currently needs a deploy.
+
+### Redundant slug index
+
+`idx_blog_posts_slug` duplicates the index the `blog_posts_slug_key` UNIQUE constraint already
+provides — extra write cost on every insert/update, no benefit. Safe one-line `DROP INDEX`, but
+it is a live-DB change, so its own deliberate action, not a docs edit.
+
+### blog_posts.content has no NOT NULL
+
+`content` is `text DEFAULT ''` — the table would accept a null-content post. Nothing does today:
+`validateContentDraft` requires non-empty content, and `POST /api/blog` requires it too. So this
+is a latent gap, not a live bug — the enforcement is real but lives entirely in application code,
+and a future writer that bypasses both doors would find no floor under it. Low priority.
 
 ---
 

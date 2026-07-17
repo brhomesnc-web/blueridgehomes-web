@@ -61,6 +61,13 @@ Access is **only** via `lib/db.ts` `query()` with `$1`/`$2` parameters. No ORM, 
 Conventions follow the existing tables: snake_case columns, `serial` primary keys, timestamptz
 `created_at`, text status enums, JSONB written as `$n::jsonb` with `JSON.stringify`.
 
+**Exception (Content module).** `lib/queueExecutor.ts`'s approve-and-publish runs inside
+`lib/db.ts` `withTransaction()`, which uses `pool.connect()` to pin one client for
+`BEGIN`/`COMMIT`/`ROLLBACK`. This is the one place raw-pool access is sanctioned: the status flip
+and the `blog_posts` INSERT must not half-commit, and `query()` cannot express that because each
+call may draw a different client from the pool. All other access stays `query()`-only — reach for
+`withTransaction` only when two writes must both land or both not.
+
 New tables are documented as **checked-in SQL under `db/schema/`** and applied **manually** on
 the VPS Postgres (`:5433`). There is no migration runner in this repo — `db/schema/*.sql` is the
 record of intent, not an executable migration. See `OPS.md` → "Repo Conventions".
@@ -89,7 +96,7 @@ record of intent, not an executable migration. See `OPS.md` → "Repo Convention
 | Leads | `/admin/marketing/leads` | **Built.** READ-THROUGH of `submissions` + `feedback_submissions`. No leads table, no writes anywhere. |
 | Agent-status chip + kill-switch | sidebar footer | **Built, wired to a STUB source** (`/api/admin/marketing/agent-status`, in-memory state). There is no real agent yet; Pause flips a stub flag. |
 | Date-range selector | Overview header | **Built.** Slices representative data (7 / 30 / 90 / This month / custom). Shape is production-ready for real queries. |
-| Content | `/admin/marketing/content` | Placeholder — "Not built yet". |
+| Content | `/admin/marketing/content` | **Built.** Full loop: human compose form + agent producer (`POST /api/agent/content` via `checkMarketingApiKey` — first wiring of `lib/agentAuth.ts`) enqueue `publish_post` drafts into `approval_queue`; review drawer shows full payload; Approve runs status-flip + `blog_posts` INSERT in one transaction (`lib/queueExecutor.ts`), rejecting/re-opening are side-effect-free; Posts tab is a `blog_posts` inventory incl. drafts. Slug conflict → 409, tx rolls back, nothing publishes. |
 | Social | `/admin/marketing/social` | Placeholder — "Not built yet". |
 | Ads | `/admin/marketing/ads` | Placeholder — "Not built yet". |
 | Email | `/admin/marketing/email` | Placeholder — "Not built yet". |
@@ -161,6 +168,10 @@ Explicitly out of scope for slice 1, in rough dependency order:
    working pipeline. Its own table; leads stay read-through until it lands.
 2. **Agent producers** — the modules that write proposed actions into `approval_queue`. These are
    what make the queue non-empty and what first consume `lib/agentAuth.ts`.
+   **Content: DONE** — `POST /api/agent/content` is the first consumer of `lib/agentAuth.ts`, and
+   the pattern the rest follow: validate → enqueue pending → human approves → `queueExecutor`
+   dispatches the effect. Producers for the remaining 7 modules are still pending; each needs its
+   own `(module, action)` case registered in `lib/queueExecutor.ts`.
 3. **Real functionality behind the 8 placeholders** — Content, Social, Ads, Email, Reviews,
    Analytics, Market Data, Assets.
 4. **Replace the agent-status stub** with a real status store the agent heartbeats into (current
@@ -175,16 +186,17 @@ Explicitly out of scope for slice 1, in rough dependency order:
 
 Both are done by hand on the VPS, deliberately, outside any build or deploy:
 
-- [ ] **(a) Apply the approval_queue schema** to Postgres on `:5433`:
+- [x] **(a) Apply the approval_queue schema** to Postgres on `:5433` — **done 2026-07-17**:
 
         psql -p 5433 -d <db> -f /var/www/brhomes/apps/web/db/schema/approval_queue.sql
 
   Until applied, the Approvals view renders empty with an in-UI notice. Nothing else breaks.
   The database is clean — there are no stale marketing tables from the old SPA to drop first.
 
-- [ ] **(b) Add `MARKETING_AGENT_API_KEY`** to `/var/www/brhomes/apps/web/.env.local` when the
-  first agent producer lands. Not needed before then — nothing reads it yet. Value must be
-  **unquoted** (see `OPS.md` → "Environment Variables").
+- [x] **(b) Add `MARKETING_AGENT_API_KEY`** to `/var/www/brhomes/apps/web/.env.local` —
+  **done 2026-07-17**, added unquoted with the Content producer. Value must be **unquoted**
+  (see `OPS.md` → "Environment Variables"); `checkMarketingApiKey` compares byte-for-byte and
+  surrounding quotes would become part of the key.
 
 When these flip to done, tick them here — that is the only doc follow-up a deploy requires.
 
