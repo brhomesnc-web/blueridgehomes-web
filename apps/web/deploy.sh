@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e
+
+echo "=== Pulling latest code ==="
+cd /var/www/brhomes
+git pull origin main
+
 cd /var/www/brhomes/apps/web
+
+echo "=== Installing dependencies ==="
+npm install
+
 echo "=== Stopping server ==="
 sudo systemctl stop brhomes-web
 echo "=== Cleaning build ==="
@@ -15,8 +24,6 @@ sudo rm -rf .next/standalone/public/optimized
 ln -s /var/www/brhomes/apps/web/public/optimized .next/standalone/public/optimized
 echo "=== Copying static to standalone ==="
 cp -r .next/static .next/standalone/.next/static
-echo "=== Copying env ==="
-cp .env.local .next/standalone/.env.local 2>/dev/null; true
 echo "=== Starting server ==="
 sudo systemctl start brhomes-web
 echo "=== Done ==="
