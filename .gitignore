@@ -6,3 +6,8 @@ build/
 .env.*
 .DS_Store
 Thumbs.db
+
+# Dead SQLite artifact (pre-Postgres era) — untracked, purge from history separately
+data/*.db
+*.sqlite
+*.sqlite3
