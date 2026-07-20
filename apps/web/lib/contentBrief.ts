@@ -39,8 +39,7 @@ FORMAT — the site renders CommonMark markdown ONLY, with no extensions:
 - Do not repeat the post title as an H1 inside the body. Start the body with the opening paragraph.
 - Length: a substantial, genuinely useful post, roughly 700-1100 words.
 
-OUTPUT — respond with a SINGLE JSON object and nothing else: no markdown code fences, no preamble, no trailing text. Exact schema:
-{"title": string, "slug": string, "description": string, "tags": string[], "content": string}
+OUTPUT — call the emit_blog_post tool exactly once with the finished post. Put the full post body (CommonMark markdown, per the FORMAT rules) in the content field; do not repeat the title as an H1 inside content. Do not write any prose outside the tool call.
 - title: compelling, includes the keyword naturally, no clickbait.
 - slug: lowercase; words separated by single hyphens; letters and digits only; no leading, trailing, or doubled hyphens.
 - description: 1-2 sentence meta description (~150 chars) including the keyword.
@@ -61,5 +60,5 @@ export function buildUserPrompt(input: GenerateInput): string {
 Topic: ${input.topic.trim()}
 Target keyword: ${keyword}
 Primary audience: ${audience}
-Follow every voice, honesty, structure, format, and output rule from your instructions. Respond with only the JSON object.`;
+Follow every voice, honesty, structure, format, and output rule from your instructions. Call the emit_blog_post tool with the finished post.`;
 }
