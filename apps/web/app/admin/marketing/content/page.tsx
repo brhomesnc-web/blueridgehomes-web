@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SectionHeader, StakesTag, EmptyState, Spinner } from "../_components/ui";
+import { CONTENT_CALENDAR } from "@/lib/contentCalendar";
 
 type Post = {
   slug: string;
@@ -312,7 +313,14 @@ export default function ContentPage() {
               <>
                 <button
                   onClick={() => {
-                    setGenForm({ topic: "", keyword: "", audience: "" });
+                    // Fast path: pre-fill the next recommended calendar slot so
+                    // the drawer opens ready to Generate with no typing.
+                    const slot = CONTENT_CALENDAR[0];
+                    setGenForm(
+                      slot
+                        ? { topic: slot.topic, keyword: slot.keyword, audience: slot.audience }
+                        : { topic: "", keyword: "", audience: "" }
+                    );
                     setGenError("");
                     setGenerateOpen(true);
                   }}
@@ -721,6 +729,56 @@ export default function ContentPage() {
                 approving — it may include <strong>[VERIFY: …]</strong> placeholders
                 for figures to confirm.
               </div>
+
+              {/* Editorial-calendar presets — one tap fills topic/keyword/audience. */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--br-text-soft)]">
+                    From the calendar
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setGenForm({ topic: "", keyword: "", audience: "" })
+                    }
+                    className="text-[11.5px] font-semibold text-[var(--br-gold-dark)] underline"
+                  >
+                    Write my own
+                  </button>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {CONTENT_CALENDAR.map((slot, i) => {
+                    const active = genForm.topic === slot.topic;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() =>
+                          setGenForm({
+                            topic: slot.topic,
+                            keyword: slot.keyword,
+                            audience: slot.audience,
+                          })
+                        }
+                        className={
+                          "flex items-start gap-2 rounded-md border px-3 py-2 text-left transition-colors " +
+                          (active
+                            ? "border-[var(--br-gold-dark)] bg-[var(--br-gold)]/10"
+                            : "border-[var(--br-line)] bg-white/70 hover:bg-[var(--br-cream-2)]")
+                        }
+                      >
+                        <span className="mt-0.5 shrink-0 rounded-full border border-[var(--br-line)] bg-[var(--br-cream-2)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--br-text-muted)]">
+                          {slot.month}
+                        </span>
+                        <span className="min-w-0 text-[12.5px] leading-snug text-[var(--br-text)]">
+                          {slot.topic}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <Labeled label="Topic">
                 <input
                   value={genForm.topic}
