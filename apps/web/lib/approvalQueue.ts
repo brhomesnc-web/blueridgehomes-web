@@ -117,7 +117,9 @@ export function validateContentDraft(input: unknown): ValidationResult {
   };
 }
 
-function buildPreview(payload: ContentDraftPayload): string {
+// Exported so the edit path (queue/[id] PATCH) can keep preview in sync with an
+// edited payload exactly the way enqueue does — one derivation, not two.
+export function buildPreview(payload: ContentDraftPayload): string {
   const source = payload.description.trim() || payload.content.trim();
   const flat = source.replace(/\s+/g, " ").trim();
   if (flat.length <= PREVIEW_LEN) return flat;

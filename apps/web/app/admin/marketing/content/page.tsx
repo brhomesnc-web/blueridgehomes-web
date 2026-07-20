@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { SectionHeader, StakesTag, EmptyState, Spinner } from "../_components/ui";
 import { CONTENT_CALENDAR } from "@/lib/contentCalendar";
 
@@ -91,6 +92,7 @@ const EMPTY_FORM = {
 };
 
 export default function ContentPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<TabKey>("posts");
 
   const [posts, setPosts] = useState<Post[]>([]);
@@ -554,6 +556,15 @@ export default function ContentPage() {
             ) : null}
 
             <div className="flex items-center justify-end gap-2 border-t border-[var(--br-line)] px-5 py-4">
+              {selected.payload ? (
+                <button
+                  onClick={() => router.push(`/admin/marketing/content/${selected.id}/edit`)}
+                  disabled={acting}
+                  className="mr-auto rounded-md border border-[var(--br-line)] bg-white/70 px-4 py-2 text-[13px] font-semibold text-[var(--br-text-mid)] hover:bg-[var(--br-stone)] disabled:opacity-50"
+                >
+                  Edit draft →
+                </button>
+              ) : null}
               <button
                 onClick={() => review(selected, "rejected")}
                 disabled={acting}
