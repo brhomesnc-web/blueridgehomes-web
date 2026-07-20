@@ -1,4 +1,5 @@
 import { query } from "./db";
+import { notifyDraftCreated } from "./notify";
 
 /**
  * approval_queue enqueue core + the Content payload contract.
@@ -142,5 +143,8 @@ export async function enqueueContentDraft(
      RETURNING ${QUEUE_COLUMNS}`,
     [action, payload.title, buildPreview(payload), JSON.stringify(payload), opts.reviewer]
   );
+  // Fire-and-forget push so Brian knows to review. Never awaited, never throws:
+  // a notify failure must not break or delay the enqueue that just succeeded.
+  notifyDraftCreated({ title: rows[0].title, module: rows[0].module, stakes: rows[0].stakes });
   return rows[0];
 }
