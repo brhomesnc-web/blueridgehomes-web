@@ -108,6 +108,11 @@ export default function ContentPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [genForm, setGenForm] = useState({ topic: "", keyword: "", audience: "" });
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState("");
+
   const loadPosts = useCallback(async () => {
     setLoadingPosts(true);
     try {
@@ -230,6 +235,47 @@ export default function ContentPage() {
     }
   }
 
+  async function generateDraft() {
+    setGenError("");
+    if (!genForm.topic.trim()) {
+      setGenError("Topic is required.");
+      return;
+    }
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/admin/marketing/content/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: genForm.topic.trim(),
+          keyword: genForm.keyword.trim(),
+          audience: genForm.audience.trim(),
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        // 502 generation failed carries a detail; other errors carry error.
+        setGenError(d.detail || d.error || "Generation failed.");
+        return;
+      }
+      // The enqueued queue item comes back; jump to it so Brian judges it now.
+      const item: QueueItem = d.item;
+      setGenerateOpen(false);
+      setGenForm({ topic: "", keyword: "", audience: "" });
+      setBanner({ text: "Draft generated and queued for review." });
+      setTab("queue");
+      await loadQueue();
+      if (item) {
+        setDrawerError("");
+        setSelected(item);
+      }
+    } catch {
+      setGenError("Network error — no draft was generated.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   return (
     <div>
       <SectionHeader
@@ -263,20 +309,32 @@ export default function ContentPage() {
               ))}
             </div>
             {tab === "posts" ? (
-              <button
-                onClick={() => {
-                  setForm({
-                    ...EMPTY_FORM,
-                    date: new Date().toISOString().slice(0, 10),
-                  });
-                  setSlugTouched(false);
-                  setFormError("");
-                  setComposeOpen(true);
-                }}
-                className="rounded-md border border-[var(--br-gold-dark)] bg-[var(--br-gold)] px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-[var(--br-gold-dark)]"
-              >
-                + New draft
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    setGenForm({ topic: "", keyword: "", audience: "" });
+                    setGenError("");
+                    setGenerateOpen(true);
+                  }}
+                  className="rounded-md border border-[var(--br-line)] bg-white/70 px-3 py-1.5 text-[12.5px] font-semibold text-[var(--br-text-mid)] hover:bg-[var(--br-cream-2)]"
+                >
+                  ✦ Generate draft
+                </button>
+                <button
+                  onClick={() => {
+                    setForm({
+                      ...EMPTY_FORM,
+                      date: new Date().toISOString().slice(0, 10),
+                    });
+                    setSlugTouched(false);
+                    setFormError("");
+                    setComposeOpen(true);
+                  }}
+                  className="rounded-md border border-[var(--br-gold-dark)] bg-[var(--br-gold)] px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-[var(--br-gold-dark)]"
+                >
+                  + New draft
+                </button>
+              </>
             ) : null}
           </div>
         }
@@ -623,6 +681,95 @@ export default function ContentPage() {
                 className="rounded-md border border-[var(--br-gold-dark)] bg-[var(--br-gold)] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[var(--br-gold-dark)] disabled:opacity-50"
               >
                 {saving ? "Queueing…" : "Queue for review"}
+              </button>
+            </div>
+          </aside>
+        </div>
+      ) : null}
+
+      {/* Generate draft */}
+      {generateOpen ? (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => (generating ? null : setGenerateOpen(false))}
+          />
+          <aside className="absolute right-0 top-0 flex h-full w-full max-w-[560px] flex-col border-l border-[var(--br-line)] bg-[var(--br-cream)] shadow-2xl">
+            <div className="flex items-start justify-between border-b border-[var(--br-line)] px-5 py-4">
+              <div>
+                <div className="font-serif text-[22px] leading-tight text-[var(--br-text)]">
+                  Generate draft
+                </div>
+                <div className="mt-1 text-[11px] uppercase tracking-wide text-[var(--br-text-muted)]">
+                  Writes a full post · queues for review · does not publish
+                </div>
+              </div>
+              <button
+                onClick={() => setGenerateOpen(false)}
+                disabled={generating}
+                className="text-2xl leading-none text-[var(--br-text-soft)] hover:text-[var(--br-text)] disabled:opacity-40"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
+              <div className="rounded-md border border-[#b7c9d6] bg-[#e9f0f4] px-4 py-2.5 text-[12.5px] text-[#3d5a68]">
+                The writer drafts in the Blue Ridge Homes voice and lands a pending
+                draft in the queue. Generation takes ~20-40s. Review and edit before
+                approving — it may include <strong>[VERIFY: …]</strong> placeholders
+                for figures to confirm.
+              </div>
+              <Labeled label="Topic">
+                <input
+                  value={genForm.topic}
+                  onChange={(e) => setGenForm((g) => ({ ...g, topic: e.target.value }))}
+                  placeholder="Resilient roofing choices for steep mountain lots"
+                  className={inputClass}
+                />
+              </Labeled>
+              <Labeled label="Target keyword (optional)">
+                <input
+                  value={genForm.keyword}
+                  onChange={(e) => setGenForm((g) => ({ ...g, keyword: e.target.value }))}
+                  placeholder="mountain home roofing asheville"
+                  className={inputClass}
+                />
+                <div className="mt-1 text-[11.5px] text-[var(--br-text-muted)]">
+                  Left blank, the writer picks one that fits.
+                </div>
+              </Labeled>
+              <Labeled label="Audience (optional)">
+                <input
+                  value={genForm.audience}
+                  onChange={(e) => setGenForm((g) => ({ ...g, audience: e.target.value }))}
+                  placeholder="resilience-minded rebuilders"
+                  className={inputClass}
+                />
+              </Labeled>
+            </div>
+
+            {genError ? (
+              <div className="mx-5 mb-3 rounded-md border border-[#d9b3ad] bg-[#f6e9e7] px-4 py-2.5 text-[12.5px] text-[#8b3a32]">
+                {genError}
+              </div>
+            ) : null}
+
+            <div className="flex items-center justify-end gap-2 border-t border-[var(--br-line)] px-5 py-4">
+              <button
+                onClick={() => setGenerateOpen(false)}
+                disabled={generating}
+                className="rounded-md border border-[var(--br-line)] bg-white/70 px-4 py-2 text-[13px] font-semibold text-[var(--br-text-mid)] hover:bg-[var(--br-stone)] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={generateDraft}
+                disabled={generating}
+                className="rounded-md border border-[var(--br-gold-dark)] bg-[var(--br-gold)] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[var(--br-gold-dark)] disabled:opacity-50"
+              >
+                {generating ? "Generating…" : "Generate & queue"}
               </button>
             </div>
           </aside>
