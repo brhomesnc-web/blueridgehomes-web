@@ -60,69 +60,7 @@
   margin: 0 auto;
   padding: 0 20px;
 }
-.br-blog-prose {
-  font-size: 1.05rem;
-  color: var(--br-body);
-  line-height: 1.75;
-}
-.br-blog-prose h2 {
-  font-family: var(--font-serif);
-  font-size: 1.6rem;
-  font-weight: 600;
-  color: var(--br-heading);
-  margin: 40px 0 16px;
-}
-.br-blog-prose h3 {
-  font-family: var(--font-serif);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--br-heading);
-  margin: 28px 0 12px;
-}
-.br-blog-prose p {
-  margin-bottom: 18px;
-}
-.br-blog-prose ul,
-.br-blog-prose ol {
-  margin: 0 0 18px 24px;
-}
-.br-blog-prose li {
-  margin-bottom: 8px;
-}
-.br-blog-prose strong {
-  color: var(--br-heading);
-  font-weight: 600;
-}
-.br-blog-prose em {
-  font-style: italic;
-}
-.br-blog-prose a {
-  color: var(--br-accent, #6b4226);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.br-blog-prose a:hover {
-  opacity: 0.8;
-}
-.br-blog-prose table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 24px 0;
-  font-size: 0.95rem;
-}
-.br-blog-prose th,
-.br-blog-prose td {
-  padding: 10px 14px;
-  border: 1px solid var(--br-line);
-  text-align: left;
-}
-.br-blog-prose th {
-  background: var(--br-stone);
-  color: var(--br-heading);
-  font-weight: 600;
-}
-.br-blog-prose hr {
-  border: none;
-  border-top: 1px solid var(--br-line);
-  margin: 36px 0;
-}
+
+/* Prose (rendered-markdown) rules moved to globals.css so they load app-wide
+   (live post + admin editor previews render identically). The layout rules
+   above stay here, scoped to /blog. */
