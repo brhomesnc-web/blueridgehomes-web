@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import Markdown from "react-markdown";
+import BlogMarkdown from "@/components/BlogMarkdown";
 import { getPostBySlug, getAllSlugs } from "@/lib/blog";
 import type { Metadata } from "next";
 
@@ -137,7 +137,7 @@ export default async function BlogPostPage({ params }: Props) {
 
           {/* Content */}
           <div className="br-blog-prose">
-            <Markdown>{post.content}</Markdown>
+            <BlogMarkdown>{post.content}</BlogMarkdown>
           </div>
 
           {/* CTA */}

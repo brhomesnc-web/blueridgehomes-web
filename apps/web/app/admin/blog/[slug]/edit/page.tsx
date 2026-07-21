@@ -1,6 +1,6 @@
 "use client";
 import ImagePicker from "@/components/admin/ImagePicker";
-import Markdown from "react-markdown";
+import BlogMarkdownEditor from "@/components/BlogMarkdownEditor";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 
@@ -175,7 +175,7 @@ export default function AdminBlogEdit() {
             <div style={{ marginTop: 12, padding: "20px 24px", border: "1px solid #d8cdc0", borderRadius: 4, background: "#fff", minHeight: 200 }}>
               <div style={{ fontSize: 11, color: "#a89a8c", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>Preview</div>
               <div className="br-blog-prose" style={{ fontSize: 15, lineHeight: 1.8, color: "#1e1812" }}>
-                {content ? <Markdown>{content}</Markdown> : <p style={{ color: "#a89a8c", fontStyle: "italic" }}>Start typing to see preview...</p>}
+                {content ? <BlogMarkdownEditor content={content} onChange={setContent} slug={slug} /> : <p style={{ color: "#a89a8c", fontStyle: "italic" }}>Start typing to see preview...</p>}
               </div>
             </div>
           )}

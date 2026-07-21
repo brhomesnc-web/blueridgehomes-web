@@ -8,6 +8,7 @@ import {
   validateContentDraft,
   type QueueRow,
 } from "@/lib/approvalQueue";
+import { hasUnresolvedMedia } from "@/lib/mediaBlocks";
 
 // GET one queue item (full payload) and PATCH it. getSession()-guarded.
 // Reviewer is "admin" — the app has a single admin identity (admin_config is a
@@ -30,6 +31,7 @@ type Reviewable = (typeof REVIEWABLE)[number];
 // Throwing is the only way to roll back from inside withTransaction.
 class NotFoundError extends Error {}
 class NotPendingError extends Error {}
+class UnresolvedMediaError extends Error {}
 class ExecuteError extends Error {
   code: string;
   constructor(message: string, code: string) {
@@ -177,6 +179,15 @@ export async function PATCH(
 
       // Only approval executes. Reject, save, and re-open are status/payload only.
       if (row.status === "approved") {
+        // Approve-scoped backstop (F6 — NOT in validateContentDraft, which also
+        // runs at enqueue where media fences are legitimately present). Whatever
+        // is about to publish — edited-this-request or previously stored — must
+        // have no unbaked chart / unfilled photo fence left, or a reader would
+        // see raw JSON. Covers the agent door and any editor bypass.
+        const publishing = row.payload as { content?: string } | null;
+        if (publishing?.content && hasUnresolvedMedia(publishing.content)) {
+          throw new UnresolvedMediaError();
+        }
         const result = await executeApprovedAction(client, row);
         if (!result.ok) {
           // Rolls back the UPDATE above: nothing published, row stays pending.
@@ -191,6 +202,12 @@ export async function PATCH(
   } catch (err) {
     if (err instanceof NotFoundError) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (err instanceof UnresolvedMediaError) {
+      return NextResponse.json(
+        { error: "Resolve all media blocks before publishing." },
+        { status: 400 }
+      );
     }
     if (err instanceof NotPendingError) {
       return NextResponse.json(

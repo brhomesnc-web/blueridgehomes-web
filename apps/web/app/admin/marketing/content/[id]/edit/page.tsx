@@ -1,9 +1,14 @@
 "use client";
 import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Markdown from "react-markdown";
+import BlogMarkdownEditor from "@/components/BlogMarkdownEditor";
 import ImagePicker from "@/components/admin/ImagePicker";
+import { hasUnresolvedMedia, listMediaFences } from "@/lib/mediaBlocks";
 import { Spinner } from "../../../_components/ui";
+
+// The old placeholder path some drafts carried as a "featured image" — treated
+// as unset so a fake hero can never reach publish.
+const FAKE_HERO = "/optimized/project/image.jpg";
 
 // Dedicated editor for a queued Content draft: edit fields + markdown + photos,
 // Save without publishing, or Approve with edits. Marketing Tailwind look;
@@ -182,12 +187,31 @@ export default function ContentEditPage({
     }
   }
 
+  const heroSet = !!featuredImage.trim() && featuredImage.trim() !== FAKE_HERO;
+
   async function approve() {
     setError("");
     setBanner("");
     const invalid = clientValidate();
     if (invalid) {
       setError(invalid);
+      return;
+    }
+    // Every chart must be baked and every photo filled-or-dropped — only the
+    // browser can render recharts, so this is the primary enforcement.
+    if (hasUnresolvedMedia(content)) {
+      const fences = listMediaFences(content);
+      const charts = fences.filter((f) => f.kind === "chart").length;
+      const photos = fences.filter((f) => f.kind === "photo").length;
+      const bits = [
+        charts ? `${charts} chart${charts === 1 ? "" : "s"} to bake` : "",
+        photos ? `${photos} photo slot${photos === 1 ? "" : "s"} to fill or drop` : "",
+      ].filter(Boolean);
+      setError(`Resolve all media before publishing: ${bits.join(" and ")}.`);
+      return;
+    }
+    if (!heroSet) {
+      setError("Set a featured image before publishing.");
       return;
     }
     setSaving(true);
@@ -317,7 +341,15 @@ export default function ContentEditPage({
           </Labeled>
 
           <Labeled label="Featured image">
-            <ImagePicker value={featuredImage} onChange={setFeaturedImage} />
+            {heroSet ? null : (
+              <div className="mb-1.5 rounded border border-[#d9b3ad] bg-[#f6e9e7] px-2.5 py-1.5 text-[11.5px] text-[#8b3a32]">
+                No hero image set — required before publishing.
+              </div>
+            )}
+            <ImagePicker
+              value={featuredImage === FAKE_HERO ? "" : featuredImage}
+              onChange={setFeaturedImage}
+            />
           </Labeled>
 
           <div>
@@ -364,7 +396,7 @@ export default function ContentEditPage({
           <div className="rounded-md border border-[var(--br-line)] bg-white p-5">
             <div className="br-blog-prose">
               {content ? (
-                <Markdown>{content}</Markdown>
+                <BlogMarkdownEditor content={content} onChange={setContent} slug={slug.trim()} />
               ) : (
                 <p className="italic text-[var(--br-text-muted)]">
                   Start typing to see the preview…
