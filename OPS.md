@@ -119,17 +119,18 @@ the box). These are about not breaking the work.
        ↓
     Nginx
        ↓
-    brhomesnc.com
+    blueridgehomesnc.com
        ↓
     proxy_pass -> 127.0.0.1:3001
        ↓
     Next.js app
 
-Current staging behavior:
+Current behavior (live):
 
-- App is running locally on `127.0.0.1:3001`
-- Public DNS is not yet pointed to this server
-- Public launch is not complete until DNS and SSL are finalized
+- App runs locally on `127.0.0.1:3001`, fronted by nginx
+- Live in production at `https://blueridgehomesnc.com` (primary, TLS via certbot)
+- `brhomesnc.com` / `www.brhomesnc.com` 301-redirect to the primary domain
+- DNS and SSL are finalized — this is production, not staging
 
 ---
 
@@ -181,9 +182,10 @@ Expected result:
 
 ### Check nginx vhost locally with host header
 
-    curl -I -H "Host: brhomesnc.com" http://127.0.0.1
+    curl -I -H "Host: blueridgehomesnc.com" http://127.0.0.1
 
-Note: this may behave differently until final HTTPS config and DNS cutover are complete.
+Note: use the primary host `blueridgehomesnc.com` to reach the app vhost — a request with
+`Host: brhomesnc.com` returns a 301 to the primary domain, not the app's 200.
 
 ---
 
@@ -402,6 +404,23 @@ Notes before tearing it down:
 
 ---
 
+## Admin Auth Boundary
+
+Every `/admin/*` page and every `/api/admin/*` route sits behind one session gate — the auth
+boundary for all marketing, content, and blog admin surfaces and their write APIs.
+
+- **Mechanism:** password (bcrypt) + TOTP 2FA (otplib) → a signed JWT session cookie
+  `brh_admin_session` (jose, HS256, `ADMIN_JWT_SECRET`). This is **not** OAuth — the "Google
+  Authenticator" QR at `/admin/setup` is only the TOTP enrollment app, not a Google sign-in.
+- **Enforcement is two-layered:** `middleware.ts` (matcher `["/admin/:path*"]`) gates `/admin/*`
+  **pages**; it does **not** match `/api/admin/*`, so every admin API route calls `getSession()`
+  itself (see Horizon → "middleware → proxy convention").
+- **Separate machine credentials:** the key-gated agent door (`/api/agent/content`,
+  `MARKETING_AGENT_API_KEY`) and the upload key (`BLOG_AGENT_API_KEY`) are non-session
+  credentials for external/automated callers, outside this cookie boundary.
+
+---
+
 ## Repo Hygiene — Exposed Material in Git History
 
 ### Dead SQLite artifact: `data/submissions.db`
@@ -467,6 +486,42 @@ These are deliberate operator actions. Nothing in a deploy performs them.
 
 ---
 
+## Session Log — Shipped
+
+### 2026-07-20 — Media-slot + chart-spec system
+
+Shipped to `main` (`7c8d68d`), 9 files, tsc clean, server import graph verified recharts-free.
+
+- `lib/mediaBlocks.ts` — pure-TS, recharts-free seam (`ChartSpec`/`PhotoSpec`, `listMediaFences`,
+  `replaceFence`, `hasUnresolvedMedia`, `chartHasVerify`, `serializeChart`); the only place fence
+  parsing lives; imported by the server page, the editor, and the API route.
+- `components/BlogMarkdown.tsx` (server, no recharts in its import graph — the live page renders
+  baked `![](path)` only; unresolved fences degrade to a "media pending" note) vs
+  `components/BlogMarkdownEditor.tsx` (`"use client"`, the sole recharts importer). recharts
+  isolation is by **module boundary**, not `next/dynamic` (repo has none). Both `<Markdown>`-based;
+  swapped into all 4 markdown sites (live blog page + 3 admin editors).
+- Chart bake: recharts SVG (explicit width/height/xmlns, generic system font) → canvas → PNG →
+  `/api/admin/upload` folder `blog-charts`, explicit unique filename `chart-<slug>-<index>-<ts>.png`
+  → `replaceFence` → `![title](path)`. Bake disabled while any `[VERIFY:]` remains (honesty rule at
+  bake). Photo slots carry writer `intent`; fill via ImagePicker or drop.
+- Approve enforcement, two layers: the editor blocks approve while `hasUnresolvedMedia` or the hero
+  is unset; a **server backstop in the `status:'approved'` branch of
+  `app/api/admin/marketing/queue/[id]/route.ts`** → 400 "Resolve all media blocks before
+  publishing." Deliberately **not** in `validateContentDraft` (which runs at enqueue, where
+  chart/photo blocks are the generator's legitimate output).
+- `lib/contentBrief.ts` teaches the `chart`/`photo` grammar + honesty rule (unknown figures →
+  `"[VERIFY: …]"`, never fabricated).
+- Featured image: honest "No hero set — required before publishing" state; the old fake
+  `/optimized/project/image.jpg` fallback is treated as unset. Chart cells store raw strings so
+  decimals/partial entry survive the content round-trip; `toNum` coerces only for the chart.
+
+Prior slices this producer loop was built on (not re-detailed here): draft-created push
+(`enqueueContentDraft` chokepoint), in-platform generator (Anthropic forced tool-use), editorial-
+calendar presets, the dedicated editor (save / approve-with-edits), and the `.br-blog-prose`
+typography pass.
+
+---
+
 ## Horizon — Known, Not Scheduled
 
 Real issues, deliberately not being fixed right now. Recorded so they are found on purpose rather
@@ -503,6 +558,41 @@ it is a live-DB change, so its own deliberate action, not a docs edit.
 `validateContentDraft` requires non-empty content, and `POST /api/blog` requires it too. So this
 is a latent gap, not a live bug — the enforcement is real but lives entirely in application code,
 and a future writer that bypasses both doors would find no floor under it. Low priority.
+
+### Chart bake: NaN cells slip past both media gates
+
+The media-slot bake (`components/BlogMarkdownEditor.tsx`) gates only on `[VERIFY:]` placeholders. A
+stray non-`[VERIFY:]` non-numeric cell (a typo, or a blanked field) coerces to `NaN`; recharts
+renders it as a gap and the baked PNG ships a missing bar/point. Because baking replaces the
+` ```chart ` fence with an `![](…)` image, no fence remains — so it passes both the editor's
+`hasUnresolvedMedia` gate and the server backstop. Fix: block bake while any series value in any row
+is `NaN`, not only while `[VERIFY:]` remains. Open.
+
+### Next slice — scheduled publishing + revalidation + truncation guard
+
+The next build is one slice combining three items:
+
+- **SSG `revalidatePath` fix.** `/blog` and `/blog/[slug]` are SSG with zero `revalidatePath` (see
+  "Blog SSG delete gap" above), so an approved post does not appear live until the next deploy. Fix:
+  call `revalidatePath('/blog')` + `revalidatePath('/blog/' + slug)` **post-COMMIT** in the approve
+  branch of `app/api/admin/marketing/queue/[id]/route.ts`.
+- **Scheduler (`publish_at`).** Timed publishing — a new column and the mechanism to publish at a
+  set time — deferred to this slice.
+- **`max_tokens` truncation guard.** `generateDraft.ts` should throw when the model's
+  `stop_reason === 'max_tokens'`, so a truncated draft is rejected rather than queued half-written.
+
+### Still open, unscheduled
+
+- **Privacy-policy page** — not built.
+- **Credential rotations** — 5 outstanding; urgency downgraded per operator assessment (repo
+  private + admin behind the auth boundary above). The burned TOTP seed / admin password / Gmail
+  app-password specifics and the filter-repo purge remain recorded under "Repo Hygiene".
+- **Managed, DB-backed editorial calendar** — supersedes the static `lib/contentCalendar.ts` seed.
+- **External Cowork agent → `/api/agent/content`** — the key-gated door for an outside agent to file
+  drafts into the approval queue.
+
+Standing caution: any VPS-side edit made outside git is lost when `deploy.sh` re-syncs the box to
+`origin/main`. Commit changes to the repo, or they vanish on the next deploy.
 
 ---
 
@@ -648,7 +738,8 @@ Do not change PerfectBike or Ledger during a Blue Ridge Homes rollback.
 
 ## Launch-Day Cutover Checklist
 
-Only do this when the site is approved and ready to go live.
+**Historical — the cutover is complete; the site is live at `https://blueridgehomesnc.com`.**
+Kept as reference for the procedure that was run. Do not re-run against the live site.
 
 ### Phase 1 - Pre-cutover verification
 
@@ -783,7 +874,7 @@ Unless explicitly required and verified safe, do not modify:
 
 ## Summary
 
-Blue Ridge Homes is deployed in staging on this VPS as:
+Blue Ridge Homes is deployed on this VPS as:
 
 - repo: `/var/www/brhomes`
 - app: `/var/www/brhomes/apps/web`
@@ -792,4 +883,4 @@ Blue Ridge Homes is deployed in staging on this VPS as:
 
 It is isolated from PerfectBike and Ledger.
 
-Until DNS and SSL are finalized, treat it as staged but not live.
+It is live in production at `https://blueridgehomesnc.com`; `brhomesnc.com` 301-redirects to it.
