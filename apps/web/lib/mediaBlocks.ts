@@ -110,7 +110,69 @@ export function chartHasVerify(spec: ChartSpec): boolean {
   return false;
 }
 
+/**
+ * True if any series value is non-numeric AND not a [VERIFY: …] placeholder —
+ * i.e. a typo ("6wk") or a blanked cell. Such a value silently coerces to NaN,
+ * recharts renders a gap, and the baked PNG ships a missing bar past every gate
+ * (no fence remains after baking). Bake blocks on this as well as on [VERIFY:].
+ */
+export function chartHasInvalidNumber(spec: ChartSpec): boolean {
+  for (const row of spec.data || []) {
+    for (const s of spec.series || []) {
+      const v = row[s.key];
+      // [VERIFY:] is gated separately by chartHasVerify — not "invalid" here.
+      if (typeof v === "string" && v.includes("[VERIFY:")) continue;
+      if (typeof v === "number") {
+        if (!Number.isFinite(v)) return true;
+        continue;
+      }
+      const t = String(v ?? "").trim();
+      if (t === "") return true;
+      if (!Number.isFinite(Number(t))) return true;
+    }
+  }
+  return false;
+}
+
+// ── Body-level (de)serialization ──────────────────────────────────────────────
+// A TipTap node-view holds the JSON body as the code block's *text*, with no
+// fences (CodeBlock owns those). The string-world renderer needs the full fence.
+// Both live here so the two renderers can never disagree about the grammar.
+
+/** Parse a chart block's JSON body. Null if the JSON is invalid. */
+export function parseChartSpec(body: string): ChartSpec | null {
+  try {
+    return JSON.parse(body) as ChartSpec;
+  } catch {
+    return null;
+  }
+}
+
+/** Parse a photo block's JSON body. Null if the JSON is invalid. */
+export function parsePhotoSpec(body: string): PhotoSpec | null {
+  try {
+    return JSON.parse(body) as PhotoSpec;
+  } catch {
+    return null;
+  }
+}
+
+/** A chart spec as the JSON body only (no fences) — node-view text content. */
+export function chartBody(spec: ChartSpec): string {
+  return JSON.stringify(spec, null, 2);
+}
+
+/** A photo spec as the JSON body only (no fences) — node-view text content. */
+export function photoBody(spec: PhotoSpec): string {
+  return JSON.stringify(spec, null, 2);
+}
+
 /** Re-emit a chart spec as a ```chart``` fenced block (used after in-place edits). */
 export function serializeChart(spec: ChartSpec): string {
-  return "```chart\n" + JSON.stringify(spec, null, 2) + "\n```";
+  return "```chart\n" + chartBody(spec) + "\n```";
+}
+
+/** Re-emit a photo spec as a ```photo``` fenced block. */
+export function serializePhoto(spec: PhotoSpec): string {
+  return "```photo\n" + photoBody(spec) + "\n```";
 }
