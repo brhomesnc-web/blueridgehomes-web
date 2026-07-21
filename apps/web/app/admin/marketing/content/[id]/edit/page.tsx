@@ -2,6 +2,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BlogMarkdownEditor from "@/components/BlogMarkdownEditor";
+import BlogEditorRich from "@/components/BlogEditorRich";
 import ImagePicker from "@/components/admin/ImagePicker";
 import { hasUnresolvedMedia, listMediaFences } from "@/lib/mediaBlocks";
 import { Spinner } from "../../../_components/ui";
@@ -57,6 +58,9 @@ export default function ContentEditPage({
   const [error, setError] = useState("");
   const [banner, setBanner] = useState("");
   const [showInsert, setShowInsert] = useState(false);
+  // Rich is the default surface; Source stays as the escape hatch. `content`
+  // (the markdown string) remains the single state either way.
+  const [mode, setMode] = useState<"rich" | "source">("rich");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -353,19 +357,48 @@ export default function ContentEditPage({
           </Labeled>
 
           <div>
-            <div className="mb-1 flex items-center justify-between">
+            <div className="mb-1 flex items-center justify-between gap-2">
               <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--br-text-soft)]">
-                Content (Markdown)
+                Content {mode === "source" ? "(Markdown)" : ""}
               </div>
-              <button
-                type="button"
-                onClick={() => setShowInsert((v) => !v)}
-                className="text-[11.5px] font-semibold text-[var(--br-gold-dark)] underline"
-              >
-                {showInsert ? "Close inserter" : "Insert photo"}
-              </button>
+              <div className="flex items-center gap-2">
+                {mode === "source" ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowInsert((v) => !v)}
+                    className="text-[11.5px] font-semibold text-[var(--br-gold-dark)] underline"
+                  >
+                    {showInsert ? "Close inserter" : "Insert photo"}
+                  </button>
+                ) : null}
+                {/* Rich ⇄ Source. Both edit the same markdown string, so the
+                    toggle is just a view swap — no conversion step. */}
+                <div className="flex overflow-hidden rounded-md border border-[var(--br-line)]">
+                  {(["rich", "source"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMode(m)}
+                      className={
+                        "px-2 py-0.5 text-[11px] font-semibold transition-colors " +
+                        (mode === m
+                          ? "bg-[var(--br-gold)] text-white"
+                          : "bg-white/70 text-[var(--br-text-mid)] hover:bg-[var(--br-cream-2)]")
+                      }
+                    >
+                      {m === "rich" ? "Rich" : "Source"}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            {showInsert ? (
+            {mode === "rich" ? (
+              <div className="rounded-md border border-dashed border-[var(--br-line)] bg-[var(--br-cream-2)] px-3 py-2 text-[11.5px] text-[var(--br-text-muted)]">
+                Editing in the rich editor on the right. Switch to <strong>Source</strong> for raw
+                markdown.
+              </div>
+            ) : null}
+            {mode === "source" && showInsert ? (
               <div className="mb-2 rounded-md border border-[var(--br-line)] bg-white/70 p-3">
                 <div className="mb-1.5 text-[11.5px] text-[var(--br-text-muted)]">
                   Pick or upload — drops <code>![image description](…)</code> at the cursor.
@@ -379,31 +412,37 @@ export default function ContentEditPage({
                 />
               </div>
             ) : null}
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className={`${inputClass} min-h-[420px] resize-y font-mono text-[12.5px] leading-relaxed`}
-            />
+            {mode === "source" ? (
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className={`${inputClass} min-h-[420px] resize-y font-mono text-[12.5px] leading-relaxed`}
+              />
+            ) : null}
           </div>
         </div>
 
-        {/* Right: live preview — identical to the live post */}
+        {/* Right: the rich editor, or the read-through preview in Source mode */}
         <div>
           <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--br-text-soft)]">
-            Live preview
+            {mode === "rich" ? "Rich editor" : "Live preview"}
           </div>
-          <div className="rounded-md border border-[var(--br-line)] bg-white p-5">
-            <div className="br-blog-prose">
-              {content ? (
-                <BlogMarkdownEditor content={content} onChange={setContent} slug={slug.trim()} />
-              ) : (
-                <p className="italic text-[var(--br-text-muted)]">
-                  Start typing to see the preview…
-                </p>
-              )}
+          {mode === "rich" ? (
+            <BlogEditorRich content={content} onChange={setContent} />
+          ) : (
+            <div className="rounded-md border border-[var(--br-line)] bg-white p-5">
+              <div className="br-blog-prose">
+                {content ? (
+                  <BlogMarkdownEditor content={content} onChange={setContent} slug={slug.trim()} />
+                ) : (
+                  <p className="italic text-[var(--br-text-muted)]">
+                    Start typing to see the preview…
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
