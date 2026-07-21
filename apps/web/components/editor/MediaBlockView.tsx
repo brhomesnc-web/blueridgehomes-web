@@ -28,12 +28,24 @@ export default function MediaBlockView(props: NodeViewProps) {
   const body = node.textContent;
 
   // Replace the code block's TEXT with a new JSON body (block stays a fence).
+  //
+  // No .focus() here, deliberately: the grid/title/source inputs call
+  // onSpecChange on EVERY keystroke, so focusing the editor per character
+  // yanked the caret out of the input being typed — the "only one character"
+  // bug. A background text sync has no business stealing focus. (bake/fill in
+  // replaceWithImage keep their focus() — that is a one-shot node replacement,
+  // not a per-keystroke path.)
   function writeBody(next: string) {
     const pos = typeof getPos === "function" ? getPos() : null;
     if (pos == null) return;
+    // Hardening guard (NOT the corruption fix): ProseMirror throws a RangeError
+    // on an empty text node, and an exception inside a command during a
+    // render-triggered update white-screens the whole admin tree. Not reachable
+    // today — chartBody/photoBody are JSON.stringify, min output "{}" — so this
+    // is belt-and-braces against future callers.
+    if (!next || !next.trim()) return;
     editor
       .chain()
-      .focus()
       .command(({ tr }) => {
         const from = pos + 1;
         const to = pos + 1 + node.content.size;
@@ -69,19 +81,26 @@ export default function MediaBlockView(props: NodeViewProps) {
         <div style={{ display: "none" }}>
           <NodeViewContent />
         </div>
-        {spec ? (
-          <ChartPreview
-            spec={spec}
-            slug={undefined}
-            onSpecChange={(next: ChartSpec) => writeBody(chartBody(next))}
-            onReplaceWithImage={replaceWithImage}
-            onRemove={() => deleteNode()}
-          />
-        ) : (
-          <div className="my-5 rounded-md border border-[#d9b3ad] bg-[#f6e9e7] px-4 py-3 text-[12.5px] text-[#8b3a32] not-prose">
-            This chart block has invalid JSON — switch to Source to fix it.
-          </div>
-        )}
+        {/* contentEditable={false} is load-bearing: without it ProseMirror
+            treats this interactive React UI as editable text and maps DOM
+            positions inside it back to document offsets, so keystrokes land at
+            mismapped positions (reversed / bled into neighbouring nodes). The
+            hidden NodeViewContent above stays the ONLY editable region. */}
+        <div contentEditable={false}>
+          {spec ? (
+            <ChartPreview
+              spec={spec}
+              slug={undefined}
+              onSpecChange={(next: ChartSpec) => writeBody(chartBody(next))}
+              onReplaceWithImage={replaceWithImage}
+              onRemove={() => deleteNode()}
+            />
+          ) : (
+            <div className="my-5 rounded-md border border-[#d9b3ad] bg-[#f6e9e7] px-4 py-3 text-[12.5px] text-[#8b3a32] not-prose">
+              This chart block has invalid JSON — switch to Source to fix it.
+            </div>
+          )}
+        </div>
       </NodeViewWrapper>
     );
   }
@@ -93,11 +112,15 @@ export default function MediaBlockView(props: NodeViewProps) {
         <div style={{ display: "none" }}>
           <NodeViewContent />
         </div>
-        <PhotoSlot
-          spec={spec}
-          onReplaceWithImage={replaceWithImage}
-          onRemove={() => deleteNode()}
-        />
+        {/* See the chart branch: the visible UI must be non-editable so
+            ProseMirror never maps positions into it. */}
+        <div contentEditable={false}>
+          <PhotoSlot
+            spec={spec}
+            onReplaceWithImage={replaceWithImage}
+            onRemove={() => deleteNode()}
+          />
+        </div>
       </NodeViewWrapper>
     );
   }
