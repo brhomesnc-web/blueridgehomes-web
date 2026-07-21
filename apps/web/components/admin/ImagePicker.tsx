@@ -23,8 +23,12 @@ export default function ImagePicker({
       fetch("/api/admin/images")
         .then((r) => r.json())
         .then((d) => {
-          setImages(d.images || []);
-          setFolders(d.folders || []);
+          // The API returns `folders` as an OBJECT keyed by folder name
+          // ({ blog: [...files] }) — only the keys are used here, as tab labels
+          // and filter values. Storing the object itself made folders.map()
+          // throw and unmount the whole admin tree.
+          setImages(Array.isArray(d.images) ? d.images : []);
+          setFolders(Object.keys(d.folders || {}));
           setLoading(false);
         })
         .catch(() => setLoading(false));
@@ -46,8 +50,8 @@ export default function ImagePicker({
       // Refresh full image list to pick up new folders
       const refreshRes = await fetch("/api/admin/images");
       const refreshData = await refreshRes.json();
-      setImages(refreshData.images || []);
-      setFolders(refreshData.folders || []);
+      setImages(Array.isArray(refreshData.images) ? refreshData.images : []);
+      setFolders(Object.keys(refreshData.folders || {}));
     }
   }
 
@@ -130,7 +134,7 @@ export default function ImagePicker({
             </div>
             <div style={{ padding: "8px 16px", display: "flex", gap: 6, flexWrap: "wrap", borderBottom: "1px solid #eee" }}>
               <button style={tabStyle(activeFolder === "all")} onClick={() => setActiveFolder("all")}>All</button>
-              {folders.map((f) => (
+              {Array.isArray(folders) && folders.map((f) => (
                 <button key={f} style={tabStyle(activeFolder === f)} onClick={() => setActiveFolder(f)}>{f}</button>
               ))}
             </div>
