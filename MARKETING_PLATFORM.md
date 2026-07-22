@@ -17,6 +17,21 @@ actions require sign-off; low-stakes actions auto-approve and are recorded for t
 The platform is an extension of the site's existing admin — it reuses the site's auth, database
 layer, and brand system rather than standing anything up alongside them.
 
+### The Cowork boundary — Cowork must never own the publish moment
+
+Cowork's scheduled recurring tasks only run **while the machine is awake and the Claude Desktop app
+is open**; a run scheduled while the box is off is skipped, not queued for later. A post due at 6am
+Tuesday therefore cannot depend on it. That splits the work along a determinism line:
+
+- **The VPS owns publishing** — always-on, must-fire, deterministic, no LLM anywhere in the path.
+  This is the scheduler (`instrumentation.ts` → `/api/internal/publish-due`).
+- **Cowork owns the upstream creative end** — draft generation, research, competitor/SEO passes,
+  batching drafts into the queue via `POST /api/agent/content`. Non-deterministic, best-effort,
+  human-in-the-loop at approve. **A missed Cowork run costs nothing** — the queue just doesn't grow
+  that day.
+- **Cowork must never hold the only copy of a scheduled date.** `publish_at` lands in Postgres at
+  approve time; Cowork's job ends at "the draft is in the queue".
+
 **This is NOT the old `/marketing/` static SPA.** That is a separate, pre-existing artifact
 served directly by nginx from `/var/www/brhomes-marketing/`, superseded by this platform and
 pending decommission. See `OPS.md` → "VPS Artifacts — Pending Decommission". Nothing in this
@@ -47,13 +62,18 @@ Defense in depth: **every marketing API route also calls `getSession()`** and re
 absent — matching the convention of every other admin API in the app. Middleware alone is not
 treated as sufficient.
 
-Future agent-write endpoints use `lib/agentAuth.ts` → `checkMarketingApiKey(request)`:
+Key-gated (non-session) endpoints use `lib/agentAuth.ts`:
 
-- Reads `MARKETING_AGENT_API_KEY` from the environment.
+- `checkApiKey(request, expected)` holds the comparison; `checkMarketingApiKey(request)` is a thin
+  wrapper that supplies `MARKETING_AGENT_API_KEY`. Callers of the wrapper were unchanged by the
+  generalization.
 - Dual-header, same convention as the existing blog agent key: `x-api-key: <key>` **or**
   `Authorization: Bearer <key>`.
 - Constant-time comparison via `crypto.timingSafeEqual` (the blog seed used `===`).
-- **Not wired to any endpoint yet** — it is the door, waiting on producers.
+- **Closed when unset**: an empty expected value returns `false`, so a route is shut until its key
+  exists rather than open by default.
+- **Two consumers today:** `POST /api/agent/content` (`MARKETING_AGENT_API_KEY`) and
+  `PATCH /api/internal/publish-due` (`PUBLISH_SCHEDULER_KEY`, via `checkApiKey` directly).
 
 ### Database
 
@@ -72,13 +92,29 @@ New tables are documented as **checked-in SQL under `db/schema/`** and applied *
 the VPS Postgres (`:5433`). There is no migration runner in this repo — `db/schema/*.sql` is the
 record of intent, not an executable migration. See `OPS.md` → "Repo Conventions".
 
+**Adding a COLUMN needs two forms, and this is a trap.** The files are full
+`CREATE TABLE IF NOT EXISTS` snapshots, so against an existing table the guard skips the whole
+statement — **a column added only to the `CREATE` block is a silent no-op** that lives in git and
+never in the database. Write both: the `CREATE` entry (keeping the snapshot honest) **and** an
+idempotent `ALTER TABLE … ADD COLUMN IF NOT EXISTS` below it. Apply the DDL **before** the deploy
+that ships code reading the column. `publish_at` set this precedent 2026-07-22.
+
+### Background processing
+
+The platform now runs **one server-side background timer** — `apps/web/instrumentation.ts`, a 60s
+tick that drives the publish scheduler. It is the first in the codebase and the only thing here that
+is not request-driven. Full shape, guards, and the health check live in `OPS.md` →
+"Background Processing"; note it deliberately does **no** database work of its own, self-`fetch`ing
+an internal route so the work lands in a real request context.
+
 ### UI
 
 - Tailwind v4 utilities (CSS-first; configured via `@tailwindcss/postcss` + `@theme inline` in
   `app/globals.css` — there is no `tailwind.config.js`).
 - Brand CSS-var palette: `--br-gold`, `--br-cream`, `--br-text`, `--br-line`, etc.
 - Fonts already wired via `next/font`: `font-serif` (Cormorant Garamond), `font-sans` (Inter).
-- **Recharts `^3.9.2`** for charts — the only dependency this platform added.
+- **Recharts `^3.9.2`** for charts — verified against `package.json` 2026-07-22. TipTap added
+  5 more dependencies later (see §7), so this is no longer the only one.
 - Shared primitives in `_components/`: `ui.tsx` (Card, KpiCard, StakesTag, ModuleTag, StatusTag,
   EmptyState, NotBuiltYet, Spinner), `palette.ts` (hex values for Recharts, mirrored from the CSS
   vars), `DateRangeSelector.tsx`, `AgentStatusChip.tsx`, `OverviewClient.tsx`.
@@ -96,7 +132,7 @@ record of intent, not an executable migration. See `OPS.md` → "Repo Convention
 | Leads | `/admin/marketing/leads` | **Built.** READ-THROUGH of `submissions` + `feedback_submissions`. No leads table, no writes anywhere. |
 | Agent-status chip + kill-switch | sidebar footer | **Built, wired to a STUB source** (`/api/admin/marketing/agent-status`, in-memory state). There is no real agent yet; Pause flips a stub flag. |
 | Date-range selector | Overview header | **Built.** Slices representative data (7 / 30 / 90 / This month / custom). Shape is production-ready for real queries. |
-| Content | `/admin/marketing/content` | **Built.** Full loop: human compose form + agent producer (`POST /api/agent/content` via `checkMarketingApiKey` — first wiring of `lib/agentAuth.ts`) enqueue `publish_post` drafts into `approval_queue`; review drawer shows full payload; Approve runs status-flip + `blog_posts` INSERT in one transaction (`lib/queueExecutor.ts`), rejecting/re-opening are side-effect-free; Posts tab is a `blog_posts` inventory incl. drafts. Slug conflict → 409, tx rolls back, nothing publishes. |
+| Content | `/admin/marketing/content` | **Built.** Full loop: human compose form + agent producer (`POST /api/agent/content` via `checkMarketingApiKey` — first wiring of `lib/agentAuth.ts`) enqueue `publish_post` drafts into `approval_queue`; review drawer shows full payload; Approve runs status-flip + `blog_posts` INSERT in one transaction (`lib/queueExecutor.ts`), rejecting/re-opening are side-effect-free. Slug conflict → 409, tx rolls back, nothing publishes. **Scheduling (2026-07-22):** approve accepts an optional top-level `publish_at`; the executor computes `published`, `date` and `publish_at` from it; approve revalidates `/blog` only when something actually publishes; scheduled posts flip live on the 60s tick. Posts tab is a `blog_posts` inventory with a three-state pill (Live / Scheduled / Draft) plus reschedule, publish-now and cancel via `PATCH /api/admin/marketing/content/[slug]/schedule`. |
 | Social | `/admin/marketing/social` | Placeholder — "Not built yet". |
 | Ads | `/admin/marketing/ads` | Placeholder — "Not built yet". |
 | Email | `/admin/marketing/email` | Placeholder — "Not built yet". |
@@ -135,6 +171,23 @@ almost exclusively by status, newest-first.
 
 **No producers write to this table yet.** The API supports listing by status and PATCHing a
 status; the enqueue side arrives with the agent modules.
+
+### `blog_posts` (pre-existing — the platform now owns columns on it)
+
+Not a table this platform created, but no longer only a write target either: the Content module owns
+`publish_at`, and the scheduler writes `published` and `date`. Source of truth for the shape is
+`apps/web/db/schema/blog_posts.sql` (a snapshot reconciled against live `\d blog_posts`).
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `slug` | `text` | NOT NULL, UNIQUE (`blog_posts_slug_key`) — the executor's `ON CONFLICT (slug)` target and the `/blog/[slug]` route key |
+| `published` | `boolean` | default `false` — **the source of truth.** Every read in `lib/blog.ts` gates on `published = TRUE` |
+| `date` | `text` | NOT NULL, **`YYYY-MM-DD`** — display date AND sort key. `idx_blog_posts_published (published, date DESC)` sorts it **lexicographically**, so any other format silently corrupts ordering |
+| `publish_at` | `timestamptz` | nullable — **an instruction, not a state.** NULL = not scheduled. The tick flips `published` once `publish_at <= now()` and re-derives `date` from it |
+
+The `published` / `publish_at` split is deliberate: deriving `published` from `publish_at` would have
+rewritten every read query for no gain, and the catch-up property (a missed tick publishes late
+rather than never) falls out of the predicate for free.
 
 ### Leads — read-through, no table
 
@@ -179,6 +232,26 @@ Explicitly out of scope for slice 1, in rough dependency order:
    flag — it does not yet stop anything real).
 5. **Analytics ingest** — real data behind the Overview KPIs and charts, replacing the
    representative series. Only leads-this-month is real today.
+6. **Social publishing on publish — designed, not built.** Recorded because the decisions are
+   non-obvious and would otherwise be redone from scratch:
+   - **Same determinism split as the Cowork boundary in §1:** dispatch must fire at publish time, so
+     it belongs on the **VPS**. Caption *composition* is LLM work that belongs **upstream at draft
+     time** — generated with the post and reviewed in the same approve step, never inside the
+     must-fire path.
+   - **A social send failing must never roll back the publish.** The site is the asset; social is
+     amplification. This is the single most important constraint in the design.
+   - **Shape:** an outbox table, one row per (post × channel) carrying status / attempts /
+     last_error, dispatched **outside** the publish transaction, retried on the tick the scheduler
+     already runs, with a Pushover alert on terminal failure (`PUSHOVER_TOKEN` / `PUSHOVER_USER` are
+     already wired).
+   - **Hangs off the flip** in `app/api/internal/publish-due/route.ts` — that is where outbox rows
+     get written.
+   - **Sequencing:** (1) scheduler ✅ shipped 2026-07-22, (2) outbox + **one** channel proven end to
+     end, (3) further channels as per-channel adapters.
+   - **Blocked on:** which channels are actually live, and whether a Meta Business account exists
+     with Instagram linked to the Facebook Page — a hard prerequisite for programmatic IG posting.
+     Every channel needs its own OAuth app, review process, and token-refresh lifecycle; expired page
+     tokens mean silently missed posts.
 
 ---
 
@@ -198,13 +271,28 @@ Both are done by hand on the VPS, deliberately, outside any build or deploy:
   (see `OPS.md` → "Environment Variables"); `checkMarketingApiKey` compares byte-for-byte and
   surrounding quotes would become part of the key.
 
+- [x] **(c) Publish scheduler prerequisites** — **both done 2026-07-22**, both applied
+  **before** the deploy that shipped the code reading them:
+
+        # 1. the key, appended to .env.local unquoted
+        PUBLISH_SCHEDULER_KEY=<openssl rand -hex 32>
+
+        # 2. the column
+        ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS publish_at timestamptz;
+
+  **The ordering is the rule, not a coincidence:** DDL and env first, deploy second. A nullable
+  column is backward-compatible so early application is safe, whereas the reverse order gives you a
+  live app querying a column that does not exist. Note the `ALTER` was required *in addition to* the
+  `CREATE` block edit — see §2 → Database.
+
 When these flip to done, tick them here — that is the only doc follow-up a deploy requires.
 
 ---
 
 ## 7. Deploy Notes
 
-The platform ships as **ordinary routes in the existing Next app**. There are:
+The platform ships as **ordinary routes in the existing Next app**, plus — since 2026-07-22 —
+**one background timer** (`instrumentation.ts`; see §2 → Background processing). There are:
 
 - **No nginx changes** — it is served through the existing `proxy_pass` to `127.0.0.1:3001`.
 - **No systemd changes** — same `brhomes-web` service, same port. That service runs the
@@ -217,8 +305,11 @@ deploy path and owns the pull, install, build, standalone asset copies, and rest
 `OPS.md` → "Standard Update / Redeploy Procedure", including the bootstrap note for when
 `deploy.sh` itself changes.
 
-The only build-relevant change is the added `recharts` dependency, which the script's
-`npm install` picks up from the committed `package-lock.json`.
+Build-relevant dependency changes to date: `recharts` (this platform), and **5 TipTap packages**
+added later for the WYSIWYG editor (`@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`,
+`@tiptap/markdown`, `@tiptap/extension-image`, all 3.28.x). The script's `npm install` picks all of
+them up from the committed `package-lock.json`. No dependency was added for the scheduler — it is
+`setInterval` and `fetch`.
 
 **Local builds do not complete, and that is expected.** `next build` compiles and typechecks
 cleanly, then fails at `Collecting page data` with `ECONNREFUSED` on `/portfolio/[slug]`. That

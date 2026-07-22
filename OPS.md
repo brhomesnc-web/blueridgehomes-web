@@ -6,10 +6,13 @@ This document describes how to operate the Blue Ridge Homes website on the produ
 
 - Marketing platform — architecture, module status, data model, agent surface: `MARKETING_PLATFORM.md`
 
-Note: `docs/OPS.md` is a **local-only untracked shadow** of this file — it has never been
-committed and never reaches the VPS. **This root `OPS.md` is the tracked source of truth; edit
-this one.** Resolve the duplicate (promote `docs/OPS.md` by committing it as canonical, or delete
-it) — decision pending.
+Note: `docs/OPS.md` is a **local-only untracked** earlier draft, scoped to website operations
+only — it predates the marketing platform and lacks the Session Log and Horizon. It has never been
+committed and never reaches the VPS. **This root `OPS.md` is the tracked source of truth; edit this
+one.** Left in place deliberately as a website-only reference; it is not maintained.
+
+`MEMORY.md` was archived to a pointer stub on 2026-07-22 — project state lives here (Session Log +
+Horizon) and in `MARKETING_PLATFORM.md`.
 
 The marketing platform runs inside this same app, service, and port, so it needs no operations of its own. Only the cross-cutting facts it depends on live here: environment keys, the schema convention, and the old marketing SPA artifact.
 
@@ -23,7 +26,7 @@ This guide applies only to:
 - Blue Ridge Homes app: `/var/www/brhomes/apps/web`
 - Blue Ridge Homes local app port: `127.0.0.1:3001`
 - Blue Ridge Homes systemd service: `brhomes-web`
-- Blue Ridge Homes nginx site file: `/etc/nginx/sites-available/brhomesnc.com`
+- Blue Ridge Homes nginx site file: `/etc/nginx/sites-available/blueridgehomesnc.com`
 
 This guide does not apply to:
 
@@ -106,8 +109,11 @@ the box). These are about not breaking the work.
 
 ### Nginx site
 
-    /etc/nginx/sites-available/brhomesnc.com
-    /etc/nginx/sites-enabled/brhomesnc.com
+    /etc/nginx/sites-available/blueridgehomesnc.com
+    /etc/nginx/sites-enabled/blueridgehomesnc.com
+
+`brhomesnc.com` also has a site file, but it is now a **pure 301 redirect** to the primary domain
+— it is not the app's server block. Inspect and edit `blueridgehomesnc.com`.
 
 ---
 
@@ -358,9 +364,24 @@ Key names in use (names only — never commit values):
     SMTP_HOST / SMTP_PORT            mail transport
     SMTP_USER / SMTP_PASS            mail credentials
     CONTACT_EMAIL                    contact-form notification recipient
-    PUBLIC_DIR                       public asset directory override
+    PUSHOVER_TOKEN / PUSHOVER_USER   Pushover push notifications (lib/notify.ts)
+    ANTHROPIC_API_KEY                draft generation (lib/generateDraft.ts)
+    PUBLISH_SCHEDULER_KEY            publish-scheduler auth (see below)
+    PUBLIC_DIR                       public asset directory override — optional; both readers
+                                     (api/admin/images, api/admin/upload) fall back to
+                                     /var/www/brhomes/apps/web/public, and it is NOT set in the
+                                     live .env.local, so the fallback is what runs
 
-`MARKETING_AGENT_API_KEY` — marketing agent auth, consumed by `apps/web/lib/agentAuth.ts`. Add it to `.env.local` when the first agent producer lands; nothing reads it before then. **Write it unquoted.** Unlike `SMTP_PASS`, which the code defensively strips surrounding quotes from, this key is compared byte-for-byte as-is — surrounding quotes become part of the key and auth will fail.
+`MARKETING_AGENT_API_KEY` — marketing agent auth, consumed by `apps/web/lib/agentAuth.ts` and wired to `POST /api/agent/content` (added 2026-07-17). **Write it unquoted.** Unlike `SMTP_PASS`, which the code defensively strips surrounding quotes from, this key is compared byte-for-byte as-is — surrounding quotes become part of the key and auth will fail.
+
+`PUBLISH_SCHEDULER_KEY` — added 2026-07-22 for the publish scheduler. Consumed by **both**
+`app/api/internal/publish-due/route.ts` (the door) and `instrumentation.ts` (the tick) — same
+process, same `EnvironmentFile`, so one value serves both. **Write it unquoted**, same reason as
+above. **If it is missing the scheduler 401s itself forever and publishes nothing, silently** —
+which is why `instrumentation.ts` logs a warning at registration when it is unset. Blast radius if
+leaked: an attacker can publish already-approved posts early and force `/blog` cache invalidation.
+No data loss. Note the route is reachable from the public internet through nginx's catch-all
+`location /`; there is no loopback-only option without editing nginx, so the key is the only control.
 
 After changing `.env.local`, restart the service to pick it up:
 
@@ -380,6 +401,90 @@ There is **no migration runner**. These files are the record of intent, not exec
 
 Deploys never run DDL. Adding a table means committing the `.sql` file and applying it by hand.
 
+#### Adding a COLUMN takes two forms — read this before touching `db/schema/`
+
+The files are full `CREATE TABLE IF NOT EXISTS` **snapshots**. Against a table that already exists,
+that guard skips the **entire statement** — so **adding a column only to the `CREATE` block is a
+silent no-op**. The column lives in git and never in the database, and the failure does not surface
+until a deploy later, as a query error against a column that was "added" weeks ago.
+
+Every new column therefore needs **both**:
+
+1. the entry in the `CREATE` block — keeps the snapshot an honest description of the live table; and
+2. an idempotent `ALTER TABLE <t> ADD COLUMN IF NOT EXISTS <col> <type>;` appended below it — this
+   is the statement that actually runs.
+
+`publish_at` set this precedent (2026-07-22); there was no prior column addition to copy.
+
+**Ordering: apply the DDL BEFORE the deploy that ships code reading the column.** A nullable column
+is backward-compatible, so old code ignores it and applying early is always safe. The reverse order
+gives you a live app querying a column that does not exist.
+
+---
+
+## Timezones
+
+Operationally load-bearing since the publish scheduler landed.
+
+- **The VPS system zone is `Etc/UTC`.** `TZ` is set **nowhere** — not in the `brhomes-web` unit, not
+  in `.env.local` — so the Node process inherits UTC. Postgres `SHOW timezone` is also `Etc/UTC`.
+- **The business operates in `America/New_York`.** These are not the same, and the gap is four or
+  five hours depending on DST.
+- **Standing rule:** naive NY wall-clock strings travel on the wire (`"2026-08-05T06:00"`); **all
+  zone conversion happens in SQL** via `AT TIME ZONE 'America/New_York'`. `America/New_York` must
+  not appear in client code. This is what makes scheduling correct from a laptop in any timezone —
+  you schedule in *business* time, not browser time. See `apps/web/lib/publishAt.ts`.
+- **⚠ Do NOT set `TZ=America/New_York` on the unit.** It is a plausible reflex once you start
+  thinking in NY time for scheduling, and it would shift every public blog date one day early. The
+  date-rendering fix below defuses the symptom; the reflex is still wrong.
+
+### Scheduling a post by hand requires a zone-named literal
+
+A bare literal is UTC, not Eastern: `'2026-08-05 06:00'` is 2am NY — four hours early, silently.
+
+    UPDATE blog_posts
+       SET published = false,
+           publish_at = TIMESTAMP '2026-08-05 06:00' AT TIME ZONE 'America/New_York'
+     WHERE slug = 'your-slug';
+
+Verify what you actually stored before walking away:
+
+    SELECT slug, publish_at, publish_at AT TIME ZONE 'America/New_York' AS ny
+      FROM blog_posts WHERE slug = 'your-slug';
+
+---
+
+## Background Processing
+
+`apps/web/instrumentation.ts` is the **first server-side background timer in this codebase** — until
+2026-07-22 the app was request-driven only, and `MARKETING_PLATFORM.md` §7's "ordinary routes" framing
+was the whole truth. It no longer is.
+
+Shape, and why each part is deliberate:
+
+- **60s `setInterval`**, registered by Next's `register()` hook at server start.
+- **Guarded on `process.env.NEXT_RUNTIME === "nodejs"`** — instrumentation also executes in the build
+  worker and the edge runtime, neither of which should start a timer.
+- **Module-scope `isRunning` flag**, so a slow tick cannot stack fetches. Reset in a `finally`.
+- **No eager first call.** At boot the HTTP server may not be listening yet; the first natural tick
+  at +60s sidesteps the race. Do not "improve" this by firing immediately.
+- **Whole body try/caught.** An unhandled rejection here would take the server down — a live outage
+  caused by the scheduler is far worse than a late post. During `next build` there is no server on
+  3001, so the fetch throws and is swallowed: fail-safe by design.
+- **It does not touch the database.** It self-`fetch`es `POST 127.0.0.1:${PORT}/api/internal/publish-due`
+  so the flip and the `revalidatePath` calls run inside a **real request context** —
+  `revalidatePath` outside a request scope is unproven in this setup and is being routed around
+  deliberately.
+
+Single-process standalone means exactly one timer; there is no duplicate-fire risk from workers.
+
+**Health check** — this is the go/no-go signal after any deploy:
+
+    journalctl -u brhomes-web | grep -i scheduler
+
+A `[scheduler] registered — polling …` line at boot means the hook ran. Its absence means nothing is
+scheduled and nothing will publish.
+
 ---
 
 ## VPS Artifacts — Pending Decommission
@@ -389,7 +494,7 @@ Deploys never run DDL. Adding a table means committing the `.sql` file and apply
 A static marketing dashboard predating the current platform is **still live** on this VPS:
 
     Files    /var/www/brhomes-marketing/
-    Nginx    location /marketing/*  — 13 blocks in the brhomesnc.com site file
+    Nginx    location /marketing/*  — 13 blocks in the blueridgehomesnc.com site file
     Auth     .htpasswd-marketing (HTTP basic auth)
     Since    ~Apr 28
 
@@ -487,6 +592,93 @@ These are deliberate operator actions. Nothing in a deploy performs them.
 ---
 
 ## Session Log — Shipped
+
+### 2026-07-22 — Revalidation, publish scheduler, and the scheduling workflow
+
+Four slices, all on `main` and all deployed (VPS HEAD `52a49bc`, rebuilt 10:09 UTC).
+
+#### `ca46860` — SSG revalidation on approve
+
+**The first on-demand revalidation in this codebase.** Post-commit in
+`app/api/admin/marketing/queue/[id]/route.ts`, gated on `item.status === "approved"` — PATCH also
+handles save-draft, reject and re-open, none of which publish anything. Seam: `ExecuteResult`'s
+success variant widened to carry the slug and `RETURNING id` became `RETURNING id, slug`, so the
+route revalidates the **exact inserted (trimmed) slug** the DB holds rather than re-deriving it from
+`payload`. **Verified live** — an approved post appeared at `/blog` with no deploy.
+
+#### `f055c09` — Edit link on post cards
+
+`/admin/marketing/content` cards gained `Edit →` beside `View →`, targeting `/admin/blog/[slug]/edit`.
+
+Two facts worth keeping:
+
+- **Internal admin nav is plain `<a>` by house convention** — 7 files use `<a href="/admin/…">`;
+  exactly one (`admin/marketing/layout.tsx`) uses `next/link`. Match the neighbours.
+- **Two different editors, easily confused:** `/admin/blog/[slug]/edit` edits a published
+  `blog_posts` row; `/admin/marketing/content/[id]/edit` edits a **queue item**. Linking a published
+  post at the latter would be wrong.
+
+#### `c00c205` — publish scheduler mechanism
+
+`publish_at timestamptz NULL` added to `blog_posts`. **`published bool` remains the source of
+truth** and the scheduler flips it, so no read query changed (`lib/blog.ts` still gates on
+`published = TRUE`). Deriving `published` from `publish_at` instead would have rewritten every read
+for no gain.
+
+Design properties — **recorded so nobody "fixes" them**:
+
+- **Idempotency is free.** `WHERE published = false` means an overlapping tick matches zero rows.
+  Double-firing cannot double-publish, so the tick needs no lock.
+- **`date` derives from `publish_at`, not `now()`** — a late catch-up tick still stamps the date the
+  post was scheduled for, not the recovery date.
+- **`date` must stay `YYYY-MM-DD`.** `idx_blog_posts_published (published, date DESC)` sorts it
+  **lexicographically**; any other format silently corrupts ordering.
+- **A missed tick publishes late, never never** — the predicate is a catch-up (`publish_at <= now()`),
+  not an exact match.
+
+Also shipped: `lib/agentAuth.ts` generalized to `checkApiKey(request, expected)` with
+`checkMarketingApiKey` as a thin wrapper (every existing caller unchanged), and the date-rendering
+fix below.
+
+**Verified in production:** a post with `publish_at` 09:30:58Z flipped unattended, with the browser
+closed, and stamped `date = 2026-07-22` — the correct NY-local date.
+
+#### `52a49bc` — scheduling workflow in the admin
+
+Schedule / reschedule / publish-now / cancel, all from the UI. Deployed; the browser acceptance pass
+was not reported back, so treat the UI as shipped-but-unwitnessed.
+
+- **`lib/publishAt.ts`** holds the wire contract in one place — `PUBLISH_AT_PATTERN`,
+  `parsePublishAtLocal()`, `nowInNewYorkLocal()` — imported by two server routes and two client pages.
+- `ExecuteResult` → `{ ok, slug, published }`, so **approve revalidates only when something actually
+  went live**. A scheduled approve publishes nothing and revalidating would be wasted work.
+- New `PATCH /api/admin/marketing/content/[slug]/schedule`, three actions, all guarded on
+  `published = false`, **409 `already_published`** on zero rows, `revalidatePath` only on `publish_now`.
+- **`publish_at` rides top-level in the approve body**, never inside `payload` —
+  `validateContentDraft` builds from a 7-field whitelist and silently drops unknown keys.
+- **`publish_at_ny` is returned preformatted** in `datetime-local` shape, so one field serves both
+  the display and the input prefill with **zero client-side zone math**.
+- Posts tab now has a three-state pill (Live / Scheduled / Draft) and three explicit count buckets;
+  the old `drafts = total - live` subtraction filed every scheduled post under "drafts".
+
+#### Date rendering — `timeAgo(iso, dateOnly)`
+
+`blog_posts.date` is a bare `YYYY-MM-DD`, which `new Date()` parses as **UTC midnight**; a
+`toLocaleDateString()` with no explicit zone then renders it a day early in any behind-UTC browser.
+Live symptom: `2026-03-10` displayed as `3/9/2026` on the admin Content card. Fixed with
+`timeZone: "UTC"` at the three post-date sites (`app/blog/page.tsx`, `app/blog/[slug]/page.tsx`,
+`admin/marketing/content/page.tsx`).
+
+**Why `timeAgo` took a `dateOnly` parameter instead of a blanket pin:** it has three callers, and the
+other two pass `created_at` timestamptz values that *should* render in the viewer's zone. Pinning
+unconditionally would have introduced the same off-by-one in the opposite direction — a queue item
+created at 9pm ET showing tomorrow's date. **Bare date strings pin UTC; real timestamps stay
+viewer-local. Do not "simplify" this back to one behaviour.**
+
+Note the two public blog pages were correct only **by accident of the box being UTC** — see
+"Timezones" above for why that makes `TZ=America/New_York` actively dangerous.
+
+---
 
 ### 2026-07-21 — WYSIWYG (TipTap) editor for the marketing content editor
 
@@ -598,16 +790,21 @@ recon-and-build item — not yet scheduled. Note the gate is narrower than it lo
 `/admin/*` pages only, never `/api/admin/*`, which is why every admin API route calls
 `getSession()` itself.
 
-### Blog SSG delete gap
+### Blog SSG delete gap — HALF RESOLVED 2026-07-22
 
-`/blog/[slug]` is statically generated via `generateStaticParams()`. Deleting a `blog_posts` row
-does **not** invalidate the prerendered page — it keeps serving a 200 with stale content until the
-next deploy or a revalidation. Pre-existing property of the blog, surfaced during Content
-smoke-test cleanup; not introduced by the Content module. Not yet addressed.
+On-demand revalidation now exists, but **only on the publish paths**: approve (`ca46860`) and the
+scheduler's `publish_now`. **Deleting or editing a row still leaves a stale prerendered page.**
+`revalidatePath` appears in exactly two files, both of which run when something goes *live*; nothing
+runs when something goes away or changes.
 
-The same staleness applies to edits, not just deletes: `PUT /api/blog/[slug]` updates the row, and
-the prerendered page keeps serving the old copy. Anything that needs to disappear or change
-promptly currently needs a deploy.
+**This is no longer theoretical.** During the 2026-07-22 scheduler verification the
+`scheduler-smoke-test` row was published by the tick as designed, and a bare `DELETE` did **not**
+remove it from `/blog` — the page kept serving 200 with the deleted post until a `./deploy.sh`.
+
+The same staleness applies to edits: `PUT /api/blog/[slug]` updates the row and the prerendered page
+keeps serving the old copy. **Anything that needs to disappear or change promptly still needs a
+deploy**, or a `revalidatePath` call added to the delete/update routes — which is the obvious fix and
+is not done.
 
 ### Redundant slug index
 
@@ -634,30 +831,66 @@ remained — so it passed both the editor's `hasUnresolvedMedia` gate and the se
 entry. Kept here rather than deleted because the failure mode — a defect that survives *because* the
 gate's own predicate stops matching after the transform — is worth recognising again elsewhere.
 
-### Next slice — scheduled publishing + revalidation + truncation guard
+### `max_tokens` truncation guard
 
-The next build is one slice combining three items:
+`generateDraft.ts` should throw when the model's `stop_reason === 'max_tokens'`, so a truncated draft
+is rejected rather than queued half-written. Still not built.
 
-- **SSG `revalidatePath` fix.** `/blog` and `/blog/[slug]` are SSG with zero `revalidatePath` (see
-  "Blog SSG delete gap" above), so an approved post does not appear live until the next deploy. Fix:
-  call `revalidatePath('/blog')` + `revalidatePath('/blog/' + slug)` **post-COMMIT** in the approve
-  branch of `app/api/admin/marketing/queue/[id]/route.ts`, when `status === 'approved'`.
-  **Confirmed live 2026-07-21:** approving wrote the row (`blog_posts`, `published = t`) but the SSG
-  pages did not update until a redeploy. This is observed behaviour now, not a prediction.
-- **Scheduler (`publish_at`).** Timed publishing. There is **no scheduling column today** —
-  `blog_posts` has `published bool` plus a **text** `date`, so this needs a real column (and a
-  mechanism to publish at a set time), not just a query change.
-- **`max_tokens` truncation guard.** `generateDraft.ts` should throw when the model's
-  `stop_reason === 'max_tokens'`, so a truncated draft is rejected rather than queued half-written.
-
-**Standing note until revalidation lands: an approved post requires a `./deploy.sh` before it is
-visible on the live site.** Approving alone is not publishing, in practice.
+This is the last surviving item of the three-part "scheduled publishing + revalidation + truncation
+guard" slice. The other two shipped 2026-07-22 — **SSG `revalidatePath`** (`ca46860`) and the
+**scheduler / `publish_at`** (`c00c205`, workflow in `52a49bc`); both are in the Session Log above.
 
 ### Deferred — migrating the blog-admin editors to TipTap
 
 `app/admin/blog/[slug]/edit` and `app/admin/blog/new` deliberately stay on `BlogMarkdownEditor`
 (string-world) via the refactored shared components. They are only migrated once the rich editor has
 proven itself on the marketing content editor. Not scheduled.
+
+### No unpublish path
+
+Nothing in the admin can set `published = false` on a live post, and there is therefore no
+revalidation story for one. The schedule route returns **409 `already_published`** rather than
+attempting it. Combined with the SSG delete gap above, taking a live post down currently requires a
+DB write **plus** a deploy. If unpublish is ever wanted, the revalidation half is the hard half.
+
+### `ON CONFLICT (slug) DO NOTHING` errors rather than updates
+
+Re-approving an already-published slug matches zero rows → `ok:false` → `ExecuteError` → rollback.
+Correct and safe today: the `rows.length === 0` guard fires before `rows[0]`, so nothing
+double-publishes and the queue row stays pending and retryable.
+
+**Scheduling makes this materially easier to hit** — "schedule it, then change my mind and
+re-approve" is a natural gesture that now lands on a hard error. If edit-then-republish is wanted,
+that is a `DO UPDATE` decision, not a bug fix.
+
+### Three approve entry points, no shared code path
+
+`content/page.tsx` (review drawer), `content/[id]/edit/page.tsx` (full editor), and
+`queue/page.tsx` (inline row action) each approve independently. Two send `{ status }`, one sends
+`{ payload, status }`; there is **no shared hook or component** and the error handling differs in all
+three.
+
+**Absent `publish_at` means publish-now specifically so the un-updated door keeps working** — the
+queue page stays publish-now-only by design, not by oversight. Any future change to approve semantics
+has to consider all three, or two of them will silently keep the old behaviour.
+
+### `checkApiKey` name shadowing
+
+`app/api/blog/route.ts` and `app/api/blog/[slug]/route.ts` each define a **module-local**
+`checkApiKey(request)` comparing `BLOG_AGENT_API_KEY` with `===`, importing nothing from
+`lib/agentAuth.ts`. Now that a constant-time (`timingSafeEqual`) helper exists under the same name,
+this is both a readability trap and a minor timing-safety inconsistency. Folding the two onto the
+shared helper is a clean small follow-up.
+
+### ⚠ Tooling hazard — `.bak` is not a scratch extension in this repo
+
+Two **tracked** files, `apps/web/app/globals.css.preavif.bak` and
+`apps/web/app/layout.tsx.preavif.bak`, were caught by a `find -name "*.bak" -delete` cleanup glob
+during the 2026-07-22 session. Restored with `git checkout --` before the commit; no harm done.
+
+Record the hazard rather than the incident: **`.bak` is a real, tracked extension here.** Scope
+cleanup globs to the specific files created, and read `git status` before every commit — the
+deletions were visible there and that is what caught them.
 
 ### Still open, unscheduled
 
@@ -700,7 +933,7 @@ Before reloading nginx:
 
 ### 1. Inspect the Blue Ridge Homes config
 
-    sudo sed -n '1,220p' /etc/nginx/sites-available/brhomesnc.com
+    sudo sed -n '1,220p' /etc/nginx/sites-available/blueridgehomesnc.com
 
 ### 2. Validate nginx config
 

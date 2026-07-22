@@ -1,322 +1,35 @@
-\# Blue Ridge Homes — Project Memory (MEMORY.md)
+# Blue Ridge Homes — Project Memory (ARCHIVED)
 
+**Superseded 2026-07-22.** This file was last meaningfully updated 2026-03-10, when the project was
+still in landing-page design. It described a phase that ended months ago and never mentioned the
+blog, the admin surface, the marketing platform, the approval queue, or the publish scheduler — a
+fresh reader following it in good faith would have built a badly wrong model of the project.
 
+Project state now lives in two places, both maintained:
 
-This document tracks what has been completed and what is next.
+- **`OPS.md`** — operations, deploy, environment, plus the **Session Log** (what shipped, when, with
+  commits) and **Horizon** (known issues, deliberately unscheduled). This is where "what has been
+  completed and what is next" actually lives.
+- **`MARKETING_PLATFORM.md`** — architecture, module-by-module status, data model, agent surface.
 
-
-
-This file prevents loss of project state across development sessions.
-
-
+Git history retains everything this file used to say. It is kept as a pointer rather than deleted so
+that anything still referencing `MEMORY.md` lands somewhere useful.
 
 ---
 
+## Project Goal
 
+Create a modern high-end custom home builder website for **Blue Ridge Homes**.
 
-\# Project Goal
-
-
-
-Create a modern high-end custom home builder website for:
-
-
-
-Blue Ridge Homes
-
-
-
-Location:
-
-
-
-Western North Carolina
-
-
+Location: Western North Carolina.
 
 Primary focus:
 
-
-
-• Luxury aesthetic
-
-• Portfolio-first design
-
-• Fast image loading
-
-• Modern build process explanation
-
-• Lead capture
-
-
-
----
-
-
-
-\# Current Development Phase
-
-
-
-Landing page design.
-
-
-
-The goal is to visually match the provided template design.
-
-
-
-Current work focuses on:
-
-
-
-• typography
-
-• background texture
-
-• hero layout
-
-• button styling
-
-• stat counter bar
-
-• portfolio cards
-
-
-
----
-
-
-
-\# What Has Been Completed
-
-
-
-Infrastructure:
-
-
-
-• Next.js project created
-
-• GitHub repository created
-
-• Server deployment configured
-
-• SSH tunnel viewing working
-
-• Deploy script created
-
-• Image optimization pipeline built
-
-
-
-Images:
-
-
-
-• ~5600 original images imported
-
-• optimized WebP images generated
-
-• responsive image sizes created
-
-
-
-Gallery API:
-
-
-
-/api/gallery
-
-
-
-Returns responsive image sets.
-
-
-
-Portfolio pages:
-
-
-
-/portfolio/\[slug]
-
-
-
-Dynamic image galleries supported.
-
-
-
----
-
-
-
-\# Landing Page Progress
-
-
-
-Hero section implemented.
-
-
-
-Stats counter implemented.
-
-
-
-Process section implemented.
-
-
-
-Portfolio preview implemented.
-
-
-
-Contact CTA implemented.
-
-
-
-Design system partially applied.
-
-
-
-However the page still differs from the template in:
-
-
-
-• background texture
-
-• button styling
-
-• typography contrast
-
-• spacing
-
-• hero proportions
-
-• card styling
-
-
-
----
-
-
-
-\# Current Priority
-
-
-
-Match the landing page visual style to the template.
-
-
-
-Focus areas:
-
-
-
-1\. Background stone texture
-
-2\. Button design system
-
-3\. Typography hierarchy
-
-4\. Section contrast
-
-5\. Card design consistency
-
-6\. Hero proportions
-
-
-
----
-
-
-
-\# Next Major Steps
-
-
-
-After landing page design is complete:
-
-
-
-1\. Portfolio page design
-
-2\. Project gallery layout
-
-3\. Contact form backend
-
-4\. SEO structure
-
-5\. Performance optimization
-
-6\. Nginx production switch
-
-
-
----
-
-
-
-\# Future Improvements
-
-
-
-CDN for images
-
-
-
-Structured data for SEO
-
-
-
-Dynamic project CMS
-
-
-
-Lead tracking
-
-
-
-Analytics
-
-
-
----
-
-
-
-\# Important Notes
-
-
-
-This project shares a server with:
-
-
-
-PerfectBike
-
-
-
-Never kill processes unrelated to Blue Ridge Homes.
-
-
-
-All work should occur in:
-
-
-
-/var/www/brhomes
-
-
-
----
-
-
-
-\# Last Updated
-
-
-
-March 10, 2026
-
-
-
+- Luxury aesthetic
+- Portfolio-first design
+- Fast image loading
+- Modern build process explanation
+- Lead capture
+
+*(This section is the one part of the original file still true and not duplicated elsewhere, which is
+why it survives here.)*
