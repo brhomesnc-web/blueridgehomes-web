@@ -422,20 +422,28 @@ export default function ContentPage() {
                     </div>
                   ) : null}
                 </div>
-                {post.published ? (
+                <div className="flex shrink-0 items-center gap-3">
                   <a
-                    href={`/blog/${post.slug}`}
-                    target="_blank"
-                    rel="noreferrer"
+                    href={`/admin/blog/${post.slug}/edit`}
                     className="shrink-0 text-[12.5px] font-semibold text-[var(--br-gold-dark)] underline"
                   >
-                    View →
+                    Edit →
                   </a>
-                ) : (
-                  <span className="shrink-0 text-[12px] text-[var(--br-text-muted)]">
-                    Not public
-                  </span>
-                )}
+                  {post.published ? (
+                    <a
+                      href={`/blog/${post.slug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="shrink-0 text-[12.5px] font-semibold text-[var(--br-gold-dark)] underline"
+                    >
+                      View →
+                    </a>
+                  ) : (
+                    <span className="shrink-0 text-[12px] text-[var(--br-text-muted)]">
+                      Not public
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
