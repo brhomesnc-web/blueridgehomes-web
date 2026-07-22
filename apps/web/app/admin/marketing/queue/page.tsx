@@ -63,6 +63,7 @@ export default function ApprovalQueuePage() {
   const [tableMissing, setTableMissing] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [acting, setActing] = useState<number | null>(null);
+  const [reviewError, setReviewError] = useState("");
 
   const load = useCallback(async (status: string) => {
     setLoading(true);
@@ -85,13 +86,28 @@ export default function ApprovalQueuePage() {
 
   async function review(id: number, status: "approved" | "rejected") {
     setActing(id);
+    setReviewError("");
     try {
       const res = await fetch(`/api/admin/marketing/queue/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (res.ok) load(tab);
+      if (res.ok) {
+        load(tab);
+        return;
+      }
+      // Previously swallowed: a failed approve looked exactly like a no-op.
+      // slug_conflict is the common one and gets materially easier to hit once
+      // posts can be scheduled and re-approved.
+      const d = await res.json().catch(() => ({}));
+      setReviewError(
+        d.code === "slug_conflict"
+          ? "That slug is already published — edit the draft and retry."
+          : d.error || "Something went wrong."
+      );
+    } catch {
+      setReviewError("Network error — nothing was changed.");
     } finally {
       setActing(null);
     }
@@ -103,6 +119,12 @@ export default function ApprovalQueuePage() {
         title="Approval Queue"
         subtitle="High-stakes actions require sign-off · low-stakes actions auto-approve and appear here for the record."
       />
+
+      {reviewError ? (
+        <div className="mb-4 rounded-md border border-[#d9b3ad] bg-[#f6e9e7] px-4 py-2.5 text-[12.5px] text-[#8b3a32]">
+          {reviewError}
+        </div>
+      ) : null}
 
       {tableMissing ? (
         <div className="mb-4 rounded-md border border-[#e2cf9a] bg-[#f7efd9] px-4 py-2.5 text-[12.5px] text-[#8a6a1f]">

@@ -19,7 +19,13 @@ export async function GET() {
     // and drops `published`/`updated_at` in its row mapping. The admin inventory
     // has to show drafts and their real column names.
     const { rows: posts } = await query(
-      `SELECT slug, title, date, description, featured_image, tags, published, updated_at
+      // publish_at_ny is preformatted in datetime-local's own shape so the
+      // client does zero timezone math: one field serves both the "goes live at"
+      // display and the reschedule input's prefill.
+      `SELECT slug, title, date, description, featured_image, tags, published, updated_at,
+              publish_at,
+              to_char(publish_at AT TIME ZONE 'America/New_York', 'YYYY-MM-DD"T"HH24:MI')
+                AS publish_at_ny
          FROM blog_posts
         ORDER BY date DESC`
     );

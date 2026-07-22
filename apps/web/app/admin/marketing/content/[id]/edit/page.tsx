@@ -5,6 +5,7 @@ import BlogMarkdownEditor from "@/components/BlogMarkdownEditor";
 import BlogEditorRich from "@/components/BlogEditorRich";
 import ImagePicker from "@/components/admin/ImagePicker";
 import { hasUnresolvedMedia, listMediaFences } from "@/lib/mediaBlocks";
+import { nowInNewYorkLocal } from "@/lib/publishAt";
 import { Spinner } from "../../../_components/ui";
 
 // The old placeholder path some drafts carried as a "featured image" — treated
@@ -55,6 +56,8 @@ export default function ContentEditPage({
   const [featuredImage, setFeaturedImage] = useState("");
 
   const [saving, setSaving] = useState(false);
+  const [schedulePanel, setSchedulePanel] = useState(false);
+  const [scheduleValue, setScheduleValue] = useState("");
   const [error, setError] = useState("");
   const [banner, setBanner] = useState("");
   const [showInsert, setShowInsert] = useState(false);
@@ -151,6 +154,14 @@ export default function ContentEditPage({
     if (!SLUG_PATTERN.test(slug.trim())) {
       return "Slug must be lowercase words separated by single hyphens (e.g. my-post-title).";
     }
+    if (schedulePanel) {
+      if (!scheduleValue) return "Pick a date and time to schedule, or close the scheduler.";
+      // Both sides are naive NY wall-clock strings in the same format, so this
+      // sorts chronologically as a plain string compare — no Date parsing.
+      if (scheduleValue < nowInNewYorkLocal()) {
+        return "That time is in the past — it would publish on the next tick. Pick a future time.";
+      }
+    }
     return null;
   }
 
@@ -220,7 +231,13 @@ export default function ContentEditPage({
     }
     setSaving(true);
     try {
-      const item = await patch({ payload: buildPayload(), status: "approved" });
+      const item = await patch({
+        payload: buildPayload(),
+        status: "approved",
+        // Top-level, never inside payload — the server's 7-field whitelist
+        // would drop it silently.
+        ...(schedulePanel && scheduleValue ? { publish_at: scheduleValue } : {}),
+      });
       if (item) router.push("/admin/marketing/content");
     } catch {
       setError("Network error — nothing was published.");
@@ -462,12 +479,30 @@ export default function ContentEditPage({
         >
           {saving ? "Working…" : "Save draft"}
         </button>
+        {schedulePanel ? (
+          <input
+            type="datetime-local"
+            value={scheduleValue}
+            onChange={(e) => setScheduleValue(e.target.value)}
+            className={inputClass + " max-w-[220px]"}
+          />
+        ) : null}
+        <button
+          onClick={() => {
+            setError("");
+            setSchedulePanel((open) => !open);
+          }}
+          disabled={saving}
+          className="rounded-md border border-[var(--br-line)] bg-white/70 px-4 py-2 text-[13px] font-semibold text-[var(--br-text-mid)] hover:bg-[var(--br-stone)] disabled:opacity-50"
+        >
+          {schedulePanel ? "Cancel schedule" : "Schedule Publishing"}
+        </button>
         <button
           onClick={approve}
           disabled={saving}
           className="rounded-md border border-[var(--br-gold-dark)] bg-[var(--br-gold)] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[var(--br-gold-dark)] disabled:opacity-50"
         >
-          {saving ? "Working…" : "Approve & publish"}
+          {saving ? "Working…" : schedulePanel ? "Approve & schedule" : "Approve & publish"}
         </button>
       </div>
     </div>

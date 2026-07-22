@@ -10,6 +10,7 @@ import {
   type QueueRow,
 } from "@/lib/approvalQueue";
 import { hasUnresolvedMedia } from "@/lib/mediaBlocks";
+import { parsePublishAtLocal } from "@/lib/publishAt";
 
 // GET one queue item (full payload) and PATCH it. getSession()-guarded.
 // Reviewer is "admin" — the app has a single admin identity (admin_config is a
@@ -77,7 +78,7 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  let body: { status?: string; payload?: unknown } = {};
+  let body: { status?: string; payload?: unknown; publish_at?: unknown } = {};
   try {
     body = await request.json();
   } catch {
@@ -101,6 +102,17 @@ export async function PATCH(
       { error: "status must be one of approved, rejected, pending" },
       { status: 400 }
     );
+  }
+
+  // publish_at rides at the TOP LEVEL, never inside payload: validateContentDraft
+  // builds from a 7-field whitelist and would drop it silently. Absent means
+  // publish now, which is what keeps the approve entry points that never send it
+  // working unchanged. Validated here, before the transaction, because an
+  // unvalidated string reaches $8::timestamp and throws a raw Postgres error
+  // mid-transaction that surfaces as an opaque 500.
+  const schedule = parsePublishAtLocal(body.publish_at);
+  if (!schedule.ok) {
+    return NextResponse.json({ error: schedule.error }, { status: 400 });
   }
 
   // A payload edit is only meaningful alongside no-status (save) or approve.
@@ -130,6 +142,8 @@ export async function PATCH(
     // Set inside the tx, read only after it commits. If the tx rolls back we
     // throw before the read, so an unpublished post never gets revalidated.
     let publishedSlug: string | null = null;
+    // False for a scheduled approve — the row exists but nothing is on /blog yet.
+    let didPublish: boolean = false;
 
     const item = await withTransaction(async (client) => {
       // Build the SET clause: always status/review stamp; add payload columns
@@ -193,12 +207,13 @@ export async function PATCH(
         if (publishing?.content && hasUnresolvedMedia(publishing.content)) {
           throw new UnresolvedMediaError();
         }
-        const result = await executeApprovedAction(client, row);
+        const result = await executeApprovedAction(client, row, schedule.value);
         if (!result.ok) {
           // Rolls back the UPDATE above: nothing published, row stays pending.
           throw new ExecuteError(result.error, result.code);
         }
         publishedSlug = result.slug;
+        didPublish = result.published;
       }
 
       return row;
@@ -206,13 +221,17 @@ export async function PATCH(
 
     // Post-commit: the /blog pages are statically generated, so an approved post
     // stays invisible until something invalidates them. Gated on approve —
-    // save-draft, reject and re-open reach here too and publish nothing.
-    if (item.status === "approved") {
+    // save-draft, reject and re-open reach here too and publish nothing — AND on
+    // something actually going live: a scheduled approve wrote a row nobody can
+    // see yet, so /blog is unchanged and revalidating it is wasted work.
+    if (item.status === "approved" && didPublish) {
       revalidatePath("/blog");
       if (publishedSlug) revalidatePath(`/blog/${publishedSlug}`);
     }
 
-    return NextResponse.json({ item });
+    // published tells the client which confirmation to show: went-live now, or
+    // scheduled for later.
+    return NextResponse.json({ item, published: didPublish });
   } catch (err) {
     if (err instanceof NotFoundError) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

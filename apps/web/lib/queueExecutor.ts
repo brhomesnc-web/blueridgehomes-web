@@ -19,7 +19,7 @@ import {
  */
 
 export type ExecuteResult =
-  | { ok: true; slug: string }
+  | { ok: true; slug: string; published: boolean }
   | { ok: false; error: string; code: string };
 
 /**
@@ -30,22 +30,47 @@ export type ExecuteResult =
  * VPS step). Without it Postgres errors, the tx rolls back, and the caller returns
  * 503 — it fails closed, never double-publishes.
  *
- * published is the literal true: approval IS the decision to publish.
+ * published is NOT a literal any more: approval is the decision to publish,
+ * but publishAtLocal decides WHEN. Absent (null) publishes immediately, exactly
+ * as before; present schedules, and the 60s tick in instrumentation.ts flips the
+ * row live at that instant.
+ *
+ * publishAtLocal is a naive NY wall-clock string (see lib/publishAt.ts), so the
+ * three derived columns all fall out of the one parameter:
+ *   - published  = there is no schedule
+ *   - date       = the schedule's date portion (already NY-local), else the
+ *                  drafter's date. Without this a scheduled post would display
+ *                  whatever date the drafter happened to type.
+ *   - publish_at = the instant, converted from NY to timestamptz by Postgres.
+ * The ::timestamp casts are required so Postgres can type a NULL parameter.
+ * NULL AT TIME ZONE '…' is NULL, so the last column needs no CASE.
+ *
+ * The scheduler re-stamps `date` from publish_at at flip time using the same
+ * derivation, so the row can never disagree with itself.
  *
  * RETURNING id, slug hands the caller the slug the DB actually holds — the
  * validated/trimmed one, not whatever raw string the payload carried. That is
  * the value the /blog/[slug] route keys on, so it is what gets revalidated.
+ * `published` comes back too: a scheduled approve puts nothing on /blog, and
+ * revalidating a page that did not change is pointless work.
  */
 async function publishContentPost(
   client: PoolClient,
-  payload: ContentDraftPayload
+  payload: ContentDraftPayload,
+  publishAtLocal: string | null
 ): Promise<ExecuteResult> {
-  const { rows } = await client.query<{ id: number; slug: string }>(
+  const { rows } = await client.query<{ id: number; slug: string; published: boolean }>(
     `INSERT INTO blog_posts
-       (slug, title, date, description, content, featured_image, tags, published)
-     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)
+       (slug, title, date, description, content, featured_image, tags, published, publish_at)
+     VALUES (
+       $1, $2,
+       CASE WHEN $8::timestamp IS NULL THEN $3 ELSE to_char($8::timestamp, 'YYYY-MM-DD') END,
+       $4, $5, $6, $7::jsonb,
+       $8::timestamp IS NULL,
+       $8::timestamp AT TIME ZONE 'America/New_York'
+     )
      ON CONFLICT (slug) DO NOTHING
-     RETURNING id, slug`,
+     RETURNING id, slug, published`,
     [
       payload.slug,
       payload.title,
@@ -54,7 +79,7 @@ async function publishContentPost(
       payload.content,
       payload.featured_image,
       JSON.stringify(payload.tags),
-      true,
+      publishAtLocal,
     ]
   );
 
@@ -68,12 +93,13 @@ async function publishContentPost(
     };
   }
 
-  return { ok: true, slug: rows[0].slug };
+  return { ok: true, slug: rows[0].slug, published: rows[0].published };
 }
 
 export async function executeApprovedAction(
   client: PoolClient,
-  row: QueueRow
+  row: QueueRow,
+  publishAtLocal: string | null = null
 ): Promise<ExecuteResult> {
   switch (`${row.module}/${row.action}`) {
     case "Content/publish_post": {
@@ -88,7 +114,7 @@ export async function executeApprovedAction(
           code: "invalid_payload",
         };
       }
-      return publishContentPost(client, parsed.payload);
+      return publishContentPost(client, parsed.payload, publishAtLocal);
     }
 
     default:

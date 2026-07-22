@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SectionHeader, StakesTag, EmptyState, Spinner } from "../_components/ui";
 import { CONTENT_CALENDAR } from "@/lib/contentCalendar";
+import { nowInNewYorkLocal } from "@/lib/publishAt";
 
 type Post = {
   slug: string;
@@ -13,6 +14,10 @@ type Post = {
   tags: string[] | string | null;
   published: boolean;
   updated_at: string | null;
+  publish_at: string | null;
+  // Preformatted "YYYY-MM-DDTHH:MM" in America/New_York — display and input
+  // prefill both read this directly. Never parsed, never converted client-side.
+  publish_at_ny: string | null;
 };
 
 type ContentPayload = {
@@ -111,6 +116,17 @@ export default function ContentPage() {
   const [drawerError, setDrawerError] = useState("");
   const [banner, setBanner] = useState<{ text: string; href?: string } | null>(null);
 
+  // Drawer scheduling panel (approve-with-a-date).
+  const [schedulePanel, setSchedulePanel] = useState(false);
+  const [drawerSchedule, setDrawerSchedule] = useState("");
+
+  // Card scheduling panel (reschedule / publish now / cancel on an
+  // already-scheduled post).
+  const [manageFor, setManageFor] = useState<Post | null>(null);
+  const [manageValue, setManageValue] = useState("");
+  const [manageError, setManageError] = useState("");
+  const [manageActing, setManageActing] = useState(false);
+
   const [composeOpen, setComposeOpen] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [slugTouched, setSlugTouched] = useState(false);
@@ -152,18 +168,29 @@ export default function ContentPage() {
   }, [loadPosts, loadQueue]);
 
   const counts = useMemo(() => {
+    // Three explicit buckets. Deriving drafts by subtraction would silently file
+    // every scheduled post under "drafts".
     const live = posts.filter((p) => p.published).length;
-    return { live, drafts: posts.length - live };
+    const scheduled = posts.filter((p) => !p.published && p.publish_at).length;
+    return { live, scheduled, drafts: posts.length - live - scheduled };
   }, [posts]);
 
-  async function review(item: QueueItem, status: "approved" | "rejected") {
+  async function review(
+    item: QueueItem,
+    status: "approved" | "rejected",
+    publishAtLocal: string | null = null
+  ) {
     setActing(true);
     setDrawerError("");
     try {
       const res = await fetch(`/api/admin/marketing/queue/${item.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        // publish_at is top-level, not inside payload — the server's payload
+        // validator whitelists 7 fields and would drop it.
+        body: JSON.stringify(
+          publishAtLocal ? { status, publish_at: publishAtLocal } : { status }
+        ),
       });
       const d = await res.json();
 
@@ -178,12 +205,21 @@ export default function ContentPage() {
       }
 
       setSelected(null);
+      setSchedulePanel(false);
+      setDrawerSchedule("");
       if (status === "approved") {
         const slug = item.payload?.slug;
-        setBanner({
-          text: slug ? `Published to /blog/${slug}` : "Published.",
-          href: slug ? `/blog/${slug}` : undefined,
-        });
+        // d.published distinguishes went-live-now from scheduled-for-later.
+        if (d.published) {
+          setBanner({
+            text: slug ? `Published to /blog/${slug}` : "Published.",
+            href: slug ? `/blog/${slug}` : undefined,
+          });
+        } else {
+          setBanner({
+            text: `Scheduled for ${(publishAtLocal || "").replace("T", " ")} (Eastern) — it will go live on its own.`,
+          });
+        }
       } else {
         setBanner({ text: `Rejected "${item.title}".` });
       }
@@ -192,6 +228,49 @@ export default function ContentPage() {
       setDrawerError("Network error — nothing was changed.");
     } finally {
       setActing(false);
+    }
+  }
+
+  async function manageSchedule(action: "reschedule" | "publish_now" | "cancel") {
+    if (!manageFor) return;
+    if (action === "reschedule" && !manageValue) {
+      setManageError("Pick a date and time first.");
+      return;
+    }
+    setManageActing(true);
+    setManageError("");
+    try {
+      const res = await fetch(
+        `/api/admin/marketing/content/${manageFor.slug}/schedule`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            action === "reschedule" ? { action, publish_at: manageValue } : { action }
+          ),
+        }
+      );
+      const d = await res.json();
+      if (!res.ok) {
+        // 409 = the post went live between opening this panel and saving.
+        setManageError(d.error || "Something went wrong.");
+        return;
+      }
+      setManageFor(null);
+      setBanner({
+        text:
+          action === "publish_now"
+            ? `Published to /blog/${manageFor.slug}`
+            : action === "cancel"
+              ? "Schedule cancelled — the post is a draft again."
+              : `Rescheduled for ${manageValue.replace("T", " ")} (Eastern).`,
+        href: action === "publish_now" ? `/blog/${manageFor.slug}` : undefined,
+      });
+      await loadPosts();
+    } catch {
+      setManageError("Network error — nothing was changed.");
+    } finally {
+      setManageActing(false);
     }
   }
 
@@ -291,7 +370,7 @@ export default function ContentPage() {
         title="Content"
         subtitle={
           tab === "posts"
-            ? `${counts.live} live · ${counts.drafts} draft${counts.drafts === 1 ? "" : "s"} · blog_posts inventory`
+            ? `${counts.live} live · ${counts.scheduled} scheduled · ${counts.drafts} draft${counts.drafts === 1 ? "" : "s"} · blog_posts inventory`
             : `${queue.length} Content item${queue.length === 1 ? "" : "s"} awaiting review`
         }
         right={
@@ -410,10 +489,13 @@ export default function ContentPage() {
                     <span className="truncate text-[14px] font-semibold text-[var(--br-text)]">
                       {post.title}
                     </span>
-                    <PostStatePill published={post.published} />
+                    <PostStatePill published={post.published} publishAt={post.publish_at} />
                   </div>
                   <div className="mt-0.5 truncate text-[12px] text-[var(--br-text-soft)]">
                     /{post.slug} · {timeAgo(post.date, true)}
+                    {!post.published && post.publish_at_ny
+                      ? ` · goes live ${post.publish_at_ny.replace("T", " ")} ET`
+                      : ""}
                   </div>
                   {normalizeTags(post.tags).length > 0 ? (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -429,6 +511,18 @@ export default function ContentPage() {
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
+                  {!post.published && post.publish_at ? (
+                    <button
+                      onClick={() => {
+                        setManageFor(post);
+                        setManageValue(post.publish_at_ny || "");
+                        setManageError("");
+                      }}
+                      className="shrink-0 text-[12.5px] font-semibold text-[var(--br-gold-dark)] underline"
+                    >
+                      Schedule →
+                    </button>
+                  ) : null}
                   <a
                     href={`/admin/blog/${post.slug}/edit`}
                     className="shrink-0 text-[12.5px] font-semibold text-[var(--br-gold-dark)] underline"
@@ -569,6 +663,47 @@ export default function ContentPage() {
               </div>
             ) : null}
 
+            {/* Scheduling lives in the body, not the footer: the footer is a
+                justify-end row at max-w-[560px] and a fourth button crowds it. */}
+            {schedulePanel ? (
+              <div className="mx-5 mb-3 rounded-md border border-[var(--br-line)] bg-white/70 px-4 py-3">
+                <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--br-text-soft)]">
+                  Publish at (Eastern)
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="datetime-local"
+                    value={drawerSchedule}
+                    onChange={(e) => setDrawerSchedule(e.target.value)}
+                    className={inputClass + " max-w-[220px]"}
+                  />
+                  <button
+                    onClick={() => {
+                      if (!drawerSchedule) {
+                        setDrawerError("Pick a date and time first.");
+                        return;
+                      }
+                      if (drawerSchedule < nowInNewYorkLocal()) {
+                        setDrawerError(
+                          "That time is in the past — it would publish on the next tick. Pick a future time."
+                        );
+                        return;
+                      }
+                      review(selected, "approved", drawerSchedule);
+                    }}
+                    disabled={acting}
+                    className="rounded-md border border-[var(--br-gold-dark)] bg-[var(--br-gold)] px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-[var(--br-gold-dark)] disabled:opacity-50"
+                  >
+                    {acting ? "Working…" : "Confirm schedule"}
+                  </button>
+                </div>
+                <div className="mt-1.5 text-[11.5px] text-[var(--br-text-muted)]">
+                  Approves now; the post goes live on its own within a minute of
+                  this time.
+                </div>
+              </div>
+            ) : null}
+
             <div className="flex items-center justify-end gap-2 border-t border-[var(--br-line)] px-5 py-4">
               {selected.payload ? (
                 <button
@@ -587,14 +722,83 @@ export default function ContentPage() {
                 Reject
               </button>
               <button
-                onClick={() => review(selected, "approved")}
+                onClick={() => {
+                  setDrawerError("");
+                  setSchedulePanel((open) => !open);
+                }}
                 disabled={acting}
+                className="rounded-md border border-[var(--br-line)] bg-white/70 px-4 py-2 text-[13px] font-semibold text-[var(--br-text-mid)] hover:bg-[var(--br-stone)] disabled:opacity-50"
+              >
+                {schedulePanel ? "Cancel schedule" : "Schedule Publishing"}
+              </button>
+              <button
+                onClick={() => review(selected, "approved")}
+                disabled={acting || schedulePanel}
                 className="rounded-md border border-[var(--br-gold-dark)] bg-[var(--br-gold)] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[var(--br-gold-dark)] disabled:opacity-50"
               >
                 {acting ? "Working…" : "Approve & publish"}
               </button>
             </div>
           </aside>
+        </div>
+      ) : null}
+
+      {/* Manage an existing schedule */}
+      {manageFor ? (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => (manageActing ? null : setManageFor(null))}
+          />
+          <div className="absolute left-1/2 top-1/2 w-full max-w-[440px] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[var(--br-line)] bg-[var(--br-cream)] p-5 shadow-2xl">
+            <div className="font-serif text-[19px] leading-tight text-[var(--br-text)]">
+              {manageFor.title}
+            </div>
+            <div className="mt-1 text-[12px] text-[var(--br-text-soft)]">
+              /{manageFor.slug}
+            </div>
+
+            <div className="mt-4">
+              <Labeled label="Publish at (Eastern)">
+                <input
+                  type="datetime-local"
+                  value={manageValue}
+                  onChange={(e) => setManageValue(e.target.value)}
+                  className={inputClass}
+                />
+              </Labeled>
+            </div>
+
+            {manageError ? (
+              <div className="mt-3 rounded-md border border-[#d9b3ad] bg-[#f6e9e7] px-3 py-2 text-[12.5px] text-[#8b3a32]">
+                {manageError}
+              </div>
+            ) : null}
+
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+              <button
+                onClick={() => manageSchedule("cancel")}
+                disabled={manageActing}
+                className="mr-auto rounded-md border border-[var(--br-line)] bg-white/70 px-3 py-1.5 text-[12.5px] font-semibold text-[var(--br-text-mid)] hover:bg-[var(--br-stone)] disabled:opacity-50"
+              >
+                Cancel schedule
+              </button>
+              <button
+                onClick={() => manageSchedule("publish_now")}
+                disabled={manageActing}
+                className="rounded-md border border-[var(--br-line)] bg-white/70 px-3 py-1.5 text-[12.5px] font-semibold text-[var(--br-text-mid)] hover:bg-[var(--br-stone)] disabled:opacity-50"
+              >
+                Publish now
+              </button>
+              <button
+                onClick={() => manageSchedule("reschedule")}
+                disabled={manageActing}
+                className="rounded-md border border-[var(--br-gold-dark)] bg-[var(--br-gold)] px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-[var(--br-gold-dark)] disabled:opacity-50"
+              >
+                {manageActing ? "Working…" : "Save"}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -867,17 +1071,28 @@ const inputClass =
 
 // StatusTag's map covers the lead pipeline stages only — "Live"/"Draft" would both
 // fall through to its neutral default and read identically. Own pill instead.
-function PostStatePill({ published }: { published: boolean }) {
+function PostStatePill({
+  published,
+  publishAt,
+}: {
+  published: boolean;
+  publishAt: string | null;
+}) {
+  // Three states, one source of truth: published wins, then a pending schedule,
+  // then plain draft.
+  const state = published ? "live" : publishAt ? "scheduled" : "draft";
   return (
     <span
       className={
         "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide " +
-        (published
+        (state === "live"
           ? "border-[#cdd6c3] bg-[#eef2e8] text-[#4f6340]"
-          : "border-[var(--br-line)] bg-[var(--br-stone)] text-[var(--br-text-muted)]")
+          : state === "scheduled"
+            ? "border-[var(--br-gold-dark)] bg-[var(--br-gold-light)] text-[var(--br-gold-dark)]"
+            : "border-[var(--br-line)] bg-[var(--br-stone)] text-[var(--br-text-muted)]")
       }
     >
-      {published ? "Live" : "Draft"}
+      {state === "live" ? "Live" : state === "scheduled" ? "Scheduled" : "Draft"}
     </span>
   );
 }
