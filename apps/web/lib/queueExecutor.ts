@@ -19,7 +19,7 @@ import {
  */
 
 export type ExecuteResult =
-  | { ok: true }
+  | { ok: true; slug: string }
   | { ok: false; error: string; code: string };
 
 /**
@@ -31,17 +31,21 @@ export type ExecuteResult =
  * 503 — it fails closed, never double-publishes.
  *
  * published is the literal true: approval IS the decision to publish.
+ *
+ * RETURNING id, slug hands the caller the slug the DB actually holds — the
+ * validated/trimmed one, not whatever raw string the payload carried. That is
+ * the value the /blog/[slug] route keys on, so it is what gets revalidated.
  */
 async function publishContentPost(
   client: PoolClient,
   payload: ContentDraftPayload
 ): Promise<ExecuteResult> {
-  const { rows } = await client.query<{ id: number }>(
+  const { rows } = await client.query<{ id: number; slug: string }>(
     `INSERT INTO blog_posts
        (slug, title, date, description, content, featured_image, tags, published)
      VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)
      ON CONFLICT (slug) DO NOTHING
-     RETURNING id`,
+     RETURNING id, slug`,
     [
       payload.slug,
       payload.title,
@@ -64,7 +68,7 @@ async function publishContentPost(
     };
   }
 
-  return { ok: true };
+  return { ok: true, slug: rows[0].slug };
 }
 
 export async function executeApprovedAction(

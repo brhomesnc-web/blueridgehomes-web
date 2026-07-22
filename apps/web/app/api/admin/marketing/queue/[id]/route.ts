@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { query, withTransaction } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { executeApprovedAction } from "@/lib/queueExecutor";
@@ -126,6 +127,10 @@ export async function PATCH(
   const stamping = !reopening; // approve/reject record who reviewed and when
 
   try {
+    // Set inside the tx, read only after it commits. If the tx rolls back we
+    // throw before the read, so an unpublished post never gets revalidated.
+    let publishedSlug: string | null = null;
+
     const item = await withTransaction(async (client) => {
       // Build the SET clause: always status/review stamp; add payload columns
       // when editing. Gated to pending rows so edits/reviews are race-safe.
@@ -193,10 +198,19 @@ export async function PATCH(
           // Rolls back the UPDATE above: nothing published, row stays pending.
           throw new ExecuteError(result.error, result.code);
         }
+        publishedSlug = result.slug;
       }
 
       return row;
     });
+
+    // Post-commit: the /blog pages are statically generated, so an approved post
+    // stays invisible until something invalidates them. Gated on approve —
+    // save-draft, reject and re-open reach here too and publish nothing.
+    if (item.status === "approved") {
+      revalidatePath("/blog");
+      if (publishedSlug) revalidatePath(`/blog/${publishedSlug}`);
+    }
 
     return NextResponse.json({ item });
   } catch (err) {
