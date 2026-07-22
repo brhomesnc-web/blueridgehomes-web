@@ -43,7 +43,10 @@ type QueueItem = {
 // form fails before a round-trip. The server still validates; this is UX, not a gate.
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-function timeAgo(iso: string): string {
+// `dateOnly` marks a bare YYYY-MM-DD (blog_posts.date), which Date parses as
+// UTC midnight — formatted in a NY browser without this it renders the day
+// before. created_at values are full timestamps and stay in the viewer's zone.
+function timeAgo(iso: string, dateOnly = false): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return "";
   const diff = Math.floor((Date.now() - then) / 1000);
@@ -51,7 +54,10 @@ function timeAgo(iso: string): string {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return new Date(iso).toLocaleDateString();
+  return new Date(iso).toLocaleDateString(
+    undefined,
+    dateOnly ? { timeZone: "UTC" } : undefined
+  );
 }
 
 // pg returns jsonb parsed, but blog_posts.tags has been written by more than one
@@ -407,7 +413,7 @@ export default function ContentPage() {
                     <PostStatePill published={post.published} />
                   </div>
                   <div className="mt-0.5 truncate text-[12px] text-[var(--br-text-soft)]">
-                    /{post.slug} · {timeAgo(post.date)}
+                    /{post.slug} · {timeAgo(post.date, true)}
                   </div>
                   {normalizeTags(post.tags).length > 0 ? (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">

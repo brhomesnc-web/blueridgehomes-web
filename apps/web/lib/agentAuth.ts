@@ -14,12 +14,11 @@ import { timingSafeEqual } from "crypto";
  * agent producers that write into approval_queue arrive later and will import
  * this to gate their POST handlers.
  */
-export function checkMarketingApiKey(request: Request): boolean {
+export function checkApiKey(request: Request, expected: string): boolean {
   const provided =
     request.headers.get("x-api-key") ||
     request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
     "";
-  const expected = process.env.MARKETING_AGENT_API_KEY || "";
 
   if (!expected || !provided) return false;
 
@@ -30,4 +29,14 @@ export function checkMarketingApiKey(request: Request): boolean {
   if (a.length !== b.length) return false;
 
   return timingSafeEqual(a, b);
+}
+
+/**
+ * The marketing-platform door. Kept as a named wrapper so existing callers
+ * (app/api/agent/content) are unchanged and the env var stays named at one
+ * site. New doors pass their own key: see /api/internal/publish-due, which
+ * gates on PUBLISH_SCHEDULER_KEY through the same constant-time comparison.
+ */
+export function checkMarketingApiKey(request: Request): boolean {
+  return checkApiKey(request, process.env.MARKETING_AGENT_API_KEY || "");
 }

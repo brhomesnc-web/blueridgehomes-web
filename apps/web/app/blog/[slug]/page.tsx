@@ -98,6 +98,8 @@ export default async function BlogPostPage({ params }: Props) {
               year: "numeric",
               month: "long",
               day: "numeric",
+              // date is a bare YYYY-MM-DD, which parses as UTC midnight.
+              timeZone: "UTC",
             })}
           </time>
           <h1

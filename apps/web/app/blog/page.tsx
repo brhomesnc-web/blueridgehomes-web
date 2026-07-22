@@ -63,6 +63,8 @@ export default async function BlogPage() {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
+                    // date is a bare YYYY-MM-DD, which parses as UTC midnight.
+                    timeZone: "UTC",
                   })}
                 </time>
                 <h2 className="br-blog-card-title">{post.title}</h2>
