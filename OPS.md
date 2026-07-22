@@ -488,6 +488,69 @@ These are deliberate operator actions. Nothing in a deploy performs them.
 
 ## Session Log — Shipped
 
+### 2026-07-21 — WYSIWYG (TipTap) editor for the marketing content editor
+
+Shipped to `main` (`3db9b24`, merged `4dc5819`; lockfile `a76def8`), plus two standalone fixes
+below. **Markdown remains the single source of truth** — the editor is a view layer that
+round-trips to a markdown string, so the generator, the live blog page, the media bake, and the
+approve-time backstop all still read that same string and were not changed.
+
+- **Dependencies (5), all 3.28.x:** `@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`,
+  `@tiptap/markdown`, `@tiptap/extension-image`. **`@tiptap/extension-image` is load-bearing —
+  do not remove it.** StarterKit v3 ships no Image node, and without it `![](path)` is destroyed on
+  the first markdown round-trip: baked charts and filled photos would vanish silently and slip past
+  the approve backstop (which only looks for surviving fences).
+- `lib/richEditorExtensions.ts` — the single shared extension list, consumed by both
+  `BlogEditorRich` and the round-trip regression test, so the guard cannot drift from production.
+- `components/BlogEditorRich.tsx` — the TipTap editor (`"use client"`, `immediatelyRender:false`),
+  brand toolbar, `.br-blog-prose` content area, and an echo guard so its own emit is not fed back as
+  an external change. Wired into the marketing content editor behind a **Rich⇄Source toggle** over
+  the same `content` markdown-string state; Save is unchanged.
+- `components/editor/MediaBlockView.tsx` — CodeBlock node-view branching on `node.attrs.language`
+  (chart → `ChartPreview`, photo → `PhotoSlot`, else a normal `<pre>`). The JSON body is the code
+  block's **text**, so CodeBlock keeps owning markdown serialization (fences proven byte-identical
+  on round-trip). The node-view maps its callbacks to ProseMirror transactions; a hidden
+  `NodeViewContent` supplies the required contentDOM; the visible UI subtree is
+  `contentEditable={false}` so the cursor can never enter the React chrome.
+- **Component refactor:** `ChartPreview`/`PhotoSlot` moved to `components/media/` and refactored to
+  pure **spec-in/spec-out** (`onSpecChange` / `onReplaceWithImage` / `onRemove`) — no longer coupled
+  to the whole markdown string plus a fence ordinal. `BlogMarkdownEditor` (string-world, still used
+  by the two blog-admin editors) keeps its public API and owns the adapters onto `replaceFence`.
+  Both renderers now drive the same components.
+- **Round-trip regression test** — `tests/richRoundTrip.test.ts` (vitest + happy-dom, 6 tests):
+  every generator construct, plus images and chart/photo fences, survives round-trip byte-identical
+  (modulo the CommonMark `\[` escape and a trailing newline). Proven non-vacuous — removing the
+  Image extension makes it fail. **It guards SERIALIZATION only**: it never mounts a node-view, so a
+  green run means "serialization still fine", not "editing works". The browser pass is the real check.
+- **NaN-bake gap closed** — `chartHasInvalidNumber` now blocks Bake alongside `[VERIFY:]`, with the
+  offending cells highlighted (see Horizon → "Chart bake: NaN cells", now resolved).
+- **Verified in production:** the editor mounts under React 19.2; chart/photo render as interactive
+  node-views; the editing corruption is fixed; **bake → Save → reload → the baked chart PNG survives
+  to disk** (`optimized/blog-charts/`); photo upload + fill works; approve → publish writes
+  `blog_posts` (`published = t`) with the baked media in `content`.
+
+#### Standalone fixes shipped alongside
+
+- **ImagePicker Browse crash (`5db6f1c`)** — `/api/admin/images` returns `folders` as an **object**
+  (`{ blog: [...] }`), but `ImagePicker` stored it into a `string[]` and mapped it →
+  `TypeError: s.map is not a function`, which white-screened the whole admin tree on Browse.
+  **Pre-existing from `d1a4eaf`**, latent until Browse was clicked with a populated `optimized/`;
+  unrelated to the WYSIWYG work. Fix: `setFolders(Object.keys(d.folders || {}))` at both set-sites,
+  plus `Array.isArray` guards on `images` and at the render site. The API route was left unchanged —
+  the object shape is fine, the component was wrong.
+- **Node-view editing corruption (`e3f8d71`)** — the chart/photo node-view had no
+  `contentEditable={false}` on its visible UI, so ProseMirror mapped DOM positions inside the React
+  chrome back to document offsets: keystrokes landed reversed/misplaced and prose bled into the
+  chart pill (the "55…" leak was this bug, not a separate cosmetic). Separately, `writeBody` called
+  `.focus()` on every keystroke, causing the "only one character" behaviour. Fix:
+  `contentEditable={false}` on the visible subtree in both branches, `.focus()` dropped from
+  `writeBody`, plus a hardening guard against empty text nodes (latent, not a live bug — labelled as
+  such). No schema or serialization change, so the round-trip test stayed valid throughout.
+  Storage was verified clean before the fix: draft #4 at 7984 chars, clean prose, both fence bodies
+  still valid JSON — the corruption never reached `content`.
+
+---
+
 ### 2026-07-20 — Media-slot + chart-spec system
 
 Shipped to `main` (`7c8d68d`), 9 files, tsc clean, server import graph verified recharts-free.
@@ -559,14 +622,17 @@ it is a live-DB change, so its own deliberate action, not a docs edit.
 is a latent gap, not a live bug — the enforcement is real but lives entirely in application code,
 and a future writer that bypasses both doors would find no floor under it. Low priority.
 
-### Chart bake: NaN cells slip past both media gates
+### Chart bake: NaN cells slip past both media gates — RESOLVED 2026-07-21
 
-The media-slot bake (`components/BlogMarkdownEditor.tsx`) gates only on `[VERIFY:]` placeholders. A
-stray non-`[VERIFY:]` non-numeric cell (a typo, or a blanked field) coerces to `NaN`; recharts
-renders it as a gap and the baked PNG ships a missing bar/point. Because baking replaces the
-` ```chart ` fence with an `![](…)` image, no fence remains — so it passes both the editor's
-`hasUnresolvedMedia` gate and the server backstop. Fix: block bake while any series value in any row
-is `NaN`, not only while `[VERIFY:]` remains. Open.
+The bake used to gate only on `[VERIFY:]` placeholders. A stray non-`[VERIFY:]` non-numeric cell (a
+typo, or a blanked field) coerced to `NaN`; recharts rendered it as a gap and the baked PNG shipped a
+missing bar/point. Because baking replaces the ` ```chart ` fence with an `![](…)` image, no fence
+remained — so it passed both the editor's `hasUnresolvedMedia` gate and the server backstop.
+
+**Closed** by `chartHasInvalidNumber` in `lib/mediaBlocks.ts`, which now blocks Bake alongside
+`chartHasVerify`, with the offending cells highlighted in the grid. See the 2026-07-21 Session Log
+entry. Kept here rather than deleted because the failure mode — a defect that survives *because* the
+gate's own predicate stops matching after the transform — is worth recognising again elsewhere.
 
 ### Next slice — scheduled publishing + revalidation + truncation guard
 
@@ -575,11 +641,23 @@ The next build is one slice combining three items:
 - **SSG `revalidatePath` fix.** `/blog` and `/blog/[slug]` are SSG with zero `revalidatePath` (see
   "Blog SSG delete gap" above), so an approved post does not appear live until the next deploy. Fix:
   call `revalidatePath('/blog')` + `revalidatePath('/blog/' + slug)` **post-COMMIT** in the approve
-  branch of `app/api/admin/marketing/queue/[id]/route.ts`.
-- **Scheduler (`publish_at`).** Timed publishing — a new column and the mechanism to publish at a
-  set time — deferred to this slice.
+  branch of `app/api/admin/marketing/queue/[id]/route.ts`, when `status === 'approved'`.
+  **Confirmed live 2026-07-21:** approving wrote the row (`blog_posts`, `published = t`) but the SSG
+  pages did not update until a redeploy. This is observed behaviour now, not a prediction.
+- **Scheduler (`publish_at`).** Timed publishing. There is **no scheduling column today** —
+  `blog_posts` has `published bool` plus a **text** `date`, so this needs a real column (and a
+  mechanism to publish at a set time), not just a query change.
 - **`max_tokens` truncation guard.** `generateDraft.ts` should throw when the model's
   `stop_reason === 'max_tokens'`, so a truncated draft is rejected rather than queued half-written.
+
+**Standing note until revalidation lands: an approved post requires a `./deploy.sh` before it is
+visible on the live site.** Approving alone is not publishing, in practice.
+
+### Deferred — migrating the blog-admin editors to TipTap
+
+`app/admin/blog/[slug]/edit` and `app/admin/blog/new` deliberately stay on `BlogMarkdownEditor`
+(string-world) via the refactored shared components. They are only migrated once the rich editor has
+proven itself on the marketing content editor. Not scheduled.
 
 ### Still open, unscheduled
 
@@ -590,6 +668,26 @@ The next build is one slice combining three items:
 - **Managed, DB-backed editorial calendar** — supersedes the static `lib/contentCalendar.ts` seed.
 - **External Cowork agent → `/api/agent/content`** — the key-gated door for an outside agent to file
   drafts into the approval queue.
+- **nginx `client_max_body_size`** — full-resolution phone photos (8 MB+) are rejected by **nginx**
+  with `413 Content Too Large` before the request ever reaches the app; small/optimized images upload
+  fine. The upload route itself is not at fault. Fix is an nginx config raise (~`20M`) in the
+  brhomes server block plus a reload — **Brian applies nginx changes himself** per the Safety Rules
+  and the Nginx Safety Procedure; it is deliberately not scripted. Workaround today: resize before
+  uploading.
+- **Client-side 413 handling** — on a 413 the ImagePicker sits on "Uploading…" indefinitely instead
+  of surfacing the error. Small local fix, low priority, but it makes the nginx limit above look like
+  a hang rather than a rejection.
+- **Untyped `/api/admin/*` fetch boundary** — admin fetches use `r.json()`, which is `any`, so
+  object-vs-array shape mismatches are invisible to `tsc`. That is exactly how the ImagePicker
+  crash (`5db6f1c`) stayed hidden until runtime. Worth a scoped audit — grep admin fetch sites for
+  the `d.<field> || []` pattern and compare each against its route's actual return shape — then type
+  the responses. Not done.
+- **Featured-image placeholder text** — the content editor's hero input still shows the stale
+  `/optimized/project/image.jpg` as its *placeholder*. The value itself is correctly treated as unset
+  (the red "No hero" banner works), so this is cosmetic only. Outstanding.
+- **npm audit — 7 high / 9 total**, from the TipTap dependency tree. Untouched and parked. Do **not**
+  run `npm audit fix --force` mid-slice: it resolves by upgrading across majors and would rewrite the
+  editor's dependency graph without the round-trip test having been re-proven against it.
 
 Standing caution: any VPS-side edit made outside git is lost when `deploy.sh` re-syncs the box to
 `origin/main`. Commit changes to the repo, or they vanish on the next deploy.
