@@ -19,6 +19,14 @@ const TICK_MS = 60_000;
 // single process, single timer.
 let isRunning = false;
 
+// Idle-liveness heartbeat. Boot logs `registered` and each publish logs a line,
+// but a loop that dies after boot with nothing scheduled would look identical to a
+// healthy idle one. So every HEARTBEAT_EVERY-th idle tick logs proof-of-life —
+// ~hourly at a 60s tick, not the 1440 lines/day a per-tick log would write.
+let ticks = 0;
+const HEARTBEAT_EVERY = 60;
+const startedAt = Date.now();
+
 export async function register() {
   // MANDATORY: instrumentation also executes in the build worker and in the edge
   // runtime, neither of which should start a timer. Without this the build would
@@ -56,10 +64,16 @@ export async function register() {
       }
 
       const body = (await res.json()) as { published?: number };
+      ticks += 1;
       // The route already logs a line per post; this only fires on non-zero, so
-      // an idle scheduler stays silent instead of writing 1440 lines a day.
+      // an idle scheduler stays quiet instead of writing 1440 lines a day.
       if (body.published) {
         console.log(`[scheduler] tick published ${body.published} post(s)`);
+      } else if (ticks % HEARTBEAT_EVERY === 0) {
+        const uptimeMin = Math.round((Date.now() - startedAt) / 60_000);
+        console.log(
+          `[scheduler] heartbeat — idle, ${ticks} ticks, uptime ${uptimeMin}m`
+        );
       }
     } catch (err) {
       // Swallow after logging. An unhandled rejection here would take the server
