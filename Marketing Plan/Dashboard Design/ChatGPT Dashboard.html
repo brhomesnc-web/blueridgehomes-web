@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blue Ridge Homes — Marketing Operations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --ink:#1e1812;
+      --body:#3d3228;
+      --muted:#5e5248;
+      --faint:#a89a8c;
+      --gold:#c9a54e;
+      --gold-dark:#a98533;
+      --cream:#faf7f4;
+      --panel:#ffffff;
+      --border:#e8e0d6;
+      --green:#4f7a57;
+      --green-bg:#eef5ef;
+      --red:#a34e42;
+      --red-bg:#f9efed;
+      --blue:#5f7684;
+      --orange:#b77b48;
+      --shadow:0 8px 24px rgba(50,36,24,.06);
+      --radius:4px;
+      --sidebar:248px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:var(--cream);color:var(--body);font-family:Inter,system-ui,sans-serif}
+    body{overflow-x:hidden}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{min-height:100vh}
+    .sidebar{
+      position:fixed;inset:0 auto 0 0;width:var(--sidebar);background:#f4eee8;
+      border-right:1px solid var(--border);padding:24px 18px 18px;display:flex;flex-direction:column;z-index:20
+    }
+    .brand{padding:0 10px 24px;border-bottom:1px solid var(--border);margin-bottom:16px}
+    .wordmark{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:700;line-height:1;color:var(--ink)}
+    .brand-sub{margin-top:6px;font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:var(--gold-dark);font-weight:700}
+    .nav{display:flex;flex-direction:column;gap:3px;overflow:auto;padding-right:2px}
+    .nav-btn{
+      width:100%;border:0;background:transparent;color:var(--muted);display:flex;align-items:center;gap:11px;
+      padding:10px 11px;border-radius:4px;text-align:left;font-size:13px;font-weight:600
+    }
+    .nav-btn:hover{background:#eee5dc;color:var(--ink)}
+    .nav-btn.active{background:#fff;color:var(--ink);box-shadow:0 1px 0 rgba(64,46,30,.04),0 4px 14px rgba(64,46,30,.05)}
+    .nav-icon{width:18px;height:18px;display:inline-grid;place-items:center;color:var(--faint);font-size:15px}
+    .nav-btn.active .nav-icon{color:var(--gold-dark)}
+    .badge{margin-left:auto;min-width:22px;height:20px;padding:0 6px;border-radius:10px;background:var(--gold);color:#fff;font-size:11px;display:grid;place-items:center}
+    .agent-chip{margin-top:auto;border:1px solid var(--border);background:#fff;padding:10px 12px;border-radius:4px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--muted)}
+    .dot{width:8px;height:8px;border-radius:50%;background:#4c9b61;box-shadow:0 0 0 3px #e6f4e9}
+    .main{margin-left:var(--sidebar);min-height:100vh}
+    .topbar{
+      position:sticky;top:0;z-index:15;height:72px;padding:0 28px;background:rgba(250,247,244,.94);
+      backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px
+    }
+    .section-title{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:700;color:var(--ink);margin-right:auto}
+    .top-control{height:38px;border:1px solid var(--border);background:#fff;color:var(--body);border-radius:4px;padding:0 12px;font-size:12px}
+    .pending-btn{height:38px;border:1px solid #b99238;background:var(--gold);color:#fff;border-radius:4px;padding:0 14px;font-weight:700;font-size:12px}
+    .avatar{width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:#e8ded4;display:grid;place-items:center;color:var(--ink);font-weight:700;position:relative}
+    .avatar-menu{position:absolute;right:28px;top:62px;width:190px;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow);padding:8px;display:none;z-index:50}
+    .avatar-menu.show{display:block}
+    .avatar-menu button{width:100%;border:0;background:transparent;text-align:left;padding:9px;border-radius:3px;color:var(--body);font-size:12px}
+    .avatar-menu button:hover{background:var(--cream)}
+    .content{padding:24px 28px 48px}
+    .section{display:none}
+    .section.active{display:block}
+    .section-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:18px}
+    .section-head h2{margin:0;color:var(--ink);font-family:"Cormorant Garamond",serif;font-size:25px}
+    .section-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+    .head-actions{margin-left:auto;display:flex;gap:8px}
+    .btn{border:1px solid var(--border);background:#fff;color:var(--body);border-radius:4px;padding:9px 12px;font-size:12px;font-weight:700}
+    .btn:hover{border-color:#d2c5b8}
+    .btn.primary{background:var(--gold);border-color:var(--gold);color:#fff}
+    .btn.danger{color:var(--red)}
+    .grid{display:grid;gap:14px}
+    .kpi-grid{grid-template-columns:repeat(6,minmax(0,1fr));margin-bottom:14px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .kpi{padding:16px;min-height:132px;display:flex;flex-direction:column}
+    .kpi-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+    .kpi-value{margin-top:12px;font-size:27px;line-height:1;font-weight:700;color:var(--ink)}
+    .kpi-target{margin-top:10px;color:var(--faint);font-size:11px}
+    .delta{margin-top:auto;font-size:11px;font-weight:700}
+    .delta.up{color:var(--green)} .delta.down{color:var(--red)} .delta.neutral{color:var(--orange)}
+    .chart-grid{grid-template-columns:repeat(12,minmax(0,1fr));margin-bottom:14px}
+    .chart-card{padding:16px;min-height:320px}
+    .span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
+    .card-title-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+    .card-title{font-size:13px;font-weight:700;color:var(--ink)}
+    .card-sub{font-size:11px;color:var(--faint);margin-top:3px}
+    .mini-chip{margin-left:auto;border:1px solid var(--border);padding:4px 7px;border-radius:10px;color:var(--muted);font-size:10px;font-weight:700;background:var(--cream)}
+    .canvas-wrap{position:relative;height:245px}
+    .canvas-wrap.small{height:205px}
+    .bottom-grid{grid-template-columns:1.2fr .8fr}
+    .feed,.compact-list{padding:16px}
+    .feed-item{display:grid;grid-template-columns:32px 1fr auto;gap:10px;padding:12px 0;border-top:1px solid var(--border)}
+    .feed-item:first-of-type{border-top:0}
+    .feed-icon{width:30px;height:30px;background:var(--cream);border:1px solid var(--border);display:grid;place-items:center;font-size:13px;color:var(--gold-dark)}
+    .feed-main{font-size:12px;color:var(--body);line-height:1.45}
+    .feed-main strong{color:var(--ink)}
+    .feed-time{font-size:10px;color:var(--faint);white-space:nowrap}
+    .approval-link{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);font-size:12px}
+    .approval-link:first-of-type{border-top:0}
+    .tag{display:inline-flex;align-items:center;height:22px;border-radius:11px;padding:0 8px;font-size:10px;font-weight:700;border:1px solid var(--border);background:var(--cream);color:var(--muted);white-space:nowrap}
+    .tag.content{background:#f7f0df;color:#846a27;border-color:#ead9a8}
+    .tag.reviews{background:#f1eef7;color:#6c5b86;border-color:#ddd5ea}
+    .tag.social{background:#edf4f5;color:#4e7077;border-color:#d7e5e7}
+    .tag.email{background:#eef5ef;color:#4c7654;border-color:#d7e7d9}
+    .tag.ads{background:#f7eee9;color:#925f41;border-color:#ead7cb}
+    .link-button{margin-left:auto;border:0;background:transparent;color:var(--gold-dark);font-weight:700;font-size:11px}
+    /* Approvals */
+    .tabs{display:flex;border-bottom:1px solid var(--border);gap:18px;margin-bottom:14px}
+    .tab-btn{border:0;background:transparent;padding:11px 2px 10px;color:var(--faint);font-weight:700;font-size:12px;border-bottom:2px solid transparent}
+    .tab-btn.active{color:var(--ink);border-color:var(--gold)}
+    .approval-layout{grid-template-columns:minmax(0,1fr) 310px}
+    .approval-list{display:flex;flex-direction:column;gap:10px}
+    .approval-item{padding:16px}
+    .approval-meta{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .approval-time{margin-left:auto;font-size:10px;color:var(--faint)}
+    .approval-item h3{margin:0 0 8px;color:var(--ink);font-size:15px}
+    .preview{background:var(--cream);border:1px solid var(--border);padding:12px;font-size:12px;line-height:1.55;color:var(--muted);white-space:pre-line}
+    .approval-actions{display:flex;gap:8px;margin-top:12px}
+    .approval-actions .btn{padding:8px 12px}
+    .approval-actions .approve{background:var(--gold);border-color:var(--gold);color:#fff}
+    .status-stamp{display:none;margin-top:12px;font-size:11px;font-weight:700}
+    .auto-log{padding:16px;height:max-content}
+    .auto-row{padding:12px 0;border-top:1px solid var(--border)}
+    .auto-row:first-of-type{border-top:0}
+    .auto-title{font-size:12px;color:var(--ink);font-weight:700}
+    .auto-note{font-size:11px;color:var(--faint);margin-top:4px;line-height:1.45}
+    /* Leads */
+    .filterbar{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+    .filterbar select,.filterbar input{height:36px;border:1px solid var(--border);background:#fff;border-radius:4px;padding:0 10px;color:var(--body);font-size:12px}
+    .filterbar .spacer{margin-left:auto}
+    .pipeline-summary{font-size:12px;color:var(--muted)}
+    .kanban-wrap{overflow-x:auto;padding-bottom:8px}
+    .kanban{display:grid;grid-template-columns:repeat(6,minmax(240px,1fr));gap:10px;min-width:1480px}
+    .kanban-col{background:#f4efe9;border:1px solid var(--border);border-radius:4px;min-height:620px}
+    .kanban-head{padding:12px;display:flex;align-items:center;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--ink)}
+    .kanban-count{margin-left:auto;background:#fff;border:1px solid var(--border);min-width:22px;height:20px;border-radius:10px;display:grid;place-items:center;font-size:10px;color:var(--muted)}
+    .kanban-cards{padding:8px;display:flex;flex-direction:column;gap:8px}
+    .lead-card{background:#fff;border:1px solid var(--border);padding:11px;border-radius:4px;box-shadow:0 3px 10px rgba(50,36,24,.04)}
+    .lead-card:hover{border-color:#d2c4b6}
+    .lead-name{font-size:12px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px}
+    .lead-type{font-size:11px;color:var(--muted);margin-top:4px}
+    .lead-budget{font-size:11px;color:var(--gold-dark);font-weight:700;margin-top:8px}
+    .lead-foot{display:flex;align-items:center;margin-top:10px;font-size:10px;color:var(--faint)}
+    .source-pill{border:1px solid var(--border);background:var(--cream);border-radius:9px;padding:2px 6px}
+    .days{margin-left:auto}
+    .drawer-overlay{position:fixed;inset:0;background:rgba(30,24,18,.18);z-index:40;display:none}
+    .drawer-overlay.show{display:block}
+    .drawer{position:absolute;right:0;top:0;bottom:0;width:440px;background:#fff;box-shadow:-14px 0 40px rgba(30,24,18,.14);padding:24px;overflow:auto}
+    .drawer-close{float:right;border:0;background:transparent;font-size:20px;color:var(--muted)}
+    .drawer h3{font-family:"Cormorant Garamond",serif;font-size:25px;color:var(--ink);margin:14px 0 4px}
+    .drawer-sub{font-size:12px;color:var(--muted)}
+    .detail-grid{grid-template-columns:1fr 1fr;margin:18px 0}
+    .detail-cell{border:1px solid var(--border);padding:10px;background:var(--cream)}
+    .detail-cell small{display:block;color:var(--faint);font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+    .detail-cell strong{display:block;color:var(--ink);font-size:12px;margin-top:4px}
+    .timeline{margin-top:16px}
+    .timeline-row{position:relative;padding:0 0 16px 20px;font-size:11px;color:var(--muted);line-height:1.45}
+    .timeline-row:before{content:"";position:absolute;left:2px;top:4px;width:7px;height:7px;border-radius:50%;background:var(--gold)}
+    .timeline-row:after{content:"";position:absolute;left:5px;top:12px;width:1px;height:calc(100% - 4px);background:var(--border)}
+    .timeline-row:last-child:after{display:none}
+    /* Tables & module common */
+    .module-grid{grid-template-columns:repeat(12,minmax(0,1fr));margin-bottom:14px}
+    .table-card{padding:0;overflow:hidden}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;padding:11px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);background:#fbf8f5;border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:12px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);vertical-align:middle}
+    tr:last-child td{border-bottom:0}
+    td strong{color:var(--ink)}
+    .status{display:inline-flex;align-items:center;padding:4px 7px;border-radius:10px;font-size:9px;font-weight:700;border:1px solid}
+    .status.live,.status.published,.status.responded,.status.optimized{color:#4b7653;background:#eef5ef;border-color:#d5e5d8}
+    .status.draft,.status.paused,.status.needs{color:#8f5a43;background:#f8efeb;border-color:#ead7ce}
+    .status.scheduled,.status.review,.status.ai{color:#826a2a;background:#f7f0df;border-color:#ead9a7}
+    .calendar-card{padding:16px}
+    .editorial-calendar{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--border);border-left:1px solid var(--border)}
+    .cal-cell{min-height:112px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:8px;background:#fff}
+    .cal-day{font-size:10px;color:var(--faint);font-weight:700}
+    .cal-event{margin-top:7px;padding:6px;background:#f6f0e4;border-left:3px solid var(--gold);font-size:9px;line-height:1.35;color:var(--body)}
+    .weekly-calendar{display:grid;grid-template-columns:90px repeat(7,1fr);border-top:1px solid var(--border);border-left:1px solid var(--border)}
+    .week-cell{min-height:82px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:7px;font-size:10px}
+    .week-head{min-height:auto;background:#fbf8f5;color:var(--muted);font-weight:700}
+    .platform-post{padding:5px 6px;border-radius:3px;margin-bottom:5px;font-size:9px;line-height:1.3}
+    .ig{background:#f4eaf0;color:#7d4f6b}.fb{background:#eaf0f7;color:#4d6885}.yt{background:#f7e9e7;color:#8b4f47}.tt{background:#ececec;color:#444}.li{background:#e8f0f4;color:#45687a}
+    .spark{width:94px;height:26px}
+    .sequence-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .sequence-card{padding:16px}
+    .sequence-card h3{font-size:13px;color:var(--ink);margin:0}
+    .sequence-metric{display:flex;justify-content:space-between;margin-top:12px;font-size:11px;color:var(--muted)}
+    .review-card{padding:14px}
+    .review-head{display:flex;align-items:center;gap:8px}
+    .stars{color:var(--gold-dark);letter-spacing:1px;font-size:12px}
+    .review-snippet{font-size:12px;color:var(--muted);line-height:1.5;margin:10px 0}
+    .rank-up{color:var(--green);font-weight:700}.rank-down{color:var(--red);font-weight:700}
+    .market-card{padding:16px}
+    .market-value{font-size:26px;font-weight:700;color:var(--ink);margin-top:10px}
+    .market-label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+    .signal{padding:16px;border-left:4px solid var(--gold);background:#fffaf0}
+    .asset-stats{grid-template-columns:repeat(4,1fr);margin-bottom:14px}
+    .asset-grid{grid-template-columns:repeat(4,1fr)}
+    .asset-card{overflow:hidden}
+    .asset-thumb{height:150px;background:
+      linear-gradient(145deg,rgba(30,24,18,.08),rgba(201,165,78,.10)),
+      repeating-linear-gradient(45deg,#ddd5cd 0 10px,#e7e0da 10px 20px);
+      display:grid;place-items:center;color:#857a70;font-family:"Cormorant Garamond",serif;font-size:20px}
+    .asset-info{padding:11px}
+    .asset-caption{font-size:11px;font-weight:700;color:var(--ink)}
+    .asset-tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+    .note{font-size:10px;color:var(--faint)}
+    .empty-filter{display:none;padding:22px;text-align:center;color:var(--muted)}
+    @media(max-width:1280px){
+      .kpi-grid{grid-template-columns:repeat(3,1fr)}
+      .span-4,.span-5,.span-6,.span-7,.span-8{grid-column:span 6}
+      .asset-grid{grid-template-columns:repeat(3,1fr)}
+    }
+    @media(max-width:900px){
+      :root{--sidebar:74px}
+      .sidebar{padding:20px 10px}
+      .wordmark{font-size:19px}.brand-sub,.nav-btn span:not(.nav-icon),.badge,.agent-chip span:last-child{display:none}
+      .brand{padding:0 2px 18px}.nav-btn{justify-content:center}.agent-chip{justify-content:center}
+      .topbar{padding:0 16px}.content{padding:18px 16px}.top-control{display:none}
+      .kpi-grid{grid-template-columns:repeat(2,1fr)}
+      .chart-grid,.module-grid,.approval-layout,.bottom-grid{grid-template-columns:1fr}
+      .span-4,.span-5,.span-6,.span-7,.span-8,.span-12{grid-column:span 1}
+      .sequence-grid,.asset-stats{grid-template-columns:repeat(2,1fr)}
+      .asset-grid{grid-template-columns:repeat(2,1fr)}
+      .drawer{width:min(440px,94vw)}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="wordmark">Blue Ridge Homes</div>
+      <div class="brand-sub">Marketing</div>
+    </div>
+    <nav class="nav" aria-label="Primary">
+      <button class="nav-btn active" data-section="overview"><span class="nav-icon">⌂</span><span>Overview</span></button>
+      <button class="nav-btn" data-section="approvals"><span class="nav-icon">✓</span><span>Approvals</span><span class="badge pending-count">5</span></button>
+      <button class="nav-btn" data-section="leads"><span class="nav-icon">◉</span><span>Leads</span></button>
+      <button class="nav-btn" data-section="content"><span class="nav-icon">▤</span><span>Content</span></button>
+      <button class="nav-btn" data-section="social"><span class="nav-icon">◎</span><span>Social</span></button>
+      <button class="nav-btn" data-section="ads"><span class="nav-icon">↗</span><span>Ads</span></button>
+      <button class="nav-btn" data-section="email"><span class="nav-icon">✉</span><span>Email</span></button>
+      <button class="nav-btn" data-section="reviews"><span class="nav-icon">★</span><span>Reviews</span></button>
+      <button class="nav-btn" data-section="analytics"><span class="nav-icon">⌁</span><span>Analytics</span></button>
+      <button class="nav-btn" data-section="market"><span class="nav-icon">△</span><span>Market Data</span></button>
+      <button class="nav-btn" data-section="assets"><span class="nav-icon">▧</span><span>Assets</span></button>
+    </nav>
+    <div class="agent-chip"><span class="dot"></span><span>AI Agent: Active</span></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="section-title" id="pageTitle">Overview</div>
+      <select class="top-control" id="dateRange" aria-label="Date range">
+        <option>Last 30 days</option>
+        <option>Quarter to date</option>
+        <option selected>Year to date</option>
+        <option>Last 12 months</option>
+        <option>Custom range</option>
+      </select>
+      <button class="pending-btn" id="pendingTop">Pending approvals (<span class="pending-count">5</span>)</button>
+      <button class="avatar" id="avatarBtn" aria-label="User menu">BB</button>
+      <div class="avatar-menu" id="avatarMenu">
+        <button>Account settings</button>
+        <button>Approval preferences</button>
+        <button>Agent permissions</button>
+        <button>Sign out</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- OVERVIEW -->
+      <section class="section active" id="overview">
+        <div class="section-head">
+          <div>
+            <h2>Marketing performance at a glance</h2>
+            <p>Results, pipeline health, and AI activity across Blue Ridge Homes’ growth system.</p>
+          </div>
+          <div class="head-actions">
+            <button class="btn">Export report</button>
+            <button class="btn primary" data-go="approvals">Review approvals</button>
+          </div>
+        </div>
+
+        <div class="grid kpi-grid">
+          <article class="card kpi"><div class="kpi-label">Qualified leads</div><div class="kpi-value">31</div><div class="kpi-target">Target: 25–40 / month</div><div class="delta up">↑ 19% vs. last month</div></article>
+          <article class="card kpi"><div class="kpi-label">Blended cost / lead</div><div class="kpi-value">$118</div><div class="kpi-target">Target: $100–150</div><div class="delta up">↓ $14 improvement</div></article>
+          <article class="card kpi"><div class="kpi-label">Marketing ROI</div><div class="kpi-value">3.4:1</div><div class="kpi-target">Target: 5:1</div><div class="delta up">↑ 0.5 this quarter</div></article>
+          <article class="card kpi"><div class="kpi-label">Website visitors</div><div class="kpi-value">4,200</div><div class="kpi-target">Target: 4,500 / month</div><div class="delta up">↑ 11% vs. last month</div></article>
+          <article class="card kpi"><div class="kpi-label">Google reviews</div><div class="kpi-value">4.8★</div><div class="kpi-target">63 total reviews</div><div class="delta up">↑ 4 new this month</div></article>
+          <article class="card kpi"><div class="kpi-label">Lead → contract</div><div class="kpi-value">13%</div><div class="kpi-target">4 wins from 31 leads</div><div class="delta neutral">→ Stable vs. 12.8%</div></article>
+        </div>
+
+        <div class="grid chart-grid">
+          <article class="card chart-card span-7"><div class="card-title-row"><div><div class="card-title">Leads per month</div><div class="card-sub">Qualified leads with 25–40 monthly target band</div></div><span class="mini-chip">12 months</span></div><div class="canvas-wrap"><canvas id="leadsMonthChart"></canvas></div></article>
+          <article class="card chart-card span-5"><div class="card-title-row"><div><div class="card-title">Lead source attribution</div><div class="card-sub">31 qualified leads this month</div></div></div><div class="canvas-wrap"><canvas id="sourceChart"></canvas></div></article>
+          <article class="card chart-card span-8"><div class="card-title-row"><div><div class="card-title">Cost per lead by channel</div><div class="card-sub">LSAs remain the most efficient paid source</div></div></div><div class="canvas-wrap"><canvas id="cplChart"></canvas></div></article>
+          <article class="card chart-card span-4"><div class="card-title-row"><div><div class="card-title">Pipeline funnel</div><div class="card-sub">Current month cohort</div></div></div><div class="canvas-wrap"><canvas id="funnelChart"></canvas></div></article>
+          <article class="card chart-card span-6"><div class="card-title-row"><div><div class="card-title">Marketing ROI trend</div><div class="card-sub">Progressing toward 5:1 target</div></div></div><div class="canvas-wrap"><canvas id="roiTrendChart"></canvas></div></article>
+          <article class="card chart-card span-6"><div class="card-title-row"><div><div class="card-title">Ad spend vs. leads generated</div><div class="card-sub">Paid media investment and lead volume</div></div></div><div class="canvas-wrap"><canvas id="spendLeadsChart"></canvas></div></article>
+        </div>
+
+        <div class="grid bottom-grid">
+          <article class="card feed">
+            <div class="card-title-row"><div><div class="card-title">Recent AI activity</div><div class="card-sub">Autonomous work completed within current permissions</div></div><span class="mini-chip">Live</span></div>
+            <div class="feed-item"><div class="feed-icon">↗</div><div class="feed-main"><strong>Adjusted Google Ads negatives</strong><br>Added 7 low-intent search terms after spend-quality review.</div><div class="feed-time">18 min</div></div>
+            <div class="feed-item"><div class="feed-icon">✉</div><div class="feed-main"><strong>Sent lead nurture email #2</strong><br>Delivered to 9 newly qualified remodeling prospects.</div><div class="feed-time">1 hr</div></div>
+            <div class="feed-item"><div class="feed-icon">◎</div><div class="feed-main"><strong>Published Facebook project update</strong><br>“Framing progress at Bent Creek” posted at optimal engagement window.</div><div class="feed-time">3 hr</div></div>
+            <div class="feed-item"><div class="feed-icon">⌁</div><div class="feed-main"><strong>Flagged landing-page conversion dip</strong><br>Storm restoration page fell from 6.8% to 5.9%; diagnostic created.</div><div class="feed-time">Yesterday</div></div>
+          </article>
+          <article class="card compact-list">
+            <div class="card-title-row"><div><div class="card-title">Pending approvals</div><div class="card-sub">High-impact actions awaiting owner sign-off</div></div><button class="link-button" data-go="approvals">View all</button></div>
+            <div class="approval-link"><span class="tag content">Content</span><span>Publish Asheville kitchen remodel cost guide</span><button class="link-button" data-go="approvals">Review</button></div>
+            <div class="approval-link"><span class="tag ads">Ads</span><span>Increase storm restoration LSA bid 15%</span><button class="link-button" data-go="approvals">Review</button></div>
+            <div class="approval-link"><span class="tag reviews">Reviews</span><span>Reply to 3-star Google review</span><button class="link-button" data-go="approvals">Review</button></div>
+            <div class="approval-link"><span class="tag social">Social</span><span>Schedule Friday before/after Reel</span><button class="link-button" data-go="approvals">Review</button></div>
+            <div class="approval-link"><span class="tag email">Email</span><span>Send nurture email #3 to 14 leads</span><button class="link-button" data-go="approvals">Review</button></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- APPROVALS -->
+      <section class="section" id="approvals">
+        <div class="section-head">
+          <div><h2>Human approval queue</h2><p>Review high-stakes actions before the AI agent publishes, sends, or changes spend.</p></div>
+          <div class="head-actions"><button class="btn">Approval rules</button><button class="btn primary">Approve all low-risk</button></div>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn active" data-approval-tab="pending">Pending (<span class="pending-count">5</span>)</button>
+          <button class="tab-btn" data-approval-tab="approved">Approved (<span id="approvedCount">3</span>)</button>
+          <button class="tab-btn" data-approval-tab="rejected">Rejected (<span id="rejectedCount">1</span>)</button>
+        </div>
+        <div class="grid approval-layout">
+          <div class="approval-list" id="approvalList">
+            <article class="card approval-item" data-state="pending">
+              <div class="approval-meta"><span class="tag content">Content</span><span class="approval-time">Drafted today, 10:42 AM</span></div>
+              <h3>Publish blog post: “How Much Does a Kitchen Remodel Cost in Asheville in 2026?”</h3>
+              <div class="preview">Recommended action: Publish Tuesday at 8:30 AM.
+
+Preview: Asheville kitchen remodels typically range from $45,000 for a focused refresh to $150,000+ for a full structural redesign. Cost drivers include cabinet quality, layout changes, permitting, electrical upgrades, and the realities of working in older mountain homes...</div>
+              <div class="approval-actions"><button class="btn approve" data-action="approve">Approve</button><button class="btn" data-action="edit">Edit</button><button class="btn danger" data-action="reject">Reject</button></div><div class="status-stamp"></div>
+            </article>
+            <article class="card approval-item" data-state="pending">
+              <div class="approval-meta"><span class="tag reviews">Reviews</span><span class="approval-time">Drafted today, 9:15 AM</span></div>
+              <h3>Reply to 3★ Google review from “M. Caldwell”</h3>
+              <div class="preview">“Thank you for sharing this feedback, Michael. We’re glad you were pleased with the finished craftsmanship, and we’re sorry our scheduling updates did not meet the standard we set for communication. We’ve already reviewed the handoff process with our project team and would appreciate the chance to discuss your experience directly.”</div>
+              <div class="approval-actions"><button class="btn approve" data-action="approve">Approve</button><button class="btn" data-action="edit">Edit</button><button class="btn danger" data-action="reject">Reject</button></div><div class="status-stamp"></div>
+            </article>
+            <article class="card approval-item" data-state="pending">
+              <div class="approval-meta"><span class="tag social">Social</span><span class="approval-time">Scheduled for Fri, 6:10 PM</span></div>
+              <h3>Instagram Reel + before/after carousel: Biltmore Lake kitchen transformation</h3>
+              <div class="preview">Caption: “A darker, closed-off kitchen became the gathering place this family wanted—warm white oak cabinetry, better circulation, and a view opened back toward the mountains. Swipe for the ‘before.’”
+
+Includes 7-image carousel, 18-second Reel, location tag, and #AshevilleRemodel hashtag set.</div>
+              <div class="approval-actions"><button class="btn approve" data-action="approve">Approve</button><button class="btn" data-action="edit">Edit</button><button class="btn danger" data-action="reject">Reject</button></div><div class="status-stamp"></div>
+            </article>
+            <article class="card approval-item" data-state="pending">
+              <div class="approval-meta"><span class="tag email">Email</span><span class="approval-time">Ready to send today</span></div>
+              <h3>Send nurture email #3 to 14 qualified leads</h3>
+              <div class="preview">Subject: What happens between estimate and construction?
+
+Content explains preconstruction, selections, permit timing, allowances, and how Blue Ridge Homes reduces uncertainty before work begins. Audience: 14 qualified leads with budgets above $125k who have not scheduled a site visit.</div>
+              <div class="approval-actions"><button class="btn approve" data-action="approve">Approve</button><button class="btn" data-action="edit">Edit</button><button class="btn danger" data-action="reject">Reject</button></div><div class="status-stamp"></div>
+            </article>
+            <article class="card approval-item" data-state="pending">
+              <div class="approval-meta"><span class="tag ads">Ads</span><span class="approval-time">Proposed today, 7:05 AM</span></div>
+              <h3>Increase LSA bid 15% for “storm damage restoration Asheville”</h3>
+              <div class="preview">Rationale: Impression share fell from 62% to 49% while booked-call conversion remains 18%. Estimated impact: +$420 monthly spend, +3 to 5 qualified leads, projected CPL $102–$140. Guardrail: revert automatically if 14-day CPL exceeds $155.</div>
+              <div class="approval-actions"><button class="btn approve" data-action="approve">Approve</button><button class="btn" data-action="edit">Edit</button><button class="btn danger" data-action="reject">Reject</button></div><div class="status-stamp"></div>
+            </article>
+            <article class="card approval-item" data-state="approved" style="display:none">
+              <div class="approval-meta"><span class="tag content">Content</span><span class="approval-time">Approved Jul 14</span></div><h3>Publish “Do You Need a Permit for an Asheville ADU?”</h3><div class="preview">Approved with title edit and published to the resource center.</div>
+            </article>
+            <article class="card approval-item" data-state="approved" style="display:none">
+              <div class="approval-meta"><span class="tag ads">Ads</span><span class="approval-time">Approved Jul 11</span></div><h3>Pause underperforming Meta ad set</h3><div class="preview">Paused “Broad Home Improvement 35+” after CPL exceeded $240 for 10 days.</div>
+            </article>
+            <article class="card approval-item" data-state="approved" style="display:none">
+              <div class="approval-meta"><span class="tag social">Social</span><span class="approval-time">Approved Jul 9</span></div><h3>Publish subcontractor spotlight video</h3><div class="preview">Approved and posted to Instagram, Facebook, and LinkedIn.</div>
+            </article>
+            <article class="card approval-item" data-state="rejected" style="display:none">
+              <div class="approval-meta"><span class="tag email">Email</span><span class="approval-time">Rejected Jul 8</span></div><h3>Send “Summer renovation slots” promotional blast</h3><div class="preview">Rejected because current production capacity could not support the proposed urgency claim.</div>
+            </article>
+          </div>
+          <aside class="card auto-log">
+            <div class="card-title-row"><div><div class="card-title">Auto-approved activity</div><div class="card-sub">Low-stakes actions executed without review</div></div></div>
+            <div class="auto-row"><div class="auto-title">Updated 7 ad negative keywords</div><div class="auto-note">Search-quality maintenance • Google Ads • 18 minutes ago</div></div>
+            <div class="auto-row"><div class="auto-title">Resized 12 project images</div><div class="auto-note">WebP optimization under 250 KB • Assets • 2 hours ago</div></div>
+            <div class="auto-row"><div class="auto-title">Added UTM tags to 4 scheduled posts</div><div class="auto-note">Campaign attribution • Social • Today</div></div>
+            <div class="auto-row"><div class="auto-title">Sent review requests to 3 completed clients</div><div class="auto-note">Approved post-project workflow • Reviews • Yesterday</div></div>
+            <div class="auto-row"><div class="auto-title">Refreshed Google Business project photos</div><div class="auto-note">Rotated 6 previously approved images • Local SEO • Yesterday</div></div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- LEADS -->
+      <section class="section" id="leads">
+        <div class="section-head">
+          <div><h2>Lead pipeline</h2><p>31 leads in the current operating view, with 4 won contracts and a 13% lead-to-contract conversion rate.</p></div>
+          <div class="head-actions"><button class="btn">Import leads</button><button class="btn primary">Add lead</button></div>
+        </div>
+        <div class="filterbar">
+          <select id="sourceFilter"><option value="all">All sources</option><option>Google LSA</option><option>Google Ads</option><option>Meta</option><option>Organic / SEO</option><option>Referral</option><option>Phone</option></select>
+          <select id="typeFilter"><option value="all">All project types</option><option>Custom home</option><option>Remodel</option><option>Addition</option><option>Storm restoration</option><option>Kitchen / bath</option><option>Green build</option></select>
+          <input id="leadSearch" type="search" placeholder="Search name or project..." />
+          <div class="spacer"></div><div class="pipeline-summary"><strong>Pipeline value:</strong> $3.82M quoted / qualified</div>
+        </div>
+        <div class="kanban-wrap">
+          <div class="kanban" id="kanban">
+            <div class="kanban-col" data-stage="New"><div class="kanban-head">New <span class="kanban-count">7</span></div><div class="kanban-cards">
+              <article class="lead-card" data-name="Sarah & Tom Whitaker" data-type="Custom home" data-source="Google LSA" data-budget="$900k–$1.2M" data-days="1" data-email="sarah.whitaker@example.com" data-phone="828-555-0142"><div class="lead-name">Sarah & Tom Whitaker</div><div class="lead-type">Custom home • Fairview</div><div class="lead-budget">$900k–$1.2M</div><div class="lead-foot"><span class="source-pill">Google LSA</span><span class="days">1 day</span></div></article>
+              <article class="lead-card" data-name="Nathan Cole" data-type="Storm restoration" data-source="Google Ads" data-budget="$80k–$150k" data-days="0" data-email="ncole@example.com" data-phone="828-555-0121"><div class="lead-name">Nathan Cole</div><div class="lead-type">Storm restoration • Swannanoa</div><div class="lead-budget">$80k–$150k</div><div class="lead-foot"><span class="source-pill">Google Ads</span><span class="days">Today</span></div></article>
+              <article class="lead-card" data-name="Laura Mendoza" data-type="Kitchen / bath" data-source="Organic / SEO" data-budget="$60k–$100k" data-days="2" data-email="lmendoza@example.com" data-phone="828-555-0168"><div class="lead-name">Laura Mendoza</div><div class="lead-type">Kitchen / bath • Asheville</div><div class="lead-budget">$60k–$100k</div><div class="lead-foot"><span class="source-pill">Organic / SEO</span><span class="days">2 days</span></div></article>
+              <article class="lead-card" data-name="James Patel" data-type="Addition" data-source="Referral" data-budget="$180k–$250k" data-days="1" data-email="jpatel@example.com" data-phone="828-555-0119"><div class="lead-name">James Patel</div><div class="lead-type">Addition • Weaverville</div><div class="lead-budget">$180k–$250k</div><div class="lead-foot"><span class="source-pill">Referral</span><span class="days">1 day</span></div></article>
+              <article class="lead-card" data-name="Renee Foster" data-type="Remodel" data-source="Meta" data-budget="$125k–$200k" data-days="3" data-email="rfoster@example.com" data-phone="828-555-0174"><div class="lead-name">Renee Foster</div><div class="lead-type">Whole-home remodel • Arden</div><div class="lead-budget">$125k–$200k</div><div class="lead-foot"><span class="source-pill">Meta</span><span class="days">3 days</span></div></article>
+              <article class="lead-card" data-name="Owen Brooks" data-type="Green build" data-source="Phone" data-budget="$700k–$950k" data-days="1" data-email="obrooks@example.com" data-phone="828-555-0188"><div class="lead-name">Owen Brooks</div><div class="lead-type">Green build • Black Mountain</div><div class="lead-budget">$700k–$950k</div><div class="lead-foot"><span class="source-pill">Phone</span><span class="days">1 day</span></div></article>
+              <article class="lead-card" data-name="Melanie Price" data-type="Kitchen / bath" data-source="Google LSA" data-budget="$45k–$75k" data-days="2" data-email="mprice@example.com" data-phone="828-555-0191"><div class="lead-name">Melanie Price</div><div class="lead-type">Primary bath • Asheville</div><div class="lead-budget">$45k–$75k</div><div class="lead-foot"><span class="source-pill">Google LSA</span><span class="days">2 days</span></div></article>
+            </div></div>
+
+            <div class="kanban-col" data-stage="Contacted"><div class="kanban-head">Contacted <span class="kanban-count">6</span></div><div class="kanban-cards">
+              <article class="lead-card" data-name="David Kim" data-type="Custom home" data-source="Organic / SEO" data-budget="$1.0M–$1.4M" data-days="2" data-email="dkim@example.com" data-phone="828-555-0102"><div class="lead-name">David Kim</div><div class="lead-type">Custom home • North Asheville</div><div class="lead-budget">$1.0M–$1.4M</div><div class="lead-foot"><span class="source-pill">Organic / SEO</span><span class="days">2 days</span></div></article>
+              <article class="lead-card" data-name="Evelyn Ross" data-type="Remodel" data-source="Google Ads" data-budget="$150k–$225k" data-days="4" data-email="eross@example.com" data-phone="828-555-0132"><div class="lead-name">Evelyn Ross</div><div class="lead-type">Whole-home remodel • Montford</div><div class="lead-budget">$150k–$225k</div><div class="lead-foot"><span class="source-pill">Google Ads</span><span class="days">4 days</span></div></article>
+              <article class="lead-card" data-name="Will Graves" data-type="Storm restoration" data-source="Google LSA" data-budget="$50k–$90k" data-days="1" data-email="wgraves@example.com" data-phone="828-555-0149"><div class="lead-name">Will Graves</div><div class="lead-type">Storm restoration • Marshall</div><div class="lead-budget">$50k–$90k</div><div class="lead-foot"><span class="source-pill">Google LSA</span><span class="days">1 day</span></div></article>
+              <article class="lead-card" data-name="Anna Caldwell" data-type="Addition" data-source="Referral" data-budget="$220k–$300k" data-days="5" data-email="acaldwell@example.com" data-phone="828-555-0163"><div class="lead-name">Anna Caldwell</div><div class="lead-type">Two-story addition • Asheville</div><div class="lead-budget">$220k–$300k</div><div class="lead-foot"><span class="source-pill">Referral</span><span class="days">5 days</span></div></article>
+              <article class="lead-card" data-name="Marcus Reed" data-type="Kitchen / bath" data-source="Meta" data-budget="$70k–$110k" data-days="3" data-email="mreed@example.com" data-phone="828-555-0155"><div class="lead-name">Marcus Reed</div><div class="lead-type">Kitchen remodel • Candler</div><div class="lead-budget">$70k–$110k</div><div class="lead-foot"><span class="source-pill">Meta</span><span class="days">3 days</span></div></article>
+              <article class="lead-card" data-name="Haley Nguyen" data-type="Green build" data-source="Phone" data-budget="$650k–$850k" data-days="6" data-email="hnguyen@example.com" data-phone="828-555-0177"><div class="lead-name">Haley Nguyen</div><div class="lead-type">Net-zero home • Leicester</div><div class="lead-budget">$650k–$850k</div><div class="lead-foot"><span class="source-pill">Phone</span><span class="days">6 days</span></div></article>
+            </div></div>
+
+            <div class="kanban-col" data-stage="Qualified"><div class="kanban-head">Qualified <span class="kanban-count">6</span></div><div class="kanban-cards">
+              <article class="lead-card" data-name="Ben & Claire Murphy" data-type="Remodel" data-source="Google LSA" data-budget="$275k–$400k" data-days="7" data-email="bmurphy@example.com" data-phone="828-555-0157"><div class="lead-name">Ben & Claire Murphy</div><div class="lead-type">Whole-home remodel • Biltmore Lake</div><div class="lead-budget">$275k–$400k</div><div class="lead-foot"><span class="source-pill">Google LSA</span><span class="days">7 days</span></div></article>
+              <article class="lead-card" data-name="Priya Shah" data-type="Custom home" data-source="Referral" data-budget="$1.1M–$1.5M" data-days="9" data-email="pshah@example.com" data-phone="828-555-0117"><div class="lead-name">Priya Shah</div><div class="lead-type">Custom home • Reynolds Mountain</div><div class="lead-budget">$1.1M–$1.5M</div><div class="lead-foot"><span class="source-pill">Referral</span><span class="days">9 days</span></div></article>
+              <article class="lead-card" data-name="Graham Ellis" data-type="Storm restoration" data-source="Google Ads" data-budget="$95k–$140k" data-days="5" data-email="gellis@example.com" data-phone="828-555-0181"><div class="lead-name">Graham Ellis</div><div class="lead-type">Storm restoration • Black Mountain</div><div class="lead-budget">$95k–$140k</div><div class="lead-foot"><span class="source-pill">Google Ads</span><span class="days">5 days</span></div></article>
+              <article class="lead-card" data-name="Olivia Hart" data-type="Addition" data-source="Organic / SEO" data-budget="$200k–$280k" data-days="8" data-email="ohart@example.com" data-phone="828-555-0126"><div class="lead-name">Olivia Hart</div><div class="lead-type">Primary suite addition • Asheville</div><div class="lead-budget">$200k–$280k</div><div class="lead-foot"><span class="source-pill">Organic / SEO</span><span class="days">8 days</span></div></article>
+              <article class="lead-card" data-name="Theo Simmons" data-type="Kitchen / bath" data-source="Meta" data-budget="$90k–$135k" data-days="6" data-email="tsimmons@example.com" data-phone="828-555-0193"><div class="lead-name">Theo Simmons</div><div class="lead-type">Kitchen + pantry • Haw Creek</div><div class="lead-budget">$90k–$135k</div><div class="lead-foot"><span class="source-pill">Meta</span><span class="days">6 days</span></div></article>
+              <article class="lead-card" data-name="Morgan Fields" data-type="Green build" data-source="Google LSA" data-budget="$800k–$1.0M" data-days="11" data-email="mfields@example.com" data-phone="828-555-0108"><div class="lead-name">Morgan Fields</div><div class="lead-type">High-performance home • Fletcher</div><div class="lead-budget">$800k–$1.0M</div><div class="lead-foot"><span class="source-pill">Google LSA</span><span class="days">11 days</span></div></article>
+            </div></div>
+
+            <div class="kanban-col" data-stage="Quoted"><div class="kanban-head">Quoted <span class="kanban-count">4</span></div><div class="kanban-cards">
+              <article class="lead-card" data-name="Chloe Benson" data-type="Remodel" data-source="Referral" data-budget="$310k proposal" data-days="6" data-email="cbenson@example.com" data-phone="828-555-0141"><div class="lead-name">Chloe Benson</div><div class="lead-type">Historic home remodel • Montford</div><div class="lead-budget">$310k proposal</div><div class="lead-foot"><span class="source-pill">Referral</span><span class="days">6 days</span></div></article>
+              <article class="lead-card" data-name="Isaac Turner" data-type="Addition" data-source="Google Ads" data-budget="$245k proposal" data-days="8" data-email="iturner@example.com" data-phone="828-555-0151"><div class="lead-name">Isaac Turner</div><div class="lead-type">Garage + studio • Weaverville</div><div class="lead-budget">$245k proposal</div><div class="lead-foot"><span class="source-pill">Google Ads</span><span class="days">8 days</span></div></article>
+              <article class="lead-card" data-name="Mia Reynolds" data-type="Custom home" data-source="Organic / SEO" data-budget="$1.18M proposal" data-days="4" data-email="mreynolds@example.com" data-phone="828-555-0166"><div class="lead-name">Mia Reynolds</div><div class="lead-type">Custom home • Town Mountain</div><div class="lead-budget">$1.18M proposal</div><div class="lead-foot"><span class="source-pill">Organic / SEO</span><span class="days">4 days</span></div></article>
+              <article class="lead-card" data-name="Daniel Ortiz" data-type="Storm restoration" data-source="Google LSA" data-budget="$132k proposal" data-days="3" data-email="dortiz@example.com" data-phone="828-555-0198"><div class="lead-name">Daniel Ortiz</div><div class="lead-type">Storm restoration • Swannanoa</div><div class="lead-budget">$132k proposal</div><div class="lead-foot"><span class="source-pill">Google LSA</span><span class="days">3 days</span></div></article>
+            </div></div>
+
+            <div class="kanban-col" data-stage="Won"><div class="kanban-head">Won <span class="kanban-count">4</span></div><div class="kanban-cards">
+              <article class="lead-card" data-name="Emily Stone" data-type="Kitchen / bath" data-source="Google LSA" data-budget="$96k contract" data-days="2" data-email="estone@example.com" data-phone="828-555-0171"><div class="lead-name">Emily Stone</div><div class="lead-type">Kitchen remodel • Asheville</div><div class="lead-budget">$96k contract</div><div class="lead-foot"><span class="source-pill">Google LSA</span><span class="days">2 days</span></div></article>
+              <article class="lead-card" data-name="Robert Lane" data-type="Storm restoration" data-source="Google Ads" data-budget="$164k contract" data-days="5" data-email="rlane@example.com" data-phone="828-555-0137"><div class="lead-name">Robert Lane</div><div class="lead-type">Storm restoration • Old Fort</div><div class="lead-budget">$164k contract</div><div class="lead-foot"><span class="source-pill">Google Ads</span><span class="days">5 days</span></div></article>
+              <article class="lead-card" data-name="Avery & June Fox" data-type="Custom home" data-source="Referral" data-budget="$1.06M contract" data-days="7" data-email="afox@example.com" data-phone="828-555-0186"><div class="lead-name">Avery & June Fox</div><div class="lead-type">Custom home • Mills River</div><div class="lead-budget">$1.06M contract</div><div class="lead-foot"><span class="source-pill">Referral</span><span class="days">7 days</span></div></article>
+              <article class="lead-card" data-name="Sophia Grant" data-type="Green build" data-source="Organic / SEO" data-budget="$745k contract" data-days="3" data-email="sgrant@example.com" data-phone="828-555-0105"><div class="lead-name">Sophia Grant</div><div class="lead-type">Green build • Fairview</div><div class="lead-budget">$745k contract</div><div class="lead-foot"><span class="source-pill">Organic / SEO</span><span class="days">3 days</span></div></article>
+            </div></div>
+
+            <div class="kanban-col" data-stage="Lost"><div class="kanban-head">Lost <span class="kanban-count">4</span></div><div class="kanban-cards">
+              <article class="lead-card" data-name="Cole Weaver" data-type="Remodel" data-source="Meta" data-budget="$80k–$120k" data-days="12" data-email="cweaver@example.com" data-phone="828-555-0124"><div class="lead-name">Cole Weaver</div><div class="lead-type">Remodel • Asheville</div><div class="lead-budget">$80k–$120k</div><div class="lead-foot"><span class="source-pill">Meta</span><span class="days">12 days</span></div></article>
+              <article class="lead-card" data-name="Grace Lin" data-type="Kitchen / bath" data-source="Google Ads" data-budget="$35k–$55k" data-days="7" data-email="glin@example.com" data-phone="828-555-0182"><div class="lead-name">Grace Lin</div><div class="lead-type">Kitchen refresh • Asheville</div><div class="lead-budget">$35k–$55k</div><div class="lead-foot"><span class="source-pill">Google Ads</span><span class="days">7 days</span></div></article>
+              <article class="lead-card" data-name="Sam Holloway" data-type="Addition" data-source="Phone" data-budget="$120k–$170k" data-days="15" data-email="sholloway@example.com" data-phone="828-555-0195"><div class="lead-name">Sam Holloway</div><div class="lead-type">Addition • Hendersonville</div><div class="lead-budget">$120k–$170k</div><div class="lead-foot"><span class="source-pill">Phone</span><span class="days">15 days</span></div></article>
+              <article class="lead-card" data-name="Nora Blake" data-type="Custom home" data-source="Google LSA" data-budget="$600k–$750k" data-days="9" data-email="nblake@example.com" data-phone="828-555-0111"><div class="lead-name">Nora Blake</div><div class="lead-type">Custom home • Buncombe County</div><div class="lead-budget">$600k–$750k</div><div class="lead-foot"><span class="source-pill">Google LSA</span><span class="days">9 days</span></div></article>
+            </div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONTENT -->
+      <section class="section" id="content">
+        <div class="section-head"><div><h2>Content operations</h2><p>Editorial planning, search intent, publishing cadence, and production ownership.</p></div><div class="head-actions"><button class="btn">Keyword backlog</button><button class="btn primary">Create brief</button></div></div>
+        <div class="grid module-grid">
+          <article class="card calendar-card span-8">
+            <div class="card-title-row"><div><div class="card-title">July editorial calendar</div><div class="card-sub">AI drafts are routed to approval before publishing</div></div></div>
+            <div class="editorial-calendar">
+              <div class="cal-cell"><div class="cal-day">MON 13</div><div class="cal-event">Publish: Post-Helene resilient home design</div></div>
+              <div class="cal-cell"><div class="cal-day">TUE 14</div><div class="cal-event">Outline: Asheville ADU permit guide</div></div>
+              <div class="cal-cell"><div class="cal-day">WED 15</div><div class="cal-event">Interview: Site superintendent Q&amp;A</div></div>
+              <div class="cal-cell"><div class="cal-day">THU 16</div><div class="cal-event">Draft: Kitchen remodel cost guide</div></div>
+              <div class="cal-cell"><div class="cal-day">FRI 17</div><div class="cal-event">Photo select: Biltmore Lake kitchen</div></div>
+              <div class="cal-cell"><div class="cal-day">SAT 18</div></div>
+              <div class="cal-cell"><div class="cal-day">SUN 19</div></div>
+              <div class="cal-cell"><div class="cal-day">MON 20</div><div class="cal-event">Publish: Building on a sloped lot</div></div>
+              <div class="cal-cell"><div class="cal-day">TUE 21</div></div>
+              <div class="cal-cell"><div class="cal-day">WED 22</div><div class="cal-event">Draft: Green building incentives NC</div></div>
+              <div class="cal-cell"><div class="cal-day">THU 23</div></div>
+              <div class="cal-cell"><div class="cal-day">FRI 24</div><div class="cal-event">Update: Asheville build cost page</div></div>
+              <div class="cal-cell"><div class="cal-day">SAT 25</div></div>
+              <div class="cal-cell"><div class="cal-day">SUN 26</div></div>
+            </div>
+          </article>
+          <article class="card chart-card span-4"><div class="card-title-row"><div><div class="card-title">Posts per month</div><div class="card-sub">Published long-form content</div></div></div><div class="canvas-wrap small"><canvas id="postsChart"></canvas></div></article>
+          <article class="card table-card span-12">
+            <table><thead><tr><th>Title</th><th>Target keyword</th><th>Status</th><th>Author</th><th>Publish date</th></tr></thead><tbody>
+              <tr><td><strong>How Much Does a Kitchen Remodel Cost in Asheville in 2026?</strong></td><td>kitchen remodel cost Asheville</td><td><span class="status review">In review</span></td><td>AI agent</td><td>Jul 21</td></tr>
+              <tr><td><strong>Post-Helene Home Design: Building for Water, Wind, and Access</strong></td><td>resilient home design Asheville</td><td><span class="status published">Published</span></td><td>AI + Brian</td><td>Jul 13</td></tr>
+              <tr><td><strong>What It Costs to Build a Custom Home in Asheville</strong></td><td>custom home cost Asheville</td><td><span class="status published">Published</span></td><td>Human</td><td>Jul 6</td></tr>
+              <tr><td><strong>Do You Need a Permit for an Asheville ADU?</strong></td><td>Asheville ADU permit</td><td><span class="status scheduled">Scheduled</span></td><td>AI agent</td><td>Jul 28</td></tr>
+              <tr><td><strong>Renovating a 1920s Asheville Home Without Losing Its Character</strong></td><td>historic home renovation Asheville</td><td><span class="status draft">Draft</span></td><td>AI agent</td><td>Aug 4</td></tr>
+              <tr><td><strong>Building on a Sloped Mountain Lot: Cost and Design Tradeoffs</strong></td><td>build on sloped lot NC</td><td><span class="status scheduled">Scheduled</span></td><td>AI + Architect</td><td>Jul 20</td></tr>
+            </tbody></table>
+          </article>
+        </div>
+      </section>
+
+      <!-- SOCIAL -->
+      <section class="section" id="social">
+        <div class="section-head"><div><h2>Social publishing</h2><p>Weekly schedule, engagement health, audience growth, and content-pillar mix.</p></div><div class="head-actions"><button class="btn">Media queue</button><button class="btn primary">Schedule post</button></div></div>
+        <div class="grid kpi-grid">
+          <article class="card kpi"><div class="kpi-label">Total followers</div><div class="kpi-value">8,460</div><div class="kpi-target">Across 5 platforms</div><div class="delta up">↑ 4.6% this month</div></article>
+          <article class="card kpi"><div class="kpi-label">Engagement rate</div><div class="kpi-value">5.8%</div><div class="kpi-target">Target: 4.5%+</div><div class="delta up">↑ 0.7 pts</div></article>
+          <article class="card kpi"><div class="kpi-label">Video views</div><div class="kpi-value">22.4k</div><div class="kpi-target">30-day total</div><div class="delta up">↑ 31%</div></article>
+          <article class="card kpi"><div class="kpi-label">Website clicks</div><div class="kpi-value">386</div><div class="kpi-target">From social</div><div class="delta up">↑ 12%</div></article>
+          <article class="card kpi"><div class="kpi-label">Scheduled posts</div><div class="kpi-value">17</div><div class="kpi-target">Next 14 days</div><div class="delta neutral">→ On cadence</div></article>
+          <article class="card kpi"><div class="kpi-label">Leads attributed</div><div class="kpi-value">4</div><div class="kpi-target">This month</div><div class="delta up">↑ 1 vs. June</div></article>
+        </div>
+        <div class="grid module-grid">
+          <article class="card calendar-card span-12">
+            <div class="card-title-row"><div><div class="card-title">Weekly publishing calendar</div><div class="card-sub">Platform-specific adaptations of the same core story</div></div></div>
+            <div class="weekly-calendar">
+              <div class="week-cell week-head">Time</div><div class="week-cell week-head">Mon</div><div class="week-cell week-head">Tue</div><div class="week-cell week-head">Wed</div><div class="week-cell week-head">Thu</div><div class="week-cell week-head">Fri</div><div class="week-cell week-head">Sat</div><div class="week-cell week-head">Sun</div>
+              <div class="week-cell week-head">Morning</div><div class="week-cell"><div class="platform-post li">LinkedIn: resilient design article</div></div><div class="week-cell"><div class="platform-post fb">Facebook: site progress</div></div><div class="week-cell"><div class="platform-post ig">Instagram: material palette</div></div><div class="week-cell"></div><div class="week-cell"><div class="platform-post yt">YouTube: 3-min site walk</div></div><div class="week-cell"></div><div class="week-cell"></div>
+              <div class="week-cell week-head">Afternoon</div><div class="week-cell"></div><div class="week-cell"><div class="platform-post tt">TikTok: framing detail</div></div><div class="week-cell"></div><div class="week-cell"><div class="platform-post li">LinkedIn: hiring / trade partner</div></div><div class="week-cell"></div><div class="week-cell"><div class="platform-post fb">Facebook: client testimonial</div></div><div class="week-cell"></div>
+              <div class="week-cell week-head">Evening</div><div class="week-cell"><div class="platform-post ig">Instagram Stories: poll</div></div><div class="week-cell"></div><div class="week-cell"><div class="platform-post fb">Facebook: article share</div></div><div class="week-cell"></div><div class="week-cell"><div class="platform-post ig">Instagram Reel: kitchen before/after</div><div class="platform-post tt">TikTok cutdown</div></div><div class="week-cell"><div class="platform-post ig">Instagram: community event</div></div><div class="week-cell"></div>
+            </div>
+          </article>
+          <article class="card chart-card span-8"><div class="card-title-row"><div><div class="card-title">Follower growth by platform</div><div class="card-sub">Cumulative audience over six months</div></div></div><div class="canvas-wrap"><canvas id="followersChart"></canvas></div></article>
+          <article class="card chart-card span-4"><div class="card-title-row"><div><div class="card-title">Content pillars</div><div class="card-sub">Share of scheduled content</div></div></div><div class="canvas-wrap"><canvas id="pillarChart"></canvas></div></article>
+        </div>
+      </section>
+
+      <!-- ADS -->
+      <section class="section" id="ads">
+        <div class="section-head"><div><h2>Paid media</h2><p>Campaign-level spend, lead efficiency, and AI-proposed optimizations.</p></div><div class="head-actions"><button class="btn">Budget settings</button><button class="btn primary">New campaign</button></div></div>
+        <div class="grid kpi-grid">
+          <article class="card kpi"><div class="kpi-label">Monthly spend</div><div class="kpi-value">$3,660</div><div class="kpi-target">Budget: $4,200</div><div class="delta neutral">87% utilized</div></article>
+          <article class="card kpi"><div class="kpi-label">Paid leads</div><div class="kpi-value">20</div><div class="kpi-target">LSA 9 • Search 7 • Meta 4</div><div class="delta up">↑ 18%</div></article>
+          <article class="card kpi"><div class="kpi-label">Blended paid CPL</div><div class="kpi-value">$183</div><div class="kpi-target">Target: under $190</div><div class="delta up">↓ $22</div></article>
+          <article class="card kpi"><div class="kpi-label">Booked calls</div><div class="kpi-value">14</div><div class="kpi-target">70% of paid leads</div><div class="delta up">↑ 9%</div></article>
+          <article class="card kpi"><div class="kpi-label">Search CTR</div><div class="kpi-value">6.4%</div><div class="kpi-target">Target: 5.5%+</div><div class="delta up">↑ 0.6 pts</div></article>
+          <article class="card kpi"><div class="kpi-label">Impression share</div><div class="kpi-value">58%</div><div class="kpi-target">Asheville core terms</div><div class="delta down">↓ 4 pts</div></article>
+        </div>
+        <div class="grid module-grid">
+          <article class="card chart-card span-6"><div class="card-title-row"><div><div class="card-title">Spend by channel</div><div class="card-sub">Current month</div></div></div><div class="canvas-wrap"><canvas id="adSpendChart"></canvas></div></article>
+          <article class="card chart-card span-6"><div class="card-title-row"><div><div class="card-title">CPL by channel</div><div class="card-sub">Meta remains above efficiency threshold</div></div></div><div class="canvas-wrap"><canvas id="adCplChart"></canvas></div></article>
+          <article class="card table-card span-12">
+            <table><thead><tr><th>Channel</th><th>Campaign</th><th>Status</th><th>Monthly spend</th><th>Leads</th><th>CPL</th><th>30-day trend</th></tr></thead><tbody>
+              <tr><td>Google LSAs</td><td><strong>General Contractor — Asheville</strong></td><td><span class="status live">Live</span></td><td>$1,180</td><td>7</td><td>$169</td><td><canvas class="spark" data-values="210,202,190,178,174,169"></canvas></td></tr>
+              <tr><td>Google LSAs</td><td><strong>Storm Restoration</strong></td><td><span class="status live">Live</span></td><td>$620</td><td>2</td><td>$310</td><td><canvas class="spark" data-values="245,260,272,285,299,310"></canvas></td></tr>
+              <tr><td>Google Ads</td><td><strong>Kitchen &amp; Whole-Home Remodel</strong></td><td><span class="status live">Live</span></td><td>$980</td><td>5</td><td>$196</td><td><canvas class="spark" data-values="228,218,211,205,199,196"></canvas></td></tr>
+              <tr><td>Google Ads</td><td><strong>Custom Homes — High Intent</strong></td><td><span class="status live">Live</span></td><td>$420</td><td>2</td><td>$210</td><td><canvas class="spark" data-values="248,240,231,220,215,210"></canvas></td></tr>
+              <tr><td>Meta</td><td><strong>Project Portfolio Retargeting</strong></td><td><span class="status live">Live</span></td><td>$330</td><td>3</td><td>$110</td><td><canvas class="spark" data-values="158,145,132,126,116,110"></canvas></td></tr>
+              <tr><td>Meta</td><td><strong>Broad Home Improvement 35+</strong></td><td><span class="status paused">Paused</span></td><td>$130</td><td>1</td><td>$130</td><td><canvas class="spark" data-values="98,106,118,127,135,130"></canvas></td></tr>
+            </tbody></table>
+          </article>
+        </div>
+      </section>
+
+      <!-- EMAIL -->
+      <section class="section" id="email">
+        <div class="section-head"><div><h2>Email marketing</h2><p>Lifecycle sequences, list health, engagement, and lead-nurture performance.</p></div><div class="head-actions"><button class="btn">Segments</button><button class="btn primary">Create email</button></div></div>
+        <div class="grid sequence-grid">
+          <article class="card sequence-card"><h3>New Lead Nurture</h3><div class="sequence-metric"><span>Subscribers</span><strong>86</strong></div><div class="sequence-metric"><span>Open rate</span><strong>57.2%</strong></div><div class="sequence-metric"><span>CTR</span><strong>12.4%</strong></div><div class="sequence-metric"><span>Status</span><span class="status live">Active</span></div></article>
+          <article class="card sequence-card"><h3>Quarterly Newsletter</h3><div class="sequence-metric"><span>Subscribers</span><strong>1,284</strong></div><div class="sequence-metric"><span>Open rate</span><strong>43.8%</strong></div><div class="sequence-metric"><span>CTR</span><strong>6.9%</strong></div><div class="sequence-metric"><span>Status</span><span class="status scheduled">Scheduled</span></div></article>
+          <article class="card sequence-card"><h3>Past-Client Re-engagement</h3><div class="sequence-metric"><span>Subscribers</span><strong>312</strong></div><div class="sequence-metric"><span>Open rate</span><strong>49.1%</strong></div><div class="sequence-metric"><span>CTR</span><strong>8.1%</strong></div><div class="sequence-metric"><span>Status</span><span class="status live">Active</span></div></article>
+          <article class="card sequence-card"><h3>Post-Project</h3><div class="sequence-metric"><span>Subscribers</span><strong>48</strong></div><div class="sequence-metric"><span>Open rate</span><strong>68.4%</strong></div><div class="sequence-metric"><span>CTR</span><strong>22.7%</strong></div><div class="sequence-metric"><span>Status</span><span class="status live">Active</span></div></article>
+        </div>
+        <div class="grid module-grid" style="margin-top:14px">
+          <article class="card chart-card span-7"><div class="card-title-row"><div><div class="card-title">Open and click trend</div><div class="card-sub">Average performance across sends</div></div></div><div class="canvas-wrap"><canvas id="emailTrendChart"></canvas></div></article>
+          <article class="card chart-card span-5"><div class="card-title-row"><div><div class="card-title">List growth</div><div class="card-sub">1,684 contacts vs. 2,000 annual target</div></div><span class="mini-chip">84%</span></div><div class="canvas-wrap"><canvas id="listGrowthChart"></canvas></div></article>
+        </div>
+      </section>
+
+      <!-- REVIEWS -->
+      <section class="section" id="reviews">
+        <div class="section-head"><div><h2>Reputation management</h2><p>Incoming reviews, response workflow, request performance, and rating trends.</p></div><div class="head-actions"><button class="btn">Request settings</button><button class="btn primary">Send review request</button></div></div>
+        <div class="grid kpi-grid">
+          <article class="card kpi"><div class="kpi-label">Google rating</div><div class="kpi-value">4.8★</div><div class="kpi-target">63 reviews</div><div class="delta up">↑ 0.1 YTD</div></article>
+          <article class="card kpi"><div class="kpi-label">All-platform reviews</div><div class="kpi-value">91</div><div class="kpi-target">Google, Houzz, Facebook</div><div class="delta up">↑ 11 YTD</div></article>
+          <article class="card kpi"><div class="kpi-label">Avg response time</div><div class="kpi-value">6.2h</div><div class="kpi-target">Target: under 12h</div><div class="delta up">↓ 3.1 hours</div></article>
+          <article class="card kpi"><div class="kpi-label">Response rate</div><div class="kpi-value">97%</div><div class="kpi-target">Target: 100%</div><div class="delta up">↑ 4 pts</div></article>
+          <article class="card kpi"><div class="kpi-label">Requests sent</div><div class="kpi-value">18</div><div class="kpi-target">This month</div><div class="delta up">↑ 5</div></article>
+          <article class="card kpi"><div class="kpi-label">Reviews received</div><div class="kpi-value">7</div><div class="kpi-target">39% request conversion</div><div class="delta up">↑ 8 pts</div></article>
+        </div>
+        <div class="grid module-grid">
+          <article class="card chart-card span-7"><div class="card-title-row"><div><div class="card-title">Average rating and total reviews</div><div class="card-sub">Google profile trend</div></div></div><div class="canvas-wrap"><canvas id="ratingTrendChart"></canvas></div></article>
+          <article class="card chart-card span-5"><div class="card-title-row"><div><div class="card-title">Requests sent vs. received</div><div class="card-sub">Monthly review-generation funnel</div></div></div><div class="canvas-wrap"><canvas id="reviewRequestChart"></canvas></div></article>
+          <div class="span-12 grid" style="grid-template-columns:repeat(3,1fr)">
+            <article class="card review-card"><div class="review-head"><strong>Google • Jenna R.</strong><span class="stars">★★★★★</span><span class="status responded" style="margin-left:auto">Responded</span></div><div class="review-snippet">“The team communicated clearly, protected the rest of our home, and delivered a kitchen that feels completely different without feeling out of place.”</div><div class="note">Received Jul 15 • Response sent in 2h 18m</div></article>
+            <article class="card review-card"><div class="review-head"><strong>Google • M. Caldwell</strong><span class="stars">★★★☆☆</span><span class="status ai" style="margin-left:auto">AI-drafted</span></div><div class="review-snippet">“The finished work is excellent. Scheduling updates were inconsistent near the end, which made the final two weeks stressful.”</div><div class="note">Received today • Awaiting approval</div></article>
+            <article class="card review-card"><div class="review-head"><strong>Houzz • Laura P.</strong><span class="stars">★★★★★</span><span class="status needs" style="margin-left:auto">Needs response</span></div><div class="review-snippet">“Blue Ridge Homes understood how to modernize our 1930s house without stripping away what made it special.”</div><div class="note">Received yesterday • 19h without response</div></article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ANALYTICS -->
+      <section class="section" id="analytics">
+        <div class="section-head"><div><h2>Marketing analytics</h2><p>Traffic quality, local search visibility, conversion performance, and channel ROI.</p></div><div class="head-actions"><button class="btn">Attribution model</button><button class="btn primary">Build report</button></div></div>
+        <div class="grid module-grid">
+          <article class="card chart-card span-8"><div class="card-title-row"><div><div class="card-title">Website traffic over time</div><div class="card-sub">Sessions and qualified conversions</div></div></div><div class="canvas-wrap"><canvas id="trafficChart"></canvas></div></article>
+          <article class="card chart-card span-4"><div class="card-title-row"><div><div class="card-title">Top acquisition channels</div><div class="card-sub">Sessions this month</div></div></div><div class="canvas-wrap"><canvas id="channelChart"></canvas></div></article>
+          <article class="card table-card span-7"><div class="card-title-row" style="padding:15px 15px 0"><div><div class="card-title">Top landing pages</div><div class="card-sub">Traffic and lead conversion</div></div></div>
+            <table><thead><tr><th>Landing page</th><th>Sessions</th><th>Leads</th><th>CVR</th></tr></thead><tbody>
+              <tr><td><strong>/services/custom-homes</strong></td><td>824</td><td>8</td><td>0.97%</td></tr>
+              <tr><td><strong>/services/remodeling</strong></td><td>711</td><td>7</td><td>0.98%</td></tr>
+              <tr><td><strong>/storm-restoration</strong></td><td>486</td><td>6</td><td>1.23%</td></tr>
+              <tr><td><strong>/portfolio/biltmore-lake-kitchen</strong></td><td>354</td><td>3</td><td>0.85%</td></tr>
+              <tr><td><strong>/resources/custom-home-cost-asheville</strong></td><td>329</td><td>4</td><td>1.22%</td></tr>
+            </tbody></table>
+          </article>
+          <article class="card chart-card span-5"><div class="card-title-row"><div><div class="card-title">Conversion-rate trend</div><div class="card-sub">Visitor to qualified lead</div></div></div><div class="canvas-wrap small"><canvas id="conversionChart"></canvas></div></article>
+          <article class="card table-card span-6"><div class="card-title-row" style="padding:15px 15px 0"><div><div class="card-title">Keyword visibility</div><div class="card-sub">Organic rank and Google Maps pack position</div></div></div>
+            <table><thead><tr><th>Keyword</th><th>Organic</th><th>Maps</th><th>Change</th></tr></thead><tbody>
+              <tr><td><strong>general contractor Asheville</strong></td><td>#5</td><td>#3</td><td class="rank-up">↑ 1</td></tr>
+              <tr><td><strong>kitchen remodel Asheville</strong></td><td>#7</td><td>#4</td><td class="rank-up">↑ 2</td></tr>
+              <tr><td><strong>Helene repair contractor Asheville</strong></td><td>#4</td><td>#2</td><td class="rank-up">↑ 3</td></tr>
+              <tr><td><strong>custom home builder Asheville</strong></td><td>#8</td><td>#5</td><td class="rank-down">↓ 1</td></tr>
+              <tr><td><strong>green home builder Asheville</strong></td><td>#3</td><td>#3</td><td class="rank-up">↑ 1</td></tr>
+            </tbody></table>
+          </article>
+          <article class="card table-card span-6"><div class="card-title-row" style="padding:15px 15px 0"><div><div class="card-title">ROI by channel</div><div class="card-sub">Attributed contract value divided by marketing cost</div></div></div>
+            <table><thead><tr><th>Channel</th><th>Spend</th><th>Pipeline value</th><th>ROI</th></tr></thead><tbody>
+              <tr><td><strong>Referral</strong></td><td>$680</td><td>$1.37M</td><td>8.2:1</td></tr>
+              <tr><td><strong>Organic / SEO</strong></td><td>$1,450</td><td>$1.18M</td><td>5.6:1</td></tr>
+              <tr><td><strong>Google LSAs</strong></td><td>$1,800</td><td>$702k</td><td>3.9:1</td></tr>
+              <tr><td><strong>Google Ads</strong></td><td>$1,400</td><td>$541k</td><td>3.1:1</td></tr>
+              <tr><td><strong>Meta</strong></td><td>$460</td><td>$126k</td><td>1.7:1</td></tr>
+            </tbody></table>
+          </article>
+        </div>
+      </section>
+
+      <!-- MARKET DATA -->
+      <section class="section" id="market">
+        <div class="section-head"><div><h2>Asheville market data</h2><p>Housing conditions, competitive activity, and demand signals informing campaign priorities.</p></div><div class="head-actions"><button class="btn">Data sources</button><button class="btn primary">Refresh snapshot</button></div></div>
+        <div class="grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
+          <article class="card market-card"><div class="market-label">Median sale price</div><div class="market-value">$465k</div><div class="delta down">↓ 1.8% YoY</div><div class="note">Buncombe County residential</div></article>
+          <article class="card market-card"><div class="market-label">Days on market</div><div class="market-value">90</div><div class="delta down">↑ 14 days YoY</div><div class="note">Buyer decision cycles lengthening</div></article>
+          <article class="card market-card"><div class="market-label">Months of supply</div><div class="market-value">5.0</div><div class="delta neutral">↑ 0.7 YoY</div><div class="note">Near balanced-market range</div></article>
+          <article class="card market-card"><div class="market-label">Mortgage rate</div><div class="market-value">6.3%</div><div class="delta up">↓ 0.2 pts in 30 days</div><div class="note">30-year conventional average</div></article>
+        </div>
+        <div class="grid module-grid">
+          <article class="card signal span-12"><div class="card-title">Demand signal</div><p style="margin:7px 0 0;font-size:12px;line-height:1.55;color:var(--muted)"><strong style="color:var(--ink)">Renovation demand remains strong while speculative new construction is soft.</strong> Homeowners are prioritizing kitchens, additions, resilience upgrades, and restoration work rather than moving. Recommended allocation: maintain remodel and storm-restoration spend, keep custom-home campaigns selective and high-intent.</p></article>
+          <article class="card table-card span-12">
+            <table><thead><tr><th>Competitor</th><th>Positioning</th><th>Review profile</th><th>Recent activity</th><th>Signal</th></tr></thead><tbody>
+              <tr><td><strong>Buchanan Construction</strong></td><td>High-end custom homes &amp; renovations</td><td>4.9 • 52 Google reviews</td><td>Published 2 luxury-project Reels this week</td><td><span class="status live">Active</span></td></tr>
+              <tr><td><strong>JAG Construction</strong></td><td>Design-build, green building</td><td>4.8 • 38 Google reviews</td><td>New passive-house case study</td><td><span class="status live">Active</span></td></tr>
+              <tr><td><strong>Living Stone Design + Build</strong></td><td>Architecture-led custom homes</td><td>4.9 • 44 Google reviews</td><td>Running paid search on “custom home Asheville”</td><td><span class="status scheduled">Watch</span></td></tr>
+              <tr><td><strong>Red Tree Builders</strong></td><td>Luxury green custom homes</td><td>4.8 • 29 Google reviews</td><td>Strong awards / PR cadence; low recent social frequency</td><td><span class="status scheduled">Watch</span></td></tr>
+              <tr><td><strong>Semper Fi Custom Remodeling</strong></td><td>Remodeling and restoration</td><td>4.7 • 81 Google reviews</td><td>High review-request velocity; LSA visibility rising</td><td><span class="status needs">Competitive</span></td></tr>
+            </tbody></table>
+          </article>
+        </div>
+      </section>
+
+      <!-- ASSETS -->
+      <section class="section" id="assets">
+        <div class="section-head"><div><h2>Media library</h2><p>Project photography, video, brand files, optimization status, and channel usage.</p></div><div class="head-actions"><button class="btn">Folders</button><button class="btn primary">Upload assets</button></div></div>
+        <div class="grid asset-stats">
+          <article class="card kpi"><div class="kpi-label">Total assets</div><div class="kpi-value">1,842</div><div class="kpi-target">Photos, video, documents</div><div class="delta up">↑ 64 this month</div></article>
+          <article class="card kpi"><div class="kpi-label">Storage used</div><div class="kpi-value">38.4 GB</div><div class="kpi-target">of 100 GB</div><div class="delta neutral">38%</div></article>
+          <article class="card kpi"><div class="kpi-label">Optimized</div><div class="kpi-value">91%</div><div class="kpi-target">Web-ready assets</div><div class="delta up">↑ 6 pts</div></article>
+          <article class="card kpi"><div class="kpi-label">In active use</div><div class="kpi-value">326</div><div class="kpi-target">Across web + campaigns</div><div class="delta up">↑ 21</div></article>
+        </div>
+        <div class="filterbar">
+          <select id="assetType"><option value="all">All project types</option><option>Custom home</option><option>Remodel</option><option>Storm restoration</option><option>Kitchen / bath</option><option>Brand</option></select>
+          <select id="assetStatus"><option value="all">All optimization states</option><option>Optimized</option><option>Needs optimization</option></select>
+          <input type="search" id="assetSearch" placeholder="Search assets..." />
+        </div>
+        <div class="grid asset-grid" id="assetGrid">
+          <article class="card asset-card" data-type="Kitchen / bath" data-status="Optimized" data-name="Biltmore Lake kitchen after"><div class="asset-thumb">Kitchen After</div><div class="asset-info"><div class="asset-caption">Biltmore Lake Kitchen — After 01</div><div class="asset-tags"><span class="tag">Kitchen / bath</span><span class="status optimized">Optimized</span></div></div></article>
+          <article class="card asset-card" data-type="Kitchen / bath" data-status="Optimized" data-name="Biltmore Lake kitchen before"><div class="asset-thumb">Kitchen Before</div><div class="asset-info"><div class="asset-caption">Biltmore Lake Kitchen — Before 01</div><div class="asset-tags"><span class="tag">Kitchen / bath</span><span class="status optimized">Optimized</span></div></div></article>
+          <article class="card asset-card" data-type="Custom home" data-status="Needs optimization" data-name="Town Mountain exterior dusk"><div class="asset-thumb">Exterior Dusk</div><div class="asset-info"><div class="asset-caption">Town Mountain Exterior — Dusk</div><div class="asset-tags"><span class="tag">Custom home</span><span class="status needs">Needs optimization</span></div></div></article>
+          <article class="card asset-card" data-type="Remodel" data-status="Optimized" data-name="Montford stair detail"><div class="asset-thumb">Stair Detail</div><div class="asset-info"><div class="asset-caption">Montford Remodel — Stair Detail</div><div class="asset-tags"><span class="tag">Remodel</span><span class="status optimized">Optimized</span></div></div></article>
+          <article class="card asset-card" data-type="Storm restoration" data-status="Optimized" data-name="Swannanoa restoration framing"><div class="asset-thumb">Restoration</div><div class="asset-info"><div class="asset-caption">Swannanoa Restoration — Framing</div><div class="asset-tags"><span class="tag">Storm restoration</span><span class="status optimized">Optimized</span></div></div></article>
+          <article class="card asset-card" data-type="Custom home" data-status="Needs optimization" data-name="Fairview great room"><div class="asset-thumb">Great Room</div><div class="asset-info"><div class="asset-caption">Fairview Custom Home — Great Room</div><div class="asset-tags"><span class="tag">Custom home</span><span class="status needs">Needs optimization</span></div></div></article>
+          <article class="card asset-card" data-type="Brand" data-status="Optimized" data-name="Blue Ridge Homes wordmark gold"><div class="asset-thumb">BRH Wordmark</div><div class="asset-info"><div class="asset-caption">Primary Wordmark — Gold</div><div class="asset-tags"><span class="tag">Brand</span><span class="status optimized">Optimized</span></div></div></article>
+          <article class="card asset-card" data-type="Remodel" data-status="Optimized" data-name="Arden remodel material palette"><div class="asset-thumb">Materials</div><div class="asset-info"><div class="asset-caption">Arden Remodel — Material Palette</div><div class="asset-tags"><span class="tag">Remodel</span><span class="status optimized">Optimized</span></div></div></article>
+        </div>
+        <div class="card empty-filter" id="assetEmpty">No assets match the selected filters.</div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="drawer-overlay" id="drawerOverlay">
+  <aside class="drawer">
+    <button class="drawer-close" id="drawerClose">×</button>
+    <span class="tag" id="drawerStage">Qualified</span>
+    <h3 id="drawerName">Lead name</h3>
+    <div class="drawer-sub" id="drawerType">Project type</div>
+    <div class="grid detail-grid">
+      <div class="detail-cell"><small>Budget</small><strong id="drawerBudget"></strong></div>
+      <div class="detail-cell"><small>Source</small><strong id="drawerSource"></strong></div>
+      <div class="detail-cell"><small>Email</small><strong id="drawerEmail"></strong></div>
+      <div class="detail-cell"><small>Phone</small><strong id="drawerPhone"></strong></div>
+    </div>
+    <div class="card-title">Latest message</div>
+    <div class="preview" id="drawerMessage">We are hoping to understand the right scope and order-of-magnitude cost before engaging an architect. The lot is under contract and our target is to begin design this fall.</div>
+    <div class="card-title" style="margin-top:18px">AI nurture history</div>
+    <div class="timeline">
+      <div class="timeline-row"><strong>Lead scored and routed</strong><br>Project fit, budget, and location passed qualification thresholds.</div>
+      <div class="timeline-row"><strong>Personalized reply drafted</strong><br>Response acknowledged project goals and requested site address, target timing, and design status.</div>
+      <div class="timeline-row"><strong>Nurture email #1 sent</strong><br>“How our preconstruction process works” delivered and opened twice.</div>
+      <div class="timeline-row"><strong>Human follow-up recommended</strong><br>AI detected high-intent language and recommends a phone call within one business day.</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary">Log call</button><button class="btn">Send email</button><button class="btn">Move stage</button></div>
+  </aside>
+</div>
+
+<script>
+  const COLORS = {
+    gold:'#c9a54e', gold2:'#d9c17e', ink:'#1e1812', body:'#3d3228', muted:'#5e5248',
+    faint:'#a89a8c', border:'#e8e0d6', green:'#66846b', blue:'#6f8793', orange:'#b77b48',
+    tan:'#cdbba9', rose:'#a76f64', cream:'#faf7f4'
+  };
+  Chart.defaults.font.family = 'Inter, sans-serif';
+  Chart.defaults.color = COLORS.muted;
+  Chart.defaults.borderColor = COLORS.border;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.boxWidth = 8;
+  Chart.defaults.plugins.legend.labels.font = {size:10};
+
+  const targetBandPlugin = {
+    id:'targetBand',
+    beforeDatasetsDraw(chart, args, opts){
+      if(!opts || opts.min == null) return;
+      const {ctx, chartArea, scales} = chart;
+      const y = scales.y;
+      ctx.save();
+      ctx.fillStyle = 'rgba(201,165,78,.10)';
+      const yTop = y.getPixelForValue(opts.max);
+      const yBottom = y.getPixelForValue(opts.min);
+      ctx.fillRect(chartArea.left, yTop, chartArea.right-chartArea.left, yBottom-yTop);
+      ctx.restore();
+    }
+  };
+  Chart.register(targetBandPlugin);
+
+  const common = {
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom'},tooltip:{backgroundColor:'#1e1812',padding:10,titleFont:{size:11},bodyFont:{size:11}}},
+    scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#eee8e1'},ticks:{font:{size:10}}}}
+  };
+
+  const months = ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'];
+  new Chart(document.getElementById('leadsMonthChart'),{
+    type:'bar',data:{labels:months,datasets:[{label:'Qualified leads',data:[22,24,27,25,20,23,26,28,29,30,26,31],backgroundColor:COLORS.gold,borderRadius:2}]},
+    options:{...common,plugins:{...common.plugins,targetBand:{min:25,max:40},legend:{display:false}},scales:{...common.scales,y:{...common.scales.y,min:0,max:45}}}
+  });
+  new Chart(document.getElementById('sourceChart'),{
+    type:'doughnut',data:{labels:['LSAs','Google Ads','Meta','Organic / SEO','Referral','Phone'],datasets:[{data:[9,7,4,5,4,2],backgroundColor:[COLORS.gold,COLORS.orange,COLORS.rose,COLORS.green,COLORS.blue,COLORS.tan],borderColor:'#fff',borderWidth:3}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'66%',plugins:{legend:{position:'bottom'},tooltip:{backgroundColor:COLORS.ink}}}
+  });
+  new Chart(document.getElementById('cplChart'),{
+    type:'line',data:{labels:['Feb','Mar','Apr','May','Jun','Jul'],datasets:[
+      {label:'LSAs',data:[178,171,166,160,158,169],borderColor:COLORS.gold,backgroundColor:COLORS.gold,tension:.35},
+      {label:'Google Ads',data:[242,228,217,209,205,196],borderColor:COLORS.blue,backgroundColor:COLORS.blue,tension:.35},
+      {label:'Meta',data:[226,215,198,181,164,115],borderColor:COLORS.rose,backgroundColor:COLORS.rose,tension:.35}
+    ]},options:common
+  });
+  new Chart(document.getElementById('funnelChart'),{
+    type:'bar',data:{labels:['New','Contacted','Qualified','Quoted','Won'],datasets:[{data:[48,40,31,12,4],backgroundColor:[COLORS.tan,COLORS.gold2,COLORS.gold,COLORS.orange,COLORS.green],borderRadius:2}]},
+    options:{...common,indexAxis:'y',plugins:{...common.plugins,legend:{display:false}},scales:{x:{grid:{color:'#eee8e1'},ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+  new Chart(document.getElementById('roiTrendChart'),{
+    type:'line',data:{labels:months,datasets:[{label:'Marketing ROI',data:[2.1,2.2,2.3,2.1,2.4,2.5,2.7,2.8,3.0,3.1,2.9,3.4],borderColor:COLORS.gold,backgroundColor:'rgba(201,165,78,.16)',fill:true,tension:.35},{label:'Target',data:Array(12).fill(5),borderColor:COLORS.faint,borderDash:[5,5],pointRadius:0}]},
+    options:{...common,scales:{...common.scales,y:{...common.scales.y,min:0,max:6}}}
+  });
+  new Chart(document.getElementById('spendLeadsChart'),{
+    data:{labels:['Feb','Mar','Apr','May','Jun','Jul'],datasets:[
+      {type:'bar',label:'Ad spend',data:[3020,3250,3480,3520,3410,3660],backgroundColor:COLORS.gold2,yAxisID:'y'},
+      {type:'line',label:'Paid leads',data:[14,15,17,18,17,20],borderColor:COLORS.green,backgroundColor:COLORS.green,tension:.35,yAxisID:'y1'}
+    ]},options:{...common,scales:{x:common.scales.x,y:{position:'left',grid:{color:'#eee8e1'},ticks:{callback:v=>'$'+v}},y1:{position:'right',grid:{drawOnChartArea:false},min:0,max:25}}}
+  });
+
+  new Chart(document.getElementById('postsChart'),{
+    type:'bar',data:{labels:['Feb','Mar','Apr','May','Jun','Jul'],datasets:[{data:[2,3,3,4,4,5],backgroundColor:COLORS.gold}]},
+    options:{...common,plugins:{...common.plugins,legend:{display:false}},scales:{...common.scales,y:{...common.scales.y,beginAtZero:true,ticks:{stepSize:1}}}}
+  });
+  new Chart(document.getElementById('followersChart'),{
+    type:'line',data:{labels:['Feb','Mar','Apr','May','Jun','Jul'],datasets:[
+      {label:'Instagram',data:[3180,3270,3385,3520,3690,3860],borderColor:COLORS.rose,backgroundColor:COLORS.rose,tension:.35},
+      {label:'Facebook',data:[2480,2510,2550,2605,2660,2710],borderColor:COLORS.blue,backgroundColor:COLORS.blue,tension:.35},
+      {label:'YouTube',data:[710,752,805,872,940,1010],borderColor:COLORS.orange,backgroundColor:COLORS.orange,tension:.35},
+      {label:'TikTok',data:[310,356,410,468,535,602],borderColor:COLORS.ink,backgroundColor:COLORS.ink,tension:.35},
+      {label:'LinkedIn',data:[196,210,227,243,260,278],borderColor:COLORS.green,backgroundColor:COLORS.green,tension:.35}
+    ]},options:common
+  });
+  new Chart(document.getElementById('pillarChart'),{
+    type:'doughnut',data:{labels:['Behind the Build','Finished Work','Education','Community'],datasets:[{data:[34,29,25,12],backgroundColor:[COLORS.gold,COLORS.green,COLORS.blue,COLORS.tan],borderColor:'#fff',borderWidth:3}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom'}}}
+  });
+  new Chart(document.getElementById('adSpendChart'),{
+    type:'doughnut',data:{labels:['Google LSAs','Google Ads','Meta'],datasets:[{data:[1800,1400,460],backgroundColor:[COLORS.gold,COLORS.blue,COLORS.rose],borderColor:'#fff',borderWidth:3}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom'}}}
+  });
+  new Chart(document.getElementById('adCplChart'),{
+    type:'bar',data:{labels:['Google LSAs','Google Ads','Meta'],datasets:[{data:[200,200,115],backgroundColor:[COLORS.gold,COLORS.blue,COLORS.rose],borderRadius:2}]},
+    options:{...common,plugins:{...common.plugins,legend:{display:false}},scales:{...common.scales,y:{...common.scales.y,ticks:{callback:v=>'$'+v}}}}
+  });
+  new Chart(document.getElementById('emailTrendChart'),{
+    type:'line',data:{labels:['Feb','Mar','Apr','May','Jun','Jul'],datasets:[
+      {label:'Open rate',data:[42,44,46,47,49,52],borderColor:COLORS.gold,backgroundColor:'rgba(201,165,78,.15)',fill:true,tension:.35},
+      {label:'Click rate',data:[6.2,6.7,7.1,7.5,8.2,9.1],borderColor:COLORS.green,backgroundColor:COLORS.green,tension:.35}
+    ]},options:{...common,scales:{...common.scales,y:{...common.scales.y,ticks:{callback:v=>v+'%'}}}}
+  });
+  new Chart(document.getElementById('listGrowthChart'),{
+    type:'bar',data:{labels:['Feb','Mar','Apr','May','Jun','Jul'],datasets:[{label:'Subscribers',data:[1432,1477,1526,1588,1639,1684],backgroundColor:COLORS.gold}]},
+    options:{...common,plugins:{...common.plugins,legend:{display:false}},scales:{...common.scales,y:{...common.scales.y,min:1300}}}
+  });
+  new Chart(document.getElementById('ratingTrendChart'),{
+    data:{labels:['Feb','Mar','Apr','May','Jun','Jul'],datasets:[
+      {type:'line',label:'Average rating',data:[4.7,4.7,4.7,4.8,4.8,4.8],borderColor:COLORS.gold,backgroundColor:COLORS.gold,tension:.35,yAxisID:'y'},
+      {type:'bar',label:'Total reviews',data:[53,55,57,59,60,63],backgroundColor:COLORS.gold2,yAxisID:'y1'}
+    ]},options:{...common,scales:{x:common.scales.x,y:{position:'left',min:4,max:5,grid:{color:'#eee8e1'}},y1:{position:'right',min:45,max:70,grid:{drawOnChartArea:false}}}}
+  });
+  new Chart(document.getElementById('reviewRequestChart'),{
+    type:'bar',data:{labels:['Feb','Mar','Apr','May','Jun','Jul'],datasets:[
+      {label:'Requests sent',data:[10,12,14,15,13,18],backgroundColor:COLORS.gold2},
+      {label:'Reviews received',data:[3,4,4,5,4,7],backgroundColor:COLORS.gold}
+    ]},options:common
+  });
+  new Chart(document.getElementById('trafficChart'),{
+    type:'line',data:{labels:['Feb','Mar','Apr','May','Jun','Jul'],datasets:[
+      {label:'Website sessions',data:[3180,3420,3610,3780,3890,4200],borderColor:COLORS.gold,backgroundColor:'rgba(201,165,78,.18)',fill:true,tension:.35},
+      {label:'Qualified conversions',data:[23,25,27,29,26,31],borderColor:COLORS.green,backgroundColor:COLORS.green,tension:.35,yAxisID:'y1'}
+    ]},options:{...common,scales:{x:common.scales.x,y:{grid:{color:'#eee8e1'}},y1:{position:'right',grid:{drawOnChartArea:false},min:0,max:40}}}
+  });
+  new Chart(document.getElementById('channelChart'),{
+    type:'bar',data:{labels:['Organic','Direct','Paid Search','Social','Referral'],datasets:[{data:[1460,980,760,580,420],backgroundColor:[COLORS.green,COLORS.tan,COLORS.gold,COLORS.rose,COLORS.blue],borderRadius:2}]},
+    options:{...common,indexAxis:'y',plugins:{...common.plugins,legend:{display:false}},scales:{x:{grid:{color:'#eee8e1'}},y:{grid:{display:false}}}}
+  });
+  new Chart(document.getElementById('conversionChart'),{
+    type:'line',data:{labels:['Feb','Mar','Apr','May','Jun','Jul'],datasets:[{label:'Conversion rate',data:[0.72,0.73,0.75,0.77,0.67,0.74],borderColor:COLORS.gold,backgroundColor:'rgba(201,165,78,.16)',fill:true,tension:.35}]},
+    options:{...common,plugins:{...common.plugins,legend:{display:false}},scales:{...common.scales,y:{...common.scales.y,ticks:{callback:v=>v+'%'}}}}
+  });
+
+  document.querySelectorAll('.spark').forEach((c)=>{
+    const vals = c.dataset.values.split(',').map(Number);
+    new Chart(c,{type:'line',data:{labels:vals.map((_,i)=>i),datasets:[{data:vals,borderColor:vals.at(-1)<=vals[0]?COLORS.green:COLORS.rose,borderWidth:2,pointRadius:0,tension:.35}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}
+    });
+  });
+
+  const titleMap = {overview:'Overview',approvals:'Approvals',leads:'Leads',content:'Content',social:'Social',ads:'Ads',email:'Email',reviews:'Reviews',analytics:'Analytics',market:'Market Data',assets:'Assets'};
+  function showSection(id){
+    document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===id));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
+    document.getElementById('pageTitle').textContent = titleMap[id] || id;
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>showSection(btn.dataset.section)));
+  document.querySelectorAll('[data-go]').forEach(btn=>btn.addEventListener('click',()=>showSection(btn.dataset.go)));
+  document.getElementById('pendingTop').addEventListener('click',()=>showSection('approvals'));
+
+  const avatarBtn=document.getElementById('avatarBtn'), avatarMenu=document.getElementById('avatarMenu');
+  avatarBtn.addEventListener('click',(e)=>{e.stopPropagation();avatarMenu.classList.toggle('show')});
+  document.addEventListener('click',()=>avatarMenu.classList.remove('show'));
+
+  function updateApprovalCounts(){
+    const pending=document.querySelectorAll('.approval-item[data-state="pending"]').length;
+    document.querySelectorAll('.pending-count').forEach(el=>el.textContent=pending);
+    document.getElementById('approvedCount').textContent=document.querySelectorAll('.approval-item[data-state="approved"]').length;
+    document.getElementById('rejectedCount').textContent=document.querySelectorAll('.approval-item[data-state="rejected"]').length;
+  }
+  document.querySelectorAll('.approval-actions button').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const item=btn.closest('.approval-item');
+      const action=btn.dataset.action;
+      if(action==='edit'){
+        const preview=item.querySelector('.preview');
+        const current=preview.textContent.trim();
+        const edited=prompt('Edit approval content:',current);
+        if(edited!==null) preview.textContent=edited;
+        return;
+      }
+      item.dataset.state=action==='approve'?'approved':'rejected';
+      const stamp=item.querySelector('.status-stamp');
+      stamp.style.display='block';
+      stamp.style.color=action==='approve'?COLORS.green:'#a34e42';
+      stamp.textContent=action==='approve'?'Approved just now':'Rejected just now';
+      item.querySelector('.approval-actions').style.display='none';
+      setTimeout(()=>{item.style.display='none';updateApprovalCounts();},450);
+    });
+  });
+  document.querySelectorAll('[data-approval-tab]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('[data-approval-tab]').forEach(b=>b.classList.toggle('active',b===btn));
+      const state=btn.dataset.approvalTab;
+      document.querySelectorAll('.approval-item').forEach(item=>item.style.display=item.dataset.state===state?'block':'none');
+    });
+  });
+
+  const overlay=document.getElementById('drawerOverlay');
+  function openLead(card){
+    const col=card.closest('.kanban-col');
+    document.getElementById('drawerStage').textContent=col.dataset.stage;
+    document.getElementById('drawerName').textContent=card.dataset.name;
+    document.getElementById('drawerType').textContent=card.dataset.type;
+    document.getElementById('drawerBudget').textContent=card.dataset.budget;
+    document.getElementById('drawerSource').textContent=card.dataset.source;
+    document.getElementById('drawerEmail').textContent=card.dataset.email;
+    document.getElementById('drawerPhone').textContent=card.dataset.phone;
+    overlay.classList.add('show');
+  }
+  document.querySelectorAll('.lead-card').forEach(card=>card.addEventListener('click',()=>openLead(card)));
+  document.getElementById('drawerClose').addEventListener('click',()=>overlay.classList.remove('show'));
+  overlay.addEventListener('click',(e)=>{if(e.target===overlay)overlay.classList.remove('show')});
+
+  function filterLeads(){
+    const s=document.getElementById('sourceFilter').value;
+    const t=document.getElementById('typeFilter').value;
+    const q=document.getElementById('leadSearch').value.toLowerCase();
+    document.querySelectorAll('.lead-card').forEach(card=>{
+      const okS=s==='all'||card.dataset.source===s;
+      const okT=t==='all'||card.dataset.type===t;
+      const okQ=!q||(card.dataset.name+' '+card.dataset.type).toLowerCase().includes(q);
+      card.style.display=okS&&okT&&okQ?'block':'none';
+    });
+    document.querySelectorAll('.kanban-col').forEach(col=>{
+      const count=[...col.querySelectorAll('.lead-card')].filter(c=>c.style.display!=='none').length;
+      col.querySelector('.kanban-count').textContent=count;
+    });
+  }
+  ['sourceFilter','typeFilter','leadSearch'].forEach(id=>document.getElementById(id).addEventListener('input',filterLeads));
+
+  function filterAssets(){
+    const t=document.getElementById('assetType').value;
+    const s=document.getElementById('assetStatus').value;
+    const q=document.getElementById('assetSearch').value.toLowerCase();
+    let shown=0;
+    document.querySelectorAll('.asset-card').forEach(card=>{
+      const okT=t==='all'||card.dataset.type===t;
+      const okS=s==='all'||card.dataset.status===s;
+      const okQ=!q||card.dataset.name.toLowerCase().includes(q);
+      const visible=okT&&okS&&okQ;
+      card.style.display=visible?'block':'none';
+      if(visible)shown++;
+    });
+    document.getElementById('assetEmpty').style.display=shown?'none':'block';
+  }
+  ['assetType','assetStatus','assetSearch'].forEach(id=>document.getElementById(id).addEventListener('input',filterAssets));
+</script>
+</body>
+</html>

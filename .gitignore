@@ -11,3 +11,6 @@ Thumbs.db
 data/*.db
 *.sqlite
 *.sqlite3
+
+# Raw source assets — processed variants ship from apps/web/public/
+/images/
