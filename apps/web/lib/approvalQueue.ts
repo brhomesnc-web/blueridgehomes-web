@@ -14,6 +14,16 @@ import { notifyDraftCreated } from "./notify";
 export const QUEUE_COLUMNS =
   "id, created_at, module, action, stakes, title, preview, payload, status, reviewed_at, reviewer";
 
+// The legal status values, shared by the queue readers. The admin queue route used
+// to keep its own copy of this list inline; listQueue() is now the single home.
+export const QUEUE_STATUSES = [
+  "pending",
+  "approved",
+  "rejected",
+  "auto_approved",
+] as const;
+export type QueueStatus = (typeof QUEUE_STATUSES)[number];
+
 export type QueueRow = {
   id: number;
   created_at: string;
@@ -50,6 +60,12 @@ export type ContentDraftPayload = {
 // doubled hyphens.
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+// blog_posts.date is TEXT, sorted lexicographically everywhere (the
+// (published, date DESC) index and every ORDER BY date). Only zero-padded
+// YYYY-MM-DD sorts correctly, so the draft door hard-rejects anything looser — an
+// agent filing "July 22, 2026" would otherwise be stored and mis-sort forever.
+export const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 const PREVIEW_LEN = 140;
 
 export type ValidationResult =
@@ -84,6 +100,14 @@ export function validateContentDraft(input: unknown): ValidationResult {
     };
   }
 
+  const date = (b.date as string).trim();
+  if (!DATE_PATTERN.test(date)) {
+    return {
+      ok: false,
+      error: "date must be YYYY-MM-DD (e.g. 2026-08-05)",
+    };
+  }
+
   // tags: absent/null -> []. Present -> must be an array of non-empty strings.
   let tags: string[] = [];
   if (b.tags !== undefined && b.tags !== null) {
@@ -108,7 +132,7 @@ export function validateContentDraft(input: unknown): ValidationResult {
     payload: {
       slug,
       title: (b.title as string).trim(),
-      date: (b.date as string).trim(),
+      date,
       content: b.content as string,
       description: typeof b.description === "string" ? b.description : "",
       featured_image: typeof b.featured_image === "string" ? b.featured_image : "",
@@ -149,4 +173,41 @@ export async function enqueueContentDraft(
   // a notify failure must not break or delay the enqueue that just succeeded.
   notifyDraftCreated({ title: rows[0].title, module: rows[0].module, stakes: rows[0].stakes });
   return rows[0];
+}
+
+/**
+ * List queue rows newest-first, optionally filtered by status. The one
+ * implementation shared by the session-gated admin queue route and the key-gated
+ * agent read route — no inline SQL, no duplicated column list.
+ *
+ * An absent, "all", or unrecognized status returns every row (the same behavior
+ * the admin route had). limit defaults to 100; callers that need the old admin
+ * ceiling pass it explicitly.
+ */
+export async function listQueue(
+  opts: { status?: string; limit?: number } = {}
+): Promise<QueueRow[]> {
+  const limit =
+    Number.isInteger(opts.limit) && (opts.limit as number) > 0
+      ? (opts.limit as number)
+      : 100;
+  const applyStatus =
+    !!opts.status &&
+    opts.status !== "all" &&
+    (QUEUE_STATUSES as readonly string[]).includes(opts.status);
+
+  const params: unknown[] = [];
+  let where = "";
+  if (applyStatus) {
+    params.push(opts.status);
+    where = ` WHERE status = $${params.length}`;
+  }
+  params.push(limit);
+  const limitPlaceholder = `$${params.length}`;
+
+  const { rows } = await query<QueueRow>(
+    `SELECT ${QUEUE_COLUMNS} FROM approval_queue${where} ORDER BY created_at DESC LIMIT ${limitPlaceholder}`,
+    params
+  );
+  return rows;
 }

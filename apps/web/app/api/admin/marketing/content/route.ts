@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { query } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { validateContentDraft, enqueueContentDraft } from "@/lib/approvalQueue";
+import { listAllPosts } from "@/lib/blog";
 
 // Content module API — the human (session-gated) half.
 //   GET  → blog_posts inventory for the admin, drafts included
@@ -15,20 +15,12 @@ export async function GET() {
   }
 
   try {
-    // Deliberately NOT lib/blog.ts: getAllPosts() hard-filters published = TRUE
-    // and drops `published`/`updated_at` in its row mapping. The admin inventory
-    // has to show drafts and their real column names.
-    const { rows: posts } = await query(
-      // publish_at_ny is preformatted in datetime-local's own shape so the
-      // client does zero timezone math: one field serves both the "goes live at"
-      // display and the reschedule input's prefill.
-      `SELECT slug, title, date, description, featured_image, tags, published, updated_at,
-              publish_at,
-              to_char(publish_at AT TIME ZONE 'America/New_York', 'YYYY-MM-DD"T"HH24:MI')
-                AS publish_at_ny
-         FROM blog_posts
-        ORDER BY date DESC`
-    );
+    // lib/blog.ts listAllPosts(): the admin inventory needs drafts and the real
+    // column names, so this uses the all-posts reader (NOT getAllPosts(), which
+    // hard-filters published = TRUE and drops publish_at/updated_at). The high
+    // limit keeps this route's previously-unbounded output unchanged; the NY
+    // conversion stays in SQL so publish_at_ny arrives preformatted.
+    const posts = await listAllPosts({ limit: 1000 });
     return NextResponse.json({ posts });
   } catch (err) {
     // blog_posts does exist, but degrade like the queue does rather than 500 the
