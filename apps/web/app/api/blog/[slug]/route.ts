@@ -18,45 +18,28 @@ export async function GET(request: Request, { params }: Props) {
   return NextResponse.json({ post: rows[0] });
 }
 
-// PUT /api/blog/[slug] — update via API key
-export async function PUT(request: Request, { params }: Props) {
-  if (!checkApiKey(request)) {
-    return NextResponse.json({ error: "Invalid or missing API key" }, { status: 401 });
-  }
-  const { slug } = await params;
-  const body = await request.json();
-  const { title, date, description, content, featuredImage, tags, published } = body;
-
-  const { rows: existing } = await query("SELECT id FROM blog_posts WHERE slug = $1", [slug]);
-  if (existing.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  await query(
-    `UPDATE blog_posts SET
-      title = COALESCE($1, title),
-      date = COALESCE($2, date),
-      description = COALESCE($3, description),
-      content = COALESCE($4, content),
-      featured_image = COALESCE($5, featured_image),
-      tags = COALESCE($6::jsonb, tags),
-      published = COALESCE($7, published),
-      updated_at = NOW()
-    WHERE slug = $8`,
-    [
-      title || null,
-      date || null,
-      description || null,
-      content || null,
-      featuredImage || null,
-      tags ? JSON.stringify(tags) : null,
-      published !== undefined ? (published ? true : false) : null,
-      slug,
-    ]
+// PUT /api/blog/[slug] — REMOVED (bypass-removal, 2026-07-23). Was a
+// BLOG_AGENT_API_KEY-gated door that could set `published` directly, bypassing the
+// approval queue. Edits now go through the session-gated admin CRUD
+// (/api/admin/blog/[slug]) or the approval queue.
+export async function PUT() {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "gone",
+      detail:
+        "This endpoint has been removed. Drafts are proposed via /api/agent/content and published via the approval queue.",
+    },
+    { status: 410 }
   );
-
-  return NextResponse.json({ success: true });
 }
 
-// DELETE /api/blog/[slug] — delete via API key
+// DELETE /api/blog/[slug] — delete via API key.
+// TODO(bypass-removal, 2026-07-23): retained deliberately. Gate B found the
+// session-gated admin DELETE (/api/admin/blog/[slug]) deletes rows but does NOT
+// revalidate /blog, and neither does this handler — a deleted post keeps serving
+// from the static cache until the next revalidation. This stays until admin delete
+// covers unpublish WITH revalidation; then remove this key-gated verb too.
 export async function DELETE(request: Request, { params }: Props) {
   if (!checkApiKey(request)) {
     return NextResponse.json({ error: "Invalid or missing API key" }, { status: 401 });
