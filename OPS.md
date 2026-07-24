@@ -357,8 +357,8 @@ Key names in use (names only — never commit values):
 
     ADMIN_JWT_SECRET                 admin session JWT signing secret
     DATABASE_URL                     Postgres connection string (:5433)
-    BLOG_AGENT_API_KEY               blog agent write auth
-    MARKETING_AGENT_API_KEY          marketing agent write auth (see below)
+    BLOG_AGENT_API_KEY               upload / images / blog-delete auth (see below)
+    MARKETING_AGENT_API_KEY          marketing agent read + draft auth (see below)
     TURNSTILE_SECRET_KEY             Cloudflare Turnstile server-side verify
     NEXT_PUBLIC_TURNSTILE_SITE_KEY   Turnstile client site key (public)
     SMTP_HOST / SMTP_PORT            mail transport
@@ -372,7 +372,24 @@ Key names in use (names only — never commit values):
                                      /var/www/brhomes/apps/web/public, and it is NOT set in the
                                      live .env.local, so the fallback is what runs
 
-`MARKETING_AGENT_API_KEY` — marketing agent auth, consumed by `apps/web/lib/agentAuth.ts` and wired to `POST /api/agent/content` (added 2026-07-17). **Write it unquoted.** Unlike `SMTP_PASS`, which the code defensively strips surrounding quotes from, this key is compared byte-for-byte as-is — surrounding quotes become part of the key and auth will fail.
+`BLOG_AGENT_API_KEY` — **the name is now misleading, and this is the widest credential in the file.**
+It gates **no blog writes.** Since `566dd15` (2026-07-22) `POST /api/blog` and `PUT /api/blog/[slug]`
+return **410 Gone**. What the key actually opens today is `app/api/admin/upload`,
+`app/api/admin/images`, and the retained **`DELETE /api/blog/[slug]`**.
+
+- **Blast radius:** one credential covers image upload, image listing, **and deleting a live post.**
+  And because **no delete path anywhere calls `revalidatePath`**, a deletion through that door leaves
+  `/blog` serving a ghost post until the next deploy — see Horizon → "Blog SSG delete gap".
+- **It still uses the weaker `===` comparison,** not the constant-time helper: a module-local
+  `checkApiKey` in `app/api/blog/[slug]/route.ts` compares it with `===`. (Its twin in
+  `app/api/blog/route.ts` went away with the 410 — see Horizon → "`checkApiKey` name shadowing".)
+- **Renaming/splitting it is a Horizon item.** The name promises a capability it no longer has, which
+  is exactly how a credential gets over-shared.
+
+`MARKETING_AGENT_API_KEY` — marketing agent auth, consumed by `apps/web/lib/agentAuth.ts` through
+`checkMarketingApiKey` and wired to **three** endpoints: `POST /api/agent/content` (file a draft,
+added 2026-07-17) plus, since `703eaa6` (2026-07-22), the two read doors `GET /api/agent/posts` and
+`GET /api/agent/queue`. See "Agent Read Surface". **Write it unquoted.** Unlike `SMTP_PASS`, which the code defensively strips surrounding quotes from, this key is compared byte-for-byte as-is — surrounding quotes become part of the key and auth will fail.
 
 `PUBLISH_SCHEDULER_KEY` — added 2026-07-22 for the publish scheduler. Consumed by **both**
 `app/api/internal/publish-due/route.ts` (the door) and `instrumentation.ts` (the tick) — same
@@ -478,12 +495,34 @@ Shape, and why each part is deliberate:
 
 Single-process standalone means exactly one timer; there is no duplicate-fire risk from workers.
 
+**Idle-liveness heartbeat** (added `59d768e`, 2026-07-23). Every **60th idle tick** — roughly hourly
+— the timer logs a line:
+
+    [scheduler] heartbeat — idle, 60 ticks, uptime 60m
+
+**Idle-only and throttled on purpose.** A per-tick log would write 1440 entries a day and bury
+journald; the publish path already logs its own line per post.
+
+What the three signals prove, and what they do not:
+
+- `registered — polling …` at boot → the `register()` hook ran. Says **nothing** about whether the
+  timer is still alive afterwards.
+- `tick published N post(s)` → the loop is alive **and** something was due.
+- `heartbeat — idle` → the loop is alive **with nothing due.** This is the one that closed the real
+  blind spot: before it, a loop that died after boot with an empty schedule looked **identical** to a
+  healthy idle one — silence either way.
+
 **Health check** — this is the go/no-go signal after any deploy:
 
     journalctl -u brhomes-web | grep -i scheduler
 
 A `[scheduler] registered — polling …` line at boot means the hook ran. Its absence means nothing is
-scheduled and nothing will publish.
+scheduled and nothing will publish. To confirm the loop is still alive since a given time:
+
+    journalctl -u brhomes-web -q --since "2026-07-23 10:00" | grep 'scheduler]'
+
+**Confirmed live 2026-07-23 11:00:20 UTC** — `[scheduler] heartbeat — idle, 60 ticks, uptime 60m`,
+same PID as the boot line.
 
 ---
 
@@ -520,9 +559,120 @@ boundary for all marketing, content, and blog admin surfaces and their write API
 - **Enforcement is two-layered:** `middleware.ts` (matcher `["/admin/:path*"]`) gates `/admin/*`
   **pages**; it does **not** match `/api/admin/*`, so every admin API route calls `getSession()`
   itself (see Horizon → "middleware → proxy convention").
-- **Separate machine credentials:** the key-gated agent door (`/api/agent/content`,
-  `MARKETING_AGENT_API_KEY`) and the upload key (`BLOG_AGENT_API_KEY`) are non-session
-  credentials for external/automated callers, outside this cookie boundary.
+- **Separate machine credentials:** the key-gated agent doors (`/api/agent/content`,
+  `/api/agent/posts`, `/api/agent/queue` — all `MARKETING_AGENT_API_KEY`) and the
+  upload/images/blog-delete key (`BLOG_AGENT_API_KEY`) are non-session credentials for
+  external/automated callers, outside this cookie boundary. See "Agent Read Surface" below.
+
+---
+
+## Agent Read Surface
+
+Two key-gated, **read-only** endpoints let an external agent (today: Claude Cowork) see platform
+state. Both authenticate with `MARKETING_AGENT_API_KEY` through `checkMarketingApiKey`
+(`lib/agentAuth.ts`), dual-header: `x-api-key: <key>` **or** `Authorization: Bearer <key>`.
+Shipped `703eaa6`, 2026-07-22.
+
+| Endpoint | Method | Returns |
+| --- | --- | --- |
+| `/api/agent/posts` | GET | `{ ok: true, posts: [...] }` — **every** post, drafts and scheduled included, carrying `published`, `publish_at` and a preformatted `publish_at_ny` |
+| `/api/agent/queue` | GET | `{ ok: true, items: [...] }` — approval-queue rows, newest first; optional `?status=pending\|approved\|rejected\|auto_approved` |
+
+Auth failure on either is **401** `{"error":"Invalid or missing API key"}`. A database error degrades
+to **503**, never a 500 with a stack trace.
+
+**These are read-only by design.** Approve, publish, schedule, unpublish and delete are deliberately
+**not** exposed. The only agent *write* door is `POST /api/agent/content`, which can do exactly one
+thing: file a `pending` row into `approval_queue`. Human approval remains the gate.
+
+Smoke test — read the key from `.env.local`, never paste it:
+
+    export KEY=$(grep -m1 '^MARKETING_AGENT_API_KEY=' /var/www/brhomes/apps/web/.env.local | cut -d= -f2- | tr -d '\r')
+    curl -s -H "x-api-key: $KEY" https://blueridgehomesnc.com/api/agent/posts
+    curl -s -H "x-api-key: $KEY" "https://blueridgehomesnc.com/api/agent/queue?status=pending"
+    curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: WRONG" https://blueridgehomesnc.com/api/agent/posts   # expect 401
+
+### ⚠ The nginx namespace trap — why these live under `/api/agent/*`
+
+**This is the highest-value operational fact on this page for anyone adding an API route.**
+
+The site file contains a **regex** `location` that captures 13 top-level `/api/<name>` paths and
+proxies them to the **legacy port-3002 SPA**, not to the Next app on 3001:
+
+    location ~ ^/api/(leads|scoring-config|campaigns|content|sync|reviews|analytics|seo|kpis|emails|onboarding|exports|oauth)
+
+**Regex locations take precedence over the prefix `location /`.** So a new route at `/api/leads`,
+`/api/content`, `/api/reviews`, `/api/analytics`, `/api/seo`, `/api/kpis`, `/api/emails`,
+`/api/campaigns`, `/api/sync`, `/api/scoring-config`, `/api/onboarding`, `/api/exports` or
+`/api/oauth` would typecheck, deploy, work perfectly on localhost, and then **404 into the legacy app
+in production** — with nothing in the repo to explain why.
+
+`agent` is not in that list, so `/api/agent/*` reaches the Next app. **Put new agent endpoints
+there.** Nested paths are safe as well: the regex anchors at `^/api/` followed immediately by one of
+the 13 names, so `/api/agent/content` never matches even though `content` is on the list.
+
+Verify the current list before trusting this one — read-only, **Brian applies nginx changes himself**:
+
+    ssh brian@168.231.71.124 'grep -n "location" /etc/nginx/sites-available/blueridgehomesnc.com'
+
+Confirmed against the live site file 2026-07-23. Retiring the old SPA (see "VPS Artifacts — Pending
+Decommission") would free these names — it is squatting on the most natural API namespace this
+platform has.
+
+---
+
+## Cowork Integration
+
+How the external agent actually reaches the platform. Established 2026-07-23.
+
+**Mechanism: direct HTTPS calls to the key-gated `/api/agent/*` endpoints from the Cowork sandbox.**
+No MCP server, no OAuth, no custom connector, nothing new running on the VPS.
+
+**Why not MCP.** The Add-custom-connector dialog exposes only OAuth Client ID / Client Secret — there
+is no request-headers option — so `static_headers` (the beta that would let a remote connector send
+`x-api-key`) is unavailable on this account. A request was sent to `mcp-review@anthropic.com` on
+2026-07-23; no reply as of this writing. **MCP is an upgrade path, not a prerequisite** — the read and
+write doors work today over plain HTTPS.
+
+### ⚠ Egress — the failure signature you will otherwise misdiagnose
+
+The Cowork sandbox routes outbound traffic through a **filtering proxy**. With a restrictive
+allowlist, every request to `blueridgehomesnc.com` fails like this:
+
+    curl: (56) CONNECT tunnel failed, response 403
+    %{http_code} → 000
+
+**A `000` status with curl exit 56 is a sandbox egress block, not a server fault.** The site is fine;
+the request never left the sandbox. Do not go digging through systemd, nginx or the app for it.
+
+Fix: **Settings → Capabilities → Code execution → Domain allowlist → All domains.**
+
+### Key location
+
+    C:\Users\wncre\ClaudeShare\brhomes-agent-key.txt      (Brian's Windows machine)
+
+A **dedicated single-file folder** granted to Cowork — deliberately not Desktop or Downloads, since
+granting either would expose everything in them. The value is `MARKETING_AGENT_API_KEY`.
+**Never commit the value.**
+
+### Security posture
+
+**"All domains" lets any code Cowork runs reach anywhere on the internet.** That is a real widening,
+accepted knowingly rather than by default. Narrowing to package managers plus
+`blueridgehomesnc.com` is **untested** and is a Horizon item; note that Anthropic's own guidance
+favours the narrower setting, and that several public bug reports describe additional-domain entries
+being ignored — so narrowing may simply not work.
+
+### What Cowork can and cannot do
+
+| Can | Cannot |
+| --- | --- |
+| Read posts (`GET /api/agent/posts`) | Approve anything |
+| Read the queue (`GET /api/agent/queue`) | Publish, or set `published = true` |
+| File drafts (`POST /api/agent/content`) | Schedule, unpublish, or delete |
+
+Everything it files lands as a **`pending`** row. **The approval queue remains the human gate** — and
+since `566dd15` it is the only path to `published = true`.
 
 ---
 
@@ -592,6 +742,106 @@ These are deliberate operator actions. Nothing in a deploy performs them.
 ---
 
 ## Session Log — Shipped
+
+### 2026-07-23 — Agent read surface, publish-bypass removal, and Cowork integration
+
+Three commits on `main` (`566dd15`, `703eaa6`, `59d768e`), deployed and verified in production the
+same day. The through-line: the platform gained a **read** surface for an external agent, and the one
+door that could bypass the approval queue was shut.
+
+#### `566dd15` — the publish bypass is closed
+
+`POST /api/blog` and `PUT /api/blog/[slug]` — both gated by `BLOG_AGENT_API_KEY` with `===` — wrote
+`published` straight into `blog_posts`, bypassing the approval queue entirely. Both now return
+**410 Gone**. **Net effect: `executeApprovedAction` is the only code path that can set
+`published = true`.**
+
+**410, not a silent reroute into the queue.** A surviving external caller fails **loudly and
+findably** in the logs rather than having its writes quietly redirected. The loud failure is the
+point; a silent behaviour change would hide the caller we were trying to find.
+
+**`DELETE /api/blog/[slug]` was deliberately retained.** The session-gated admin delete at
+`app/api/admin/blog/[slug]` does **not** call `revalidatePath`, so removing the key-gated verb would
+have taken a delete path away without putting a working one in its place. It carries a
+`TODO(bypass-removal)` and should go once admin delete revalidates. **So "the approval queue is the
+only publish gate" is exact, but "`/api/blog` is closed" is not** — the DELETE verb survives and can
+still remove a live post.
+
+**Evidence gathered before removing anything:** nginx access logs back to Jul 9 (plain + rotated)
+showed **zero** POST/PUT/DELETE to `/api/blog`, and no caller existed in the repo or anywhere on the
+VPS filesystem.
+
+#### `703eaa6` — read surface, shared list helpers, and the `date` hard-block
+
+Two new key-gated, **read-only** endpoints, both via `checkMarketingApiKey`:
+
+    GET /api/agent/posts   → { ok, posts }   every post, drafts and scheduled included
+    GET /api/agent/queue   → { ok, items }   approval queue, optional ?status=
+
+**Approve, publish, schedule, unpublish and delete are deliberately not exposed.** Read is cheap and
+safe; the single write door (`POST /api/agent/content`) funnels through the approval queue. They live
+under `/api/agent/*` for a hard operational reason — see "Agent Read Surface" for the nginx regex that
+steals 13 top-level `/api/<name>` paths to the legacy SPA.
+
+The SQL was extracted into shared library functions so the admin and agent surfaces cannot drift:
+
+- **`listQueue()`** in `lib/approvalQueue.ts` — replaced inline SQL in the admin queue route and
+  killed a duplicated column literal. The route's private `STATUSES` folded into a shared
+  `QUEUE_STATUSES` / `QueueStatus`.
+- **`listAllPosts()`** in `lib/blog.ts` — **must not reuse `toPost()`.** That mapper is the *public*
+  one and hard-drops `published`, `publish_at`, `created_at`, `updated_at`; reusing it would
+  typecheck cleanly and **silently strip the exact fields the function exists to expose.** It has its
+  own row type and its own mapper, and keeps snake_case keys so the admin content route's response
+  stays byte-identical.
+- Both admin routes were repointed with **response shapes unchanged** — explicit `limit: 200` / `1000`
+  preserve their prior ceilings.
+
+**The `date` hard-block lives in the shared `validateContentDraft`,** not in the route — so the agent
+door, the admin door **and** the executor's re-validation all inherit it. **One validation path, no
+wrapper duplication.** `blog_posts.date` is `text` sorted lexicographically by
+`idx_blog_posts_published (published, date DESC)`, so anything but zero-padded `YYYY-MM-DD` mis-sorts
+forever. `"July 22, 2026"` is now a 400.
+
+It returns the **house-style human message** — `{"error":"date must be YYYY-MM-DD (e.g. 2026-08-05)"}`
+— rather than a machine code. That was a deliberate, accepted divergence from the build spec: every
+sibling error from that validator is a human sentence, and forking the contract for one field would
+have changed error rendering for every caller of it.
+
+12 tests added (date guard + the constant-time key gate); both targets are pure and DB-free.
+
+#### `59d768e` — scheduler idle-liveness heartbeat
+
+Boot already logged `registered` and each publish logged its own line. The blind spot was a loop that
+**dies after boot with nothing scheduled** — indistinguishable from healthy idle, because both are
+silent. Every 60th idle tick (~hourly) now logs proof-of-life. **Idle-only and throttled on purpose:**
+a per-tick log would write 1440 lines a day and bury journald.
+
+**Confirmed live 2026-07-23 11:00:20 UTC** — `[scheduler] heartbeat — idle, 60 ticks, uptime 60m`,
+same PID as the boot line.
+
+#### Production verification, 2026-07-23
+
+All against `blueridgehomesnc.com`:
+
+    GET  /api/agent/posts                 → 200, 3 posts with published/publish_at
+    GET  /api/agent/queue?status=pending  → 200
+    GET  /api/agent/posts   (wrong key)   → 401 {"error":"Invalid or missing API key"}
+    POST /api/blog                        → 410
+    POST /api/agent/content  bad date     → 400 {"error":"date must be YYYY-MM-DD (e.g. 2026-08-05)"}
+    POST /api/agent/content  valid draft  → 201, queue row id 5, pending, stakes high, reviewer NULL
+
+**Nothing reached the public site.** The test draft stayed `pending`, and `/api/agent/posts` still
+returned the same three published slugs.
+
+#### Cowork integration — direct HTTPS, no MCP
+
+Recorded in full under "Cowork Integration". Short version: Cowork calls the key-gated
+`/api/agent/*` endpoints over plain HTTPS from its sandbox. **MCP was ruled out, not deferred by
+preference** — the custom-connector dialog exposes only OAuth client ID/secret with no
+request-headers option, so the `static_headers` beta that would carry `x-api-key` is unavailable on
+this account. The non-obvious operational fact is egress: the sandbox proxies outbound traffic, and a
+blocked request surfaces as `curl: (56) CONNECT tunnel failed` with HTTP `000` — **an egress block,
+not an outage.**
 
 ### 2026-07-22 — Revalidation, publish scheduler, and the scheduling workflow
 
@@ -790,7 +1040,7 @@ recon-and-build item — not yet scheduled. Note the gate is narrower than it lo
 `/admin/*` pages only, never `/api/admin/*`, which is why every admin API route calls
 `getSession()` itself.
 
-### Blog SSG delete gap — HALF RESOLVED 2026-07-22
+### Blog SSG delete gap — HALF RESOLVED 2026-07-22, and worse than first recorded
 
 On-demand revalidation now exists, but **only on the publish paths**: approve (`ca46860`) and the
 scheduler's `publish_now`. **Deleting or editing a row still leaves a stale prerendered page.**
@@ -801,10 +1051,22 @@ runs when something goes away or changes.
 `scheduler-smoke-test` row was published by the tick as designed, and a bare `DELETE` did **not**
 remove it from `/blog` — the page kept serving 200 with the deleted post until a `./deploy.sh`.
 
-The same staleness applies to edits: `PUT /api/blog/[slug]` updates the row and the prerendered page
-keeps serving the old copy. **Anything that needs to disappear or change promptly still needs a
-deploy**, or a `revalidatePath` call added to the delete/update routes — which is the obvious fix and
-is not done.
+**Worse than first recorded, and now load-bearing.** `DELETE /api/blog/[slug]` was **retained** in
+`566dd15` *specifically because* the session-gated admin delete does not revalidate — the bypass
+removal could not take the verb away without leaving no working delete behind it. State of play:
+
+- **No delete path anywhere calls `revalidatePath`** — not the key-gated one, not the admin one.
+- **Nothing can set `published = false` at all** (see "No unpublish path" below).
+- So **removing a live post requires a DB delete *plus* a deploy.**
+
+The same staleness applies to edits: the session-gated `PUT /api/admin/blog/[slug]` updates the row
+and the prerendered page keeps serving the old copy. (The key-gated `PUT /api/blog/[slug]` is a 410
+stub as of `566dd15` and no longer edits anything.) **Anything that needs to disappear or change
+promptly still needs a deploy**, or a `revalidatePath` call added to the delete/update routes — which
+is the obvious fix and is not done.
+
+**This rises in priority as Cowork increases draft volume.** The first approved post containing a
+wrong claim will need to come down fast, and today that means a deploy.
 
 ### Redundant slug index
 
@@ -815,7 +1077,8 @@ it is a live-DB change, so its own deliberate action, not a docs edit.
 ### blog_posts.content has no NOT NULL
 
 `content` is `text DEFAULT ''` — the table would accept a null-content post. Nothing does today:
-`validateContentDraft` requires non-empty content, and `POST /api/blog` requires it too. So this
+`validateContentDraft` requires non-empty content, and it is now the only way in — the old
+`POST /api/blog` is a 410 stub. So this
 is a latent gap, not a live bug — the enforcement is real but lives entirely in application code,
 and a future writer that bypasses both doors would find no floor under it. Low priority.
 
@@ -876,11 +1139,13 @@ has to consider all three, or two of them will silently keep the old behaviour.
 
 ### `checkApiKey` name shadowing
 
-`app/api/blog/route.ts` and `app/api/blog/[slug]/route.ts` each define a **module-local**
+**Halved by `566dd15`, not gone.** `app/api/blog/[slug]/route.ts` still defines a **module-local**
 `checkApiKey(request)` comparing `BLOG_AGENT_API_KEY` with `===`, importing nothing from
-`lib/agentAuth.ts`. Now that a constant-time (`timingSafeEqual`) helper exists under the same name,
-this is both a readability trap and a minor timing-safety inconsistency. Folding the two onto the
-shared helper is a clean small follow-up.
+`lib/agentAuth.ts` — it gates the retained `DELETE` verb. Its twin in `app/api/blog/route.ts`
+disappeared when `POST` became a 410 stub. Now that a constant-time (`timingSafeEqual`) helper exists
+under the same name, the survivor is both a readability trap and a minor timing-safety
+inconsistency. Folding it onto the shared helper — or removing the verb outright once admin delete
+revalidates — is a clean small follow-up.
 
 ### ⚠ Tooling hazard — `.bak` is not a scratch extension in this repo
 
@@ -892,6 +1157,28 @@ Record the hazard rather than the incident: **`.bak` is a real, tracked extensio
 cleanup globs to the specific files created, and read `git status` before every commit — the
 deletions were visible there and that is what caught them.
 
+### `BLOG_AGENT_API_KEY` rename / split
+
+The name describes a capability it no longer has. It gates **no blog writes** — since `566dd15` it
+opens `app/api/admin/upload`, `app/api/admin/images`, and the retained `DELETE /api/blog/[slug]`
+(see "Environment Variables"). One credential therefore covers image upload, image listing **and
+deleting a live post**, and that delete leaves a ghost page behind. Suggested shape: a dedicated
+upload/images key, and retire the blog-delete door once admin delete revalidates. Not scheduled.
+
+### Dedicated Cowork key
+
+`MARKETING_AGENT_API_KEY` currently gates **both** the read doors and the draft-filing door, and a
+plaintext copy now lives in `C:\Users\wncre\ClaudeShare\` on Brian's machine for Cowork to read.
+A separate key per consumer would be independently rotatable — revoking Cowork's access would not
+also break everything else authenticating with that value. See "Cowork Integration".
+
+### Narrow the Cowork domain allowlist
+
+Cowork currently runs with **Domain allowlist → All domains**, which lets any code it executes reach
+anywhere on the internet. Narrowing to package managers plus `blueridgehomesnc.com` is untested:
+Anthropic's guidance favours the narrower setting, but public bug reports describe additional-domain
+entries being ignored. See "Cowork Integration".
+
 ### Still open, unscheduled
 
 - **Privacy-policy page** — not built.
@@ -899,8 +1186,9 @@ deletions were visible there and that is what caught them.
   private + admin behind the auth boundary above). The burned TOTP seed / admin password / Gmail
   app-password specifics and the filter-repo purge remain recorded under "Repo Hygiene".
 - **Managed, DB-backed editorial calendar** — supersedes the static `lib/contentCalendar.ts` seed.
-- **External Cowork agent → `/api/agent/content`** — the key-gated door for an outside agent to file
-  drafts into the approval queue.
+- ~~**External Cowork agent → `/api/agent/content`**~~ — **DONE 2026-07-23.** Cowork files drafts
+  through the key-gated door and reads state through `/api/agent/{posts,queue}`. See
+  "Cowork Integration".
 - **nginx `client_max_body_size`** — full-resolution phone photos (8 MB+) are rejected by **nginx**
   with `413 Content Too Large` before the request ever reaches the app; small/optimized images upload
   fine. The upload route itself is not at fault. Fix is an nginx config raise (~`20M`) in the

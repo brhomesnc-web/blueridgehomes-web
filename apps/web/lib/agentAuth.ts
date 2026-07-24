@@ -10,9 +10,19 @@ import { timingSafeEqual } from "crypto";
  * via crypto.timingSafeEqual so key-guessing can't be timed.
  *
  * Reads MARKETING_AGENT_API_KEY from the environment (loaded by Next from
- * apps/web/.env.local — see recon §6). NOT wired to any endpoint in this slice;
- * agent producers that write into approval_queue arrive later and will import
- * this to gate their POST handlers.
+ * apps/web/.env.local — see OPS.md "Environment Variables").
+ *
+ * Four consumers today (verified by grep 2026-07-23):
+ *   - POST /api/agent/content        file a draft into approval_queue
+ *   - GET  /api/agent/posts          read the blog inventory, drafts included
+ *   - GET  /api/agent/queue          read the approval queue
+ *       ...those three via checkMarketingApiKey (MARKETING_AGENT_API_KEY)
+ *   - POST /api/internal/publish-due the scheduler door, via checkApiKey with
+ *       PUBLISH_SCHEDULER_KEY passed explicitly
+ *
+ * NOT a consumer, despite the identical name: app/api/blog/[slug]/route.ts defines
+ * its own module-local checkApiKey (=== against BLOG_AGENT_API_KEY) gating the
+ * retained DELETE verb. See OPS.md Horizon -> "checkApiKey name shadowing".
  */
 export function checkApiKey(request: Request, expected: string): boolean {
   const provided =
@@ -32,10 +42,11 @@ export function checkApiKey(request: Request, expected: string): boolean {
 }
 
 /**
- * The marketing-platform door. Kept as a named wrapper so existing callers
- * (app/api/agent/content) are unchanged and the env var stays named at one
- * site. New doors pass their own key: see /api/internal/publish-due, which
- * gates on PUBLISH_SCHEDULER_KEY through the same constant-time comparison.
+ * The marketing-platform door. Kept as a named wrapper so its callers
+ * (/api/agent/content, /api/agent/posts, /api/agent/queue) are unchanged and the
+ * env var stays named at one site. New doors pass their own key: see
+ * /api/internal/publish-due, which gates on PUBLISH_SCHEDULER_KEY through the same
+ * constant-time comparison.
  */
 export function checkMarketingApiKey(request: Request): boolean {
   return checkApiKey(request, process.env.MARKETING_AGENT_API_KEY || "");

@@ -32,6 +32,16 @@ Tuesday therefore cannot depend on it. That splits the work along a determinism 
 - **Cowork must never hold the only copy of a scheduled date.** `publish_at` lands in Postgres at
   approve time; Cowork's job ends at "the draft is in the queue".
 
+**How Cowork actually connects** (established 2026-07-23, unknown when the boundary above was
+written): **direct HTTPS calls to the key-gated `/api/agent/*` endpoints** from the Cowork sandbox —
+no MCP server, no OAuth, no custom connector. MCP was ruled out because the custom-connector dialog
+exposes only OAuth client ID/secret with no request-headers option, so the `static_headers` beta that
+would carry `x-api-key` is unavailable on this account; it stays an upgrade path, not a prerequisite.
+**The sandbox's filtering proxy must be allowed to reach the site** — a blocked request surfaces as
+`curl: (56) CONNECT tunnel failed` and HTTP `000`, which is an egress block, **not** an outage.
+Operational detail, key location, the egress fix and the security posture live in `OPS.md` →
+"Cowork Integration".
+
 **This is NOT the old `/marketing/` static SPA.** That is a separate, pre-existing artifact
 served directly by nginx from `/var/www/brhomes-marketing/`, superseded by this platform and
 pending decommission. See `OPS.md` → "VPS Artifacts — Pending Decommission". Nothing in this
@@ -72,8 +82,13 @@ Key-gated (non-session) endpoints use `lib/agentAuth.ts`:
 - Constant-time comparison via `crypto.timingSafeEqual` (the blog seed used `===`).
 - **Closed when unset**: an empty expected value returns `false`, so a route is shut until its key
   exists rather than open by default.
-- **Two consumers today:** `POST /api/agent/content` (`MARKETING_AGENT_API_KEY`) and
-  `PATCH /api/internal/publish-due` (`PUBLISH_SCHEDULER_KEY`, via `checkApiKey` directly).
+- **Four consumers today** (verified by grep 2026-07-23): `POST /api/agent/content`,
+  `GET /api/agent/posts` and `GET /api/agent/queue` — all three `MARKETING_AGENT_API_KEY` via
+  `checkMarketingApiKey` — plus `POST /api/internal/publish-due` (`PUBLISH_SCHEDULER_KEY`, passed to
+  `checkApiKey` directly).
+- **Not a consumer, despite the identical name:** `app/api/blog/[slug]/route.ts` defines its own
+  module-local `checkApiKey` (`===` against `BLOG_AGENT_API_KEY`) gating the retained `DELETE` verb.
+  See `OPS.md` → Horizon → "`checkApiKey` name shadowing".
 
 ### Database
 
@@ -169,8 +184,9 @@ Source of truth: `apps/web/db/schema/approval_queue.sql`.
 Index: `approval_queue_status_created_idx` on `(status, created_at DESC)` — the queue is read
 almost exclusively by status, newest-first.
 
-**No producers write to this table yet.** The API supports listing by status and PATCHing a
-status; the enqueue side arrives with the agent modules.
+**The Content producer writes to this table today.** `POST /api/agent/content` (key-gated) and the
+admin compose form both enqueue `pending` rows through `enqueueContentDraft`; reads go through
+`listQueue()`. Producers for the other seven modules are still pending.
 
 ### `blog_posts` (pre-existing — the platform now owns columns on it)
 
@@ -181,13 +197,20 @@ Not a table this platform created, but no longer only a write target either: the
 | Column | Type | Notes |
 | --- | --- | --- |
 | `slug` | `text` | NOT NULL, UNIQUE (`blog_posts_slug_key`) — the executor's `ON CONFLICT (slug)` target and the `/blog/[slug]` route key |
-| `published` | `boolean` | default `false` — **the source of truth.** Every read in `lib/blog.ts` gates on `published = TRUE` |
+| `published` | `boolean` | default `false` — **the source of truth.** Every *public* read in `lib/blog.ts` (`getAllPosts`, `getPostBySlug`, `getAllSlugs`) gates on `published = TRUE`; `listAllPosts()` in that same file deliberately does **not** — it backs the admin inventory and `GET /api/agent/posts` |
 | `date` | `text` | NOT NULL, **`YYYY-MM-DD`** — display date AND sort key. `idx_blog_posts_published (published, date DESC)` sorts it **lexicographically**, so any other format silently corrupts ordering |
 | `publish_at` | `timestamptz` | nullable — **an instruction, not a state.** NULL = not scheduled. The tick flips `published` once `publish_at <= now()` and re-derives `date` from it |
 
 The `published` / `publish_at` split is deliberate: deriving `published` from `publish_at` would have
 rewritten every read query for no gain, and the catch-up property (a missed tick publishes late
 rather than never) falls out of the predicate for free.
+
+**The publish-gate invariant, stated precisely.** Nothing can set `published = true` except
+`executeApprovedAction` (`lib/queueExecutor.ts`), reached only by approving a queue row — the
+`BLOG_AGENT_API_KEY` write doors returned **410 Gone** in `566dd15` (2026-07-22). **But `/api/blog` is
+not "closed":** a key-gated `DELETE /api/blog/[slug]` survives and can still remove a live post, and
+because no delete path revalidates it leaves a stale prerendered page behind. See `OPS.md` → Horizon →
+"Blog SSG delete gap".
 
 ### Leads — read-through, no table
 

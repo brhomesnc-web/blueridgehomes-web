@@ -23,8 +23,11 @@ export type ExecuteResult =
   | { ok: false; error: string; code: string };
 
 /**
- * Column order matches app/api/blog/route.ts's INSERT exactly — that route stays
- * the reference for this table's shape.
+ * This INSERT is now the ONLY code path that can set published = true. The old
+ * BLOG_AGENT_API_KEY doors (POST /api/blog, PUT /api/blog/[slug]) became 410 stubs
+ * in 566dd15, so there is no second writer to stay in sync with any more. The
+ * column order here is simply blog_posts' own declared order — see
+ * db/schema/blog_posts.sql, which is the reference now that the old route is gone.
  *
  * ON CONFLICT (slug) DO NOTHING requires a unique index on blog_posts.slug (manual
  * VPS step). Without it Postgres errors, the tx rolls back, and the caller returns
