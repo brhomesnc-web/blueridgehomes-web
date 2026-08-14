@@ -87,6 +87,29 @@ the box). These are about not breaking the work.
 4. **Deploy is `apps/web/deploy.sh`, always.** Never hand-roll the steps. See "Standard Update /
    Redeploy Procedure".
 
+5. **Scope is measured against the real objective.** The objective is a Cowork-driven marketing
+   platform that *produces* content, across all modules — Content, SEO, Social and the rest — not a
+   polished manual admin. Before starting any slice, ask: does this move the agent closer to
+   **producing**, or is it manual-admin polish? Admin fixes (unpublish, status codes, buttons) are
+   worth building only when they **block** the agent pipeline. If they do not block it, **log them —
+   do not build them.** Depth on one module at the expense of breadth toward "agent-driven" is the
+   failure mode. The 2026-08-14 session spent roughly four hours closing a manual unpublish/publish
+   loop that did not block Cowork; under this rule most of it would have been logged, not built.
+   See Horizon → "North star" for what this rule is protecting.
+
+6. **When a symptom survives two fixes, search before the third.** Two attempted fixes that do not
+   resolve a symptom means the cause is not understood — stop inferring. Search the framework's
+   documented behaviour; `web_search` is free, and thirty seconds beats an hour. Headers, logs and DB
+   state describe **symptoms**; the framework's own docs describe **causes**. On 2026-08-14 a
+   200-instead-of-404 was diagnosed five times from response headers and was wrong every time; the
+   actual cause — a route-level `loading.tsx` flushing a 200 before the page ever ran — was named by
+   a single search, once that search was finally run. **Search second, not sixth.**
+
+7. **A verification must reach the bug.** Before running a check, confirm the state the bug requires
+   actually exists: arm the condition, verify the arm, then test. A green (or clean) result against a
+   state the bug cannot occupy proves nothing and costs a round. The same session repeatedly tested
+   unpublish against rows that were already in the wrong state to exercise the fix.
+
 ---
 
 ## Deployment Layout
@@ -408,6 +431,34 @@ After changing `.env.local`, restart the service to pick it up:
 
 ## Repo Conventions
 
+### Line endings — code and docs alike are `i/lf w/crlf`
+
+Every tracked text file here carries the same EOL attributes: **LF in the index, CRLF in the working
+tree.** `core.autocrlf` is `true` and there is no `.gitattributes` anywhere in the repo, so git does
+the normalization. Verify per file rather than assuming:
+
+    git ls-files --eol <path>
+
+**This applies to code, not only to docs.** Several 2026-08-14 build prompts asserted that code files
+were `w/lf` while docs were `w/crlf`; that distinction does not exist in this repo. A tool that
+rewrites a file with LF endings in the working tree makes the whole file show as modified.
+
+### `npm run build` is NOT a valid local gate
+
+`next build` cannot pass on a dev machine. `/portfolio/[slug]` (and `/blog/[slug]`) call
+`generateStaticParams()`, which queries Postgres **at build time**, and the database is reachable only
+from the VPS. It fails identically at every recent commit — as `ECONNREFUSED`, or as
+`SASL: ... client password must be a string` when `DATABASE_URL` is present but empty. **Either
+failure is environmental, not a regression, and not a signal.**
+
+The real offline gate is:
+
+    cd apps/web
+    npx tsc --noEmit      # must exit 0
+    npm test              # vitest; no DB harness, so no DB needed
+
+Do not spend a round "fixing" a local build failure. Full detail in `MARKETING_PLATFORM.md` §7.
+
 ### Database schema
 
 `apps/web/db/schema/*.sql` is the checked-in schema convention, introduced with the marketing platform's `approval_queue` table. It is the first version-controlled schema in this repo — every table before it was created ad-hoc directly on the VPS and exists only implicitly in query strings.
@@ -671,8 +722,17 @@ being ignored — so narrowing may simply not work.
 | Read the queue (`GET /api/agent/queue`) | Publish, or set `published = true` |
 | File drafts (`POST /api/agent/content`) | Schedule, unpublish, or delete |
 
-Everything it files lands as a **`pending`** row. **The approval queue remains the human gate** — and
-since `566dd15` it is the only path to `published = true`.
+Everything it files lands as a **`pending`** row, and **the approval queue remains the human gate**
+for putting *new* content on the site.
+
+**It is not, however, the only path to `published = true`.** There are three, and there have been
+since the scheduler landed 2026-07-22 — the sentence above previously claimed otherwise and was
+wrong. `executeApprovedAction` (approve) is the only one that can publish a post the queue has not
+already approved; the other two act on rows that INSERT created — the 60s tick
+(`/api/internal/publish-due`) flipping scheduled rows as they come due, and the schedule route's
+`publish_now` flipping one on demand. Since 2026-08-14 that same route also carries `unpublish`,
+which sets `published = false`. `lib/queueExecutor.ts`'s docblock enumerates all three. **None of
+this widens what Cowork can do** — the table above is unchanged and still exact.
 
 ---
 
@@ -743,6 +803,87 @@ These are deliberate operator actions. Nothing in a deploy performs them.
 
 ## Session Log — Shipped
 
+### 2026-08-14 — Unpublish, the 404-status chain, and a forward path for drafts
+
+Five commits on `main` (`0a9cf6e`, `fc5ea9c`, `87d12e7`, `d62d8d4`, `4c961c2`), pushed the same day.
+**Not yet deployed at time of writing** — the owner deploys.
+
+The through-line: a live post could not be taken down from the admin. Closing that turned out to
+require fixing how three blog routes cache, because *removing* a post is entirely a
+cache-invalidation problem — the DB write was the easy half, exactly as the Horizon predicted.
+
+**Scope note, recorded deliberately.** Roughly four hours went into a manual unpublish/publish loop
+that **did not block the Cowork pipeline**. Working Principle 5 was written out of this session; under
+it most of this entry would have been logged rather than built. The work is good and is kept — the
+prioritisation is the lesson.
+
+#### `0a9cf6e` — the unpublish action, and revalidation on every mutation path
+
+A fourth action on `PATCH /api/admin/marketing/content/[slug]/schedule`: `unpublish`, guarded on
+`published = true` (inverting the other three) with its own **409 `not_published`** constant. Sets
+`published = false` and NULLs `publish_at` in one statement — see Horizon → "No unpublish path —
+RESOLVED" for why that is not optional. `revalidatePath` was added to every path that changes what a
+reader sees, and `/sitemap.xml` was added as the third surface everywhere it was missing.
+
+Also in this commit, and the reason A1 exists: **`published` is now rejected rather than ignored** by
+`POST /api/admin/blog` and `PUT /api/admin/blog/[slug]`, with 400 `published_not_accepted`. The PUT
+previously *wrote* the column, so opening a live post in the legacy editor and clicking Save
+unpublished it silently and without revalidating. It now preserves the column. A silent ignore was
+rejected as the fix: a caller that believes that route controls visibility should be told, loudly.
+
+226 tests added in `tests/unpublish.test.ts` — structural assertions read from source text, because
+`lib/db.ts` builds a pg Pool at module scope and there is no live-Postgres harness. Mocking the DB
+would only prove the mock agrees with the test.
+
+#### `fc5ea9c`, `87d12e7`, `d62d8d4` — three commits to make one URL return 404
+
+The unpublish landed and the URL kept serving **200**. Three settings had to be right at once; each
+was diagnosed and fixed in turn. **The full reasoning lives in `MARKETING_PLATFORM.md` §2 → "Blog
+route caching — three settings that only make sense together"** — it is written there because it
+reads as arbitrary without the why, and the next reader will meet the settings before the story.
+
+- `fc5ea9c` gave the published-gated routes an **ISR `revalidate` surface**. `revalidatePath` on a
+  route prerendered with no revalidate export is a **silent no-op** — that was the original bug, and
+  it is why every `revalidatePath` call added in `0a9cf6e` did nothing on `/blog` and `/sitemap.xml`.
+- `87d12e7` made `/blog/[slug]` **`force-dynamic`** instead. Under ISR, Next caches the 404
+  *content* but not the 404 *status*: the not-found body renders while the response is still 200.
+- `d62d8d4` **deleted `app/blog/loading.tsx`**. A route-level loading file wraps the whole segment in
+  Suspense and streams its fallback *before* the page component runs; once any HTML is flushed the
+  status is locked at 200, and **no route config can override that**. This is why force-dynamic alone
+  did not fix it.
+
+**Working Principle 6 came out of this.** The 200 was diagnosed five times from response headers and
+was wrong each time. One search of the framework's documented behaviour named the loading-boundary
+cause immediately, once that search was finally run — after the fifth wrong inference, not before the
+first.
+
+#### `4c961c2` — draft cards get `Publish now` and `Schedule →`
+
+Unpublishing produced a **draft with no forward path**: the card offered only `Edit →` and a
+`Not public` label. One expression caused it — the `Schedule →` trigger was gated
+`!post.published && post.publish_at`, and a draft fails the second clause.
+
+**UI-only, and provably so.** `publish_now` and `reschedule` both guard on
+`WHERE slug = $1 AND published = false` and **neither reads `publish_at`**, so both would have
+accepted a draft all along. The recon established this from the SQL before any code was written; the
+new `tests/draftPublishPath.test.ts` pins both WHERE clauses cross-file, because a `publish_at` clause
+added to either would break the path again from the server side with nothing in `page.tsx` to show it.
+
+The gate widened to `!post.published`, and a one-click `Publish now` was added on drafts only.
+One-click is deliberate and matches the manage modal's own `Publish now`: publishing is reversible
+from the Live card it produces, so the two-click confirm stays reserved for `Unpublish`.
+
+**Four ways a draft comes into being, and all four now have a forward path:** queue-approve-with-a-
+schedule (leaves `publish_at` **set**), `unpublish`, `cancel`, and `POST /api/admin/blog` (all three
+leave it **NULL**). Only the first satisfied the old gate — which is why the dead end stayed invisible
+to anyone exercising that one flow.
+
+#### Not verified in production
+
+Every check this session was local (`npx tsc --noEmit`, `vitest`). **Nothing was deployed**, so the
+404 chain and the publish/unpublish round trip are proven by construction and by structural tests, not
+by a live request. The curl checks belong to the next deploy.
+
 ### 2026-07-23 — Agent read surface, publish-bypass removal, and Cowork integration
 
 Three commits on `main` (`566dd15`, `703eaa6`, `59d768e`), deployed and verified in production the
@@ -754,7 +895,13 @@ door that could bypass the approval queue was shut.
 `POST /api/blog` and `PUT /api/blog/[slug]` — both gated by `BLOG_AGENT_API_KEY` with `===` — wrote
 `published` straight into `blog_posts`, bypassing the approval queue entirely. Both now return
 **410 Gone**. **Net effect: `executeApprovedAction` is the only code path that can set
-`published = true`.**
+`published = true` on a post the queue has not already approved.**
+
+> **Correction, 2026-08-14.** As originally written this read "the only code path that can set
+> `published = true`", full stop. That was already wrong when written: the 60s scheduler tick shipped
+> the previous day (`c00c205`, 2026-07-22) and `publish_now` shipped with it (`52a49bc`), and both set
+> the column. They act only on rows the executor inserted, which is why the *gate* claim holds and the
+> *only path* claim does not. See §4 of `MARKETING_PLATFORM.md` for all three paths.
 
 **410, not a silent reroute into the queue.** A surviving external caller fails **loudly and
 findably** in the logs rather than having its writes quietly redirected. The loud failure is the
@@ -1030,7 +1177,28 @@ typography pass.
 ## Horizon — Known, Not Scheduled
 
 Real issues, deliberately not being fixed right now. Recorded so they are found on purpose rather
-than rediscovered mid-incident. Neither has an owner or a date.
+than rediscovered mid-incident. None of these has an owner or a date.
+
+### ⭐ North star — and the fact that it is not being served
+
+**The objective is a Cowork-driven marketing platform that produces content across all modules.**
+
+The Cowork→queue pipe was **proven end to end on 2026-07-23**: key-gated HTTPS direct from the Cowork
+sandbox, no MCP needed. See "Cowork Integration" and the 2026-07-23 Session Log entry.
+
+**What is missing is the *producing* half.** Cowork is **not provisioned to generate content on a
+cadence**, so the queue is not being fed and no new content is being produced. The pipe works and
+nothing is going through it.
+
+**Four sessions have now gone deep on the Content module's manual admin. None has advanced Cowork
+toward producing.** This note exists so that is impossible to keep missing.
+
+**The next session's objective is the shortest path to Cowork putting a real draft in the queue** — a
+**recon** of what is provisioned on the Cowork side today (Project, Skills, scheduled tasks) and the
+gap to weekly production, **before any build**.
+
+SEO, Social, and the other modules remain entirely ahead. This is the item Working Principle 5 exists
+to protect; everything below it in this Horizon is subordinate to it.
 
 ### middleware → proxy convention
 
@@ -1056,8 +1224,13 @@ remove it from `/blog` — the page kept serving 200 with the deleted post until
 removal could not take the verb away without leaving no working delete behind it. State of play:
 
 - **No delete path anywhere calls `revalidatePath`** — not the key-gated one, not the admin one.
-- **Nothing can set `published = false` at all** (see "No unpublish path" below).
-- So **removing a live post requires a DB delete *plus* a deploy.**
+  Still true.
+- ~~**Nothing can set `published = false` at all.**~~ **False as of 2026-08-14** (`0a9cf6e`): the
+  schedule route's `unpublish` action sets it, and revalidates all three published-gated surfaces.
+  See "No unpublish path — RESOLVED" below.
+- So **hiding a live post no longer needs a deploy** — unpublish is the supported takedown and the
+  URL starts answering 404 on its own. **Hard-deleting one still does**, because `DELETE` leaves the
+  prerendered page serving until a rebuild. Unpublish is a soft-hide, not a delete.
 
 The same staleness applies to edits: the session-gated `PUT /api/admin/blog/[slug]` updates the row
 and the prerendered page keeps serving the old copy. (The key-gated `PUT /api/blog/[slug]` is a 410
@@ -1109,12 +1282,70 @@ guard" slice. The other two shipped 2026-07-22 — **SSG `revalidatePath`** (`ca
 (string-world) via the refactored shared components. They are only migrated once the rich editor has
 proven itself on the marketing content editor. Not scheduled.
 
-### No unpublish path
+### No unpublish path — RESOLVED 2026-08-14
 
-Nothing in the admin can set `published = false` on a live post, and there is therefore no
-revalidation story for one. The schedule route returns **409 `already_published`** rather than
-attempting it. Combined with the SSG delete gap above, taking a live post down currently requires a
-DB write **plus** a deploy. If unpublish is ever wanted, the revalidation half is the hard half.
+**Closed by `0a9cf6e`.** A session-gated `unpublish` action on
+`PATCH /api/admin/marketing/content/[slug]/schedule` sets `published = false` **and** NULLs
+`publish_at` in the *same* statement, guarded on `published = true`, returning **409 `not_published`**
+on zero rows. It is exposed in the marketing admin on every live post's card as a two-click inline
+confirm. The prediction recorded here while it was open — "the revalidation half is the hard half" —
+was correct, and took three further commits to settle (see `MARKETING_PLATFORM.md` §2 → "Blog route
+caching").
+
+Two properties, **recorded so nobody "simplifies" them**:
+
+- **Both column writes must land in ONE statement.** The 60s tick matches
+  `published = false AND publish_at IS NOT NULL AND publish_at <= now()` — a *catch-up* predicate. A
+  row left holding a past `publish_at` (which is exactly what `publish_now` leaves behind) satisfies
+  all three conjuncts, so it would be **republished inside a minute**, with its own revalidation.
+  Nulling `publish_at` in the same UPDATE is what makes an unpublish stick. `cancel` clears it for the
+  same reason. `tests/unpublish.test.ts` pins the single-statement shape.
+- **Correct revalidation IS the removal.** `/blog`, `/blog/<slug>` and `/sitemap.xml` are all gated on
+  `published`, so revalidating those three is what makes the URL start answering 404 — the
+  `/blog/<slug>` re-render calls `getPostBySlug`, gets null, and `notFound()` fires.
+
+### Marketing-admin findings logged 2026-08-14, deliberately not fixed
+
+Found during the unpublish/publish recon. Recorded so they are not rediscovered from scratch. None is
+scheduled and none blocks the Cowork pipeline — which, per Working Principle 5, is exactly why they
+are logged rather than built.
+
+- **A1 — `/admin/blog/new` 400s on every submit.** The legacy form always sends `published` in its
+  POST body (it still renders a "Publish immediately" checkbox), and `POST /api/admin/blog` now
+  **rejects any body carrying that key** — `hasOwnProperty`, not a truthiness test — with 400
+  `published_not_accepted`. The route was hardened in `0a9cf6e` and this caller was left behind, so
+  the legacy "new post" form cannot currently create anything, draft or otherwise. Decide whether to
+  fix the caller or retire the legacy blog admin; the tests assert the route's half only.
+- **A3 — no past-time guard on the manage-schedule modal.** The review drawer and
+  `content/[id]/edit` both refuse a past datetime by comparing against `nowInNewYorkLocal()`;
+  `manageSchedule` checks only that *a* value is present. A past datetime there publishes on the next
+  tick (≤60s) with no warning. The server accepts past times **by design** (see `lib/publishAt.ts` —
+  "the client warns; the server accepts"), so the client is where the warning belongs, and two of the
+  three clients have it.
+- **A5 — the Posts-tab `Edit →` ejects to the legacy admin.** It targets `/admin/blog/[slug]/edit`
+  (inline-styled, not the marketing Tailwind surface) and redirects to `/admin/blog` on save,
+  stranding the user outside `/admin/marketing`. Note the near-identical `Edit draft →` in the review
+  drawer goes to `/admin/marketing/content/[id]/edit` and edits a **queue item**, not a post —
+  same-looking label, different subsystem. Already flagged in the 2026-07-22 log; the eject is the
+  part still outstanding.
+- **A6 — the Content page's blue explainer banner is already incomplete.** It tells the reader that
+  approving "is what puts a post on the site". `publish_now` is a second, non-queue path, and has
+  been since 2026-07-22. See the three-paths correction under "What Cowork can and cannot do".
+- **A scheduled post going live does not refresh an open admin tab.** When the 60s tick flips a post,
+  an admin tab left open still shows the `Scheduled` pill until the user acts. It reads as a failed
+  publish and is not one — nothing polls or revalidates that client surface.
+
+### `/portfolio/[slug]` has the same latent 200-on-404 shape
+
+`apps/web/app/portfolio/loading.tsx` exists and sits above a page that calls `notFound()` — both
+verified 2026-08-14. That is precisely the arrangement `d62d8d4` had to remove from `app/blog`: the
+segment loading boundary streams a fallback, HTML flushes, the status locks at **200**, and
+`notFound()` can then render the 404 body but never set the 404 status.
+
+**Unaddressed by design** — no portfolio URL needs to 404 today. Recorded so that if one ever does,
+the cause is already named and the fix is known (delete the segment `loading.tsx`). Do **not** fix it
+speculatively: the loading boundary is doing real work on a gallery-heavy page, and removing it costs
+a visible loading state to close a hole nothing is falling through.
 
 ### `ON CONFLICT (slug) DO NOTHING` errors rather than updates
 

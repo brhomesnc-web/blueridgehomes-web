@@ -122,6 +122,54 @@ is not request-driven. Full shape, guards, and the health check live in `OPS.md`
 "Background Processing"; note it deliberately does **no** database work of its own, self-`fetch`ing
 an internal route so the work lands in a real request context.
 
+### Blog route caching — three settings that only make sense together
+
+Settled across three commits on 2026-08-14 (`fc5ea9c`, `87d12e7`, `d62d8d4`) while making
+**unpublish** actually remove a post from the site. **Read these as one connected set, not three
+independent settings** — each is non-obvious alone, and each is load-bearing. Every one of them is
+pinned by a test in `apps/web/tests/unpublish.test.ts`.
+
+The problem they solve: `/blog`, `/blog/<slug>` and `/sitemap.xml` are all gated on
+`published`, and all three are prerendered. **Correct revalidation IS the removal** — there is no
+delete step. So the caching configuration is not a performance choice here; it is the takedown
+mechanism.
+
+**1. `/blog` and `/sitemap.xml` are `export const revalidate = 60`** (`fc5ea9c`).
+
+They list published posts and **never call `notFound()`**, so they need an ISR surface for
+`revalidatePath` to invalidate against — but not per-request dynamism. This is the important part:
+**`revalidatePath` on a route prerendered with NO revalidate export is a silent no-op.** There is
+nothing to regenerate, the call returns cleanly, reports no error, and the static artifact keeps
+serving. That was the original unpublish bug — the `revalidatePath` calls were all present and all
+doing nothing.
+
+**2. `/blog/[slug]` is `export const dynamic = "force-dynamic"`, and must carry NO revalidate**
+(`87d12e7`).
+
+It is the **only** blog route that calls `notFound()`, and that changes everything. Under ISR, Next
+caches the 404 *content* but not the 404 *status*: the not-found body renders while the response is
+still served as **200**. force-dynamic computes the status per request, so an unpublished post's URL
+returns a true 404. The absence of a `revalidate` export here is therefore asserted by test, not
+merely left unwritten — the two settings contradict each other.
+
+**Trade, stated plainly:** a DB query per request instead of a static artifact. Negligible at current
+traffic, but it is a real load-profile change and the one cost in this set.
+
+**3. `app/blog` has NO `loading.tsx`** (`d62d8d4`, a deletion).
+
+A route-level `loading.tsx` wraps the **whole segment** in a Suspense boundary and streams its
+fallback *before* the page component runs. Once any HTML is flushed the status is locked at 200, so
+`notFound()` can render the 404 body but can no longer set the 404 status — **and no route config can
+override this, because the flush happens a layer above the page.** This is why force-dynamic alone did
+not fix it.
+
+> **⚠ Re-adding a segment loading boundary under `app/blog` silently reintroduces the 200-status
+> bug.** It will look like a harmless loading-state improvement. `tests/unpublish.test.ts` asserts the
+> file's absence for exactly this reason.
+
+`/portfolio/[slug]` has the same latent shape today — a segment `loading.tsx` above a page that calls
+`notFound()`. Unaddressed by design; see `OPS.md` → Horizon.
+
 ### UI
 
 - Tailwind v4 utilities (CSS-first; configured via `@tailwindcss/postcss` + `@theme inline` in
@@ -147,7 +195,7 @@ an internal route so the work lands in a real request context.
 | Leads | `/admin/marketing/leads` | **Built.** READ-THROUGH of `submissions` + `feedback_submissions`. No leads table, no writes anywhere. |
 | Agent-status chip + kill-switch | sidebar footer | **Built, wired to a STUB source** (`/api/admin/marketing/agent-status`, in-memory state). There is no real agent yet; Pause flips a stub flag. |
 | Date-range selector | Overview header | **Built.** Slices representative data (7 / 30 / 90 / This month / custom). Shape is production-ready for real queries. |
-| Content | `/admin/marketing/content` | **Built.** Full loop: human compose form + agent producer (`POST /api/agent/content` via `checkMarketingApiKey` — first wiring of `lib/agentAuth.ts`) enqueue `publish_post` drafts into `approval_queue`; review drawer shows full payload; Approve runs status-flip + `blog_posts` INSERT in one transaction (`lib/queueExecutor.ts`), rejecting/re-opening are side-effect-free. Slug conflict → 409, tx rolls back, nothing publishes. **Scheduling (2026-07-22):** approve accepts an optional top-level `publish_at`; the executor computes `published`, `date` and `publish_at` from it; approve revalidates `/blog` only when something actually publishes; scheduled posts flip live on the 60s tick. Posts tab is a `blog_posts` inventory with a three-state pill (Live / Scheduled / Draft) plus reschedule, publish-now and cancel via `PATCH /api/admin/marketing/content/[slug]/schedule`. |
+| Content | `/admin/marketing/content` | **Built.** Full loop: human compose form + agent producer (`POST /api/agent/content` via `checkMarketingApiKey` — first wiring of `lib/agentAuth.ts`) enqueue `publish_post` drafts into `approval_queue`; review drawer shows full payload; Approve runs status-flip + `blog_posts` INSERT in one transaction (`lib/queueExecutor.ts`), rejecting/re-opening are side-effect-free. Slug conflict → 409, tx rolls back, nothing publishes. **Scheduling (2026-07-22):** approve accepts an optional top-level `publish_at`; the executor computes `published`, `date` and `publish_at` from it; approve revalidates `/blog` only when something actually publishes; scheduled posts flip live on the 60s tick. Posts tab is a `blog_posts` inventory with a three-state pill (Live / Scheduled / Draft) plus reschedule, publish-now and cancel via `PATCH /api/admin/marketing/content/[slug]/schedule`. **Unpublish + the full draft lifecycle (2026-08-14):** a fourth `unpublish` action soft-hides a live post — `published = false` and `publish_at` NULLed in the *same* statement, because the 60s tick is a catch-up query (`publish_at <= now()`) and would otherwise republish it within a minute. Revalidation now fires on every mutation path, including `/sitemap.xml`; correct revalidation IS the removal, so see §2 → "Blog route caching" for the three route settings that had to land before it worked. Draft cards carry **`Publish now`** (one-click, no confirm) and **`Schedule →`**, routing through the existing `publish_now` / `reschedule` actions — both guard only on `published = false`, which a draft satisfies, so that fix was **UI-only**. Four origins produce a draft: queue-approve-with-a-schedule (leaves `publish_at` **set**), `unpublish`, `cancel`, and `POST /api/admin/blog` (all three leave it **NULL**); all four now have a forward path. |
 | Social | `/admin/marketing/social` | Placeholder — "Not built yet". |
 | Ads | `/admin/marketing/ads` | Placeholder — "Not built yet". |
 | Email | `/admin/marketing/email` | Placeholder — "Not built yet". |
@@ -205,12 +253,25 @@ The `published` / `publish_at` split is deliberate: deriving `published` from `p
 rewritten every read query for no gain, and the catch-up property (a missed tick publishes late
 rather than never) falls out of the predicate for free.
 
-**The publish-gate invariant, stated precisely.** Nothing can set `published = true` except
-`executeApprovedAction` (`lib/queueExecutor.ts`), reached only by approving a queue row — the
-`BLOG_AGENT_API_KEY` write doors returned **410 Gone** in `566dd15` (2026-07-22). **But `/api/blog` is
-not "closed":** a key-gated `DELETE /api/blog/[slug]` survives and can still remove a live post, and
-because no delete path revalidates it leaves a stale prerendered page behind. See `OPS.md` → Horizon →
-"Blog SSG delete gap".
+**The publish-gate invariant, stated precisely.** **Three** code paths can set `published = true`,
+and only one of them can do it to a post the queue has not already approved:
+
+1. **`executeApprovedAction`** (`lib/queueExecutor.ts`), reached only by approving a queue row. This
+   is the gate — the `BLOG_AGENT_API_KEY` write doors returned **410 Gone** in `566dd15` (2026-07-22),
+   and the session-gated admin CRUD stopped accepting `published` at all on 2026-08-14 (`0a9cf6e`),
+   400-ing on a body that carries the key.
+2. **The 60s scheduler tick** (`/api/internal/publish-due`), flipping rows that path 1 created with a
+   `publish_at`, once they come due.
+3. **`publish_now`** on the schedule route, flipping one of those rows on demand.
+
+Paths 2 and 3 act **only on rows path 1 inserted**, which is what keeps the approval queue the real
+gate. This entry previously read "nothing can set `published = true` except `executeApprovedAction`",
+which has been wrong since the scheduler shipped 2026-07-22. The inverse, `published = false`, is set
+by `unpublish` and is likewise not reachable without a session (2026-08-14).
+
+**And `/api/blog` is still not "closed":** a key-gated `DELETE /api/blog/[slug]` survives, can remove
+a live post, and — because no delete path revalidates — leaves a stale prerendered page behind. See
+`OPS.md` → Horizon → "Blog SSG delete gap".
 
 ### Leads — read-through, no table
 
@@ -342,7 +403,13 @@ dependency, unrelated to the marketing platform: no marketing page uses `generat
 and the Overview server page is `force-dynamic`. The full build completes on the VPS, where
 `DATABASE_URL` resolves.
 
+**So `npm run build` is not a valid local gate** — it fails identically at every recent commit, and a
+failure there is environmental, not a regression. (`SASL: ... client password must be a string` is the
+same thing wearing a different hat: `DATABASE_URL` present but empty.) Do not spend a round on it.
+
 To verify marketing changes locally without a database:
 
-    npx tsc --noEmit        # typecheck — should exit 0
-    npx next build          # expect "Compiled successfully", then the known portfolio failure
+    cd apps/web
+    npx tsc --noEmit        # typecheck — the real gate; must exit 0
+    npm test                # vitest; no DB harness, so no DB needed
+    npx next build          # optional: expect "Compiled successfully", then the portfolio failure
