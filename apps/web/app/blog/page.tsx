@@ -2,6 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { getAllPosts } from "@/lib/blog";
 
+// ISR surface — same reason as app/blog/[slug]/page.tsx. The index is
+// published-gated through getAllPosts(), so it goes stale on exactly the same
+// mutations, and revalidatePath("/blog") needs something to regenerate.
+export const revalidate = 60;
+
 export default async function BlogPage() {
   const posts = await getAllPosts();
 

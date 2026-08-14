@@ -7,6 +7,20 @@ import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
 
+// The ISR surface revalidatePath() acts on. Without this export the slug is
+// prerendered to a static artifact with no regeneration path, so a runtime
+// revalidatePath(`/blog/${slug}`) finds nothing to regenerate: it returns
+// cleanly, reports no error, and the build artifact keeps serving until the next
+// full build. Unpublish (0a9cf6e) was the first operation that had to invalidate
+// an ALREADY-prerendered slug, which is what exposed this — publishing a NEW
+// slug had always worked, but only because a slug absent from the prerender set
+// is rendered on demand by dynamicParams, never from a stale artifact.
+//
+// The mutation paths still call revalidatePath and remain the near-instant
+// route; 60s is the backstop for anything that changes published state without
+// going through them.
+export const revalidate = 60;
+
 export async function generateStaticParams() {
   const slugs = await getAllSlugs();
   return slugs.map((slug) => ({ slug }));

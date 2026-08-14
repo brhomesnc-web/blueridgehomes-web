@@ -158,6 +158,40 @@ describe("revalidation — every path that changes what a reader sees", () => {
   });
 });
 
+describe("the ISR surface revalidatePath acts on", () => {
+  /**
+   * The other half of the revalidation story, and the half that was missing.
+   *
+   * revalidatePath() cannot invalidate a page prerendered with no `revalidate`
+   * export: there is no regeneration path, so the call returns cleanly, reports
+   * no error, and the static artifact keeps serving. Every revalidatePath()
+   * pinned above is a no-op on these three routes without this export. Dropping
+   * it in a future edit would break unpublish silently — the DB write and the
+   * revalidate call would both still look correct.
+   */
+  it.each([
+    ["blog post", ["app", "blog", "[slug]", "page.tsx"]],
+    ["blog index", ["app", "blog", "page.tsx"]],
+    ["sitemap", ["app", "sitemap.ts"]],
+  ])("%s exports a revalidate window", (_label, parts) => {
+    expect(read(...(parts as string[]))).toMatch(
+      /^export const revalidate = \d+;$/m
+    );
+  });
+
+  it("all three windows agree, so the surfaces cannot drift apart", () => {
+    const windows = [
+      ["app", "blog", "[slug]", "page.tsx"],
+      ["app", "blog", "page.tsx"],
+      ["app", "sitemap.ts"],
+    ].map(
+      (parts) =>
+        read(...parts).match(/^export const revalidate = (\d+);$/m)?.[1]
+    );
+    expect(windows).toEqual(["60", "60", "60"]);
+  });
+});
+
 describe("the legacy publish doors are shut", () => {
   it("PUT /api/admin/blog/[slug] no longer writes published", () => {
     const update = ADMIN_CRUD.match(/UPDATE blog_posts SET[^`]*/)?.[0] ?? "";

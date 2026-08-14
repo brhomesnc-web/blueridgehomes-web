@@ -1,6 +1,11 @@
 import type { MetadataRoute } from "next";
 import { getAllSlugs } from "@/lib/blog";
 
+// ISR surface — same reason as the blog routes. getAllSlugs() filters
+// WHERE published = TRUE, so the sitemap carries identical staleness and needs
+// the identical surface for revalidatePath("/sitemap.xml") to act on.
+export const revalidate = 60;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://blueridgehomesnc.com";
   const now = new Date().toISOString();
