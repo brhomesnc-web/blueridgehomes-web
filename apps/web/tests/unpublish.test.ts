@@ -158,37 +158,51 @@ describe("revalidation — every path that changes what a reader sees", () => {
   });
 });
 
-describe("the ISR surface revalidatePath acts on", () => {
+describe("caching surfaces on the published-gated routes", () => {
   /**
-   * The other half of the revalidation story, and the half that was missing.
+   * Two deliberate and DIFFERENT designs. Either one silently breaks unpublish
+   * if it drifts, so both are pinned.
    *
-   * revalidatePath() cannot invalidate a page prerendered with no `revalidate`
-   * export: there is no regeneration path, so the call returns cleanly, reports
-   * no error, and the static artifact keeps serving. Every revalidatePath()
-   * pinned above is a no-op on these three routes without this export. Dropping
-   * it in a future edit would break unpublish silently — the DB write and the
-   * revalidate call would both still look correct.
+   * /blog and /sitemap.xml are ISR (revalidate = 60, fc5ea9c). revalidatePath()
+   * cannot invalidate a page prerendered with NO revalidate export — there is
+   * nothing to regenerate, so the call returns cleanly, reports no error, and
+   * the static artifact keeps serving. Every revalidatePath() pinned above is a
+   * no-op on those two routes without it.
+   *
+   * /blog/[slug] is force-dynamic instead, and is the one route that must NOT
+   * carry a revalidate export. It is the only one that calls notFound(), and
+   * under ISR Next caches the 404 content but not the 404 STATUS: the body
+   * renders while the response is still served as 200. Its lack of a revalidate
+   * window is therefore asserted, not merely left unasserted.
    */
-  it.each([
-    ["blog post", ["app", "blog", "[slug]", "page.tsx"]],
+  const SLUG_ROUTE = ["app", "blog", "[slug]", "page.tsx"];
+  const ISR_ROUTES: [string, string[]][] = [
     ["blog index", ["app", "blog", "page.tsx"]],
     ["sitemap", ["app", "sitemap.ts"]],
-  ])("%s exports a revalidate window", (_label, parts) => {
-    expect(read(...(parts as string[]))).toMatch(
-      /^export const revalidate = \d+;$/m
+  ];
+
+  it("the post route is force-dynamic, so notFound() yields a real 404", () => {
+    expect(read(...SLUG_ROUTE)).toMatch(
+      /^export const dynamic = "force-dynamic";$/m
     );
   });
 
-  it("all three windows agree, so the surfaces cannot drift apart", () => {
-    const windows = [
-      ["app", "blog", "[slug]", "page.tsx"],
-      ["app", "blog", "page.tsx"],
-      ["app", "sitemap.ts"],
-    ].map(
-      (parts) =>
+  it("the post route carries NO revalidate export — the two contradict", () => {
+    // A revalidate window here caches the 404 body and serves it as 200, which
+    // is precisely the bug force-dynamic exists to fix.
+    expect(read(...SLUG_ROUTE)).not.toMatch(/^export const revalidate/m);
+  });
+
+  it.each(ISR_ROUTES)("%s exports a revalidate window", (_label, parts) => {
+    expect(read(...parts)).toMatch(/^export const revalidate = \d+;$/m);
+  });
+
+  it("the two ISR windows agree, so those surfaces cannot drift apart", () => {
+    const windows = ISR_ROUTES.map(
+      ([, parts]) =>
         read(...parts).match(/^export const revalidate = (\d+);$/m)?.[1]
     );
-    expect(windows).toEqual(["60", "60", "60"]);
+    expect(windows).toEqual(["60", "60"]);
   });
 });
 

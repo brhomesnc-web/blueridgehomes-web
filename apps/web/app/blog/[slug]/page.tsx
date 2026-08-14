@@ -7,19 +7,25 @@ import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
 
-// The ISR surface revalidatePath() acts on. Without this export the slug is
-// prerendered to a static artifact with no regeneration path, so a runtime
-// revalidatePath(`/blog/${slug}`) finds nothing to regenerate: it returns
-// cleanly, reports no error, and the build artifact keeps serving until the next
-// full build. Unpublish (0a9cf6e) was the first operation that had to invalidate
-// an ALREADY-prerendered slug, which is what exposed this — publishing a NEW
-// slug had always worked, but only because a slug absent from the prerender set
-// is rendered on demand by dynamicParams, never from a stale artifact.
+// Dynamic, not ISR, and deliberately so: this is the only blog route that calls
+// notFound(). Under `export const revalidate` Next caches the 404 CONTENT but
+// not the 404 STATUS — the not-found body renders while the response is still
+// served as 200 with x-nextjs-cache: HIT. Verified on this deployment against a
+// row confirmed published = false: the regenerated artifact contained the
+// not-found markup and the origin still answered 200. A human saw the 404 page;
+// crawlers and every status-code consumer saw a live post.
 //
-// The mutation paths still call revalidatePath and remain the near-instant
-// route; 60s is the backstop for anything that changes published state without
-// going through them.
-export const revalidate = 60;
+// force-dynamic costs a function invocation per request and buys a status code
+// that is true, which is the right trade for the one route whose status has to
+// be. /blog and /sitemap.xml keep revalidate = 60 (fc5ea9c) — they list
+// published posts, never call notFound(), and their caching is worth keeping.
+//
+// Do NOT add a revalidate export back here or "optimize" this to static. The two
+// are contradictory, and it silently reintroduces the 200-status bug: the DB
+// write, the revalidatePath call and the rendered body would all still look
+// correct. generateStaticParams below is left alone — under force-dynamic it
+// simply stops prerendering, and removing it is a separate decision.
+export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
   const slugs = await getAllSlugs();
