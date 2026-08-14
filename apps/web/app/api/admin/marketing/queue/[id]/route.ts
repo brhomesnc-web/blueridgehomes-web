@@ -227,6 +227,9 @@ export async function PATCH(
     if (item.status === "approved" && didPublish) {
       revalidatePath("/blog");
       if (publishedSlug) revalidatePath(`/blog/${publishedSlug}`);
+      // /sitemap.xml is the third published-gated surface — app/sitemap.ts builds
+      // it from getAllSlugs(), which filters on published = TRUE.
+      revalidatePath("/sitemap.xml");
     }
 
     // published tells the client which confirmation to show: went-live now, or

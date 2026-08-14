@@ -23,9 +23,17 @@ export type ExecuteResult =
   | { ok: false; error: string; code: string };
 
 /**
- * This INSERT is now the ONLY code path that can set published = true. The old
- * BLOG_AGENT_API_KEY doors (POST /api/blog, PUT /api/blog/[slug]) became 410 stubs
- * in 566dd15, so there is no second writer to stay in sync with any more. The
+ * One of exactly three code paths that can set published = true, and the only one
+ * that can do it to a post the queue has not already approved. The other two act
+ * on rows this INSERT created: the 60s scheduler tick
+ * (app/api/internal/publish-due/route.ts) flips scheduled rows when they come
+ * due, and the schedule route's `publish_now` action flips one on demand.
+ *
+ * The old BLOG_AGENT_API_KEY doors (POST /api/blog, PUT /api/blog/[slug]) became
+ * 410 stubs in 566dd15, and the session-gated admin CRUD (POST /api/admin/blog,
+ * PUT /api/admin/blog/[slug]) stopped accepting `published` at all in the
+ * unpublish slice — it now 400s on a body that carries the key. So nothing
+ * outside the approval path can put a post on the site. The
  * column order here is simply blog_posts' own declared order — see
  * db/schema/blog_posts.sql, which is the reference now that the old route is gone.
  *

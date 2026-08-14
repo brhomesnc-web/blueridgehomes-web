@@ -1,5 +1,6 @@
 "use client";
 import ImagePicker from "@/components/admin/ImagePicker";
+import { normalizeTags } from "@/lib/tags";
 import BlogMarkdownEditor from "@/components/BlogMarkdownEditor";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -11,8 +12,7 @@ type Post = {
   description: string;
   content: string;
   featured_image: string;
-  tags: string;
-  published: number;
+  tags: string[] | string | null;
 };
 
 export default function AdminBlogEdit() {
@@ -25,7 +25,6 @@ export default function AdminBlogEdit() {
   const [content, setContent] = useState("");
   const [featuredImage, setFeaturedImage] = useState("");
   const [tags, setTags] = useState("");
-  const [published, setPublished] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -45,8 +44,11 @@ export default function AdminBlogEdit() {
           setDescription(p.description);
           setContent(p.content);
           setFeaturedImage(p.featured_image);
-          try { setTags(JSON.parse(p.tags).join(", ")); } catch { setTags(""); }
-          setPublished(p.published === 1);
+          // tags is jsonb, which pg hands back ALREADY PARSED. The old
+          // JSON.parse(p.tags) threw on the array, fell into a catch that set
+          // tags to "", and the next Save wrote that empty list back — the read
+          // threw, the write lost the data. normalizeTags handles both shapes.
+          setTags(normalizeTags(p.tags).join(", "));
         }
         setLoading(false);
       });
@@ -82,7 +84,6 @@ export default function AdminBlogEdit() {
       body: JSON.stringify({
         title, date, description, content, featuredImage,
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-        published,
       }),
     });
     const data = await res.json();
@@ -180,10 +181,11 @@ export default function AdminBlogEdit() {
             </div>
           )}
         </div>
-        <div style={{ ...fieldStyle, display: "flex", alignItems: "center", gap: 8 }}>
-          <input type="checkbox" id="published" checked={published} onChange={(e) => setPublished(e.target.checked)} />
-          <label htmlFor="published" style={{ fontSize: 14, color: "#3d3228" }}>Published</label>
-        </div>
+        {/* No Published checkbox. It read `p.published === 1` against a pg
+            boolean, so it rendered unchecked for every post including live ones,
+            and saving then sent published:false through a valid PUT — opening a
+            live post here and clicking Save unpublished it. Visibility is the
+            marketing admin's job now; this PUT preserves the column. */}
         {error && <p style={{ color: "#c0392b", fontSize: 14, marginBottom: 12 }}>{error}</p>}
         <div style={{ display: "flex", gap: 12 }}>
           <button type="submit" style={btnPrimary} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</button>

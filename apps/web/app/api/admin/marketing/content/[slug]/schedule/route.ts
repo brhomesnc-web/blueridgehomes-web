@@ -10,20 +10,31 @@ import { parsePublishAtLocal } from "@/lib/publishAt";
  * Session-gated, not key-gated: this is an admin surface like the queue routes,
  * not an agent door. (agentAuth/checkApiKey is for the /api/agent/* family.)
  *
- * Every action guards on `published = false`. Moving an ALREADY-LIVE post is
- * deliberately out of scope: there is no unpublish path anywhere in the admin,
- * and there could not be a safe one without a revalidation story — a post
- * removed from the DB keeps serving from the static cache until something
- * invalidates /blog. Zero rows affected therefore means "already live" and
+ * The three scheduling actions guard on `published = false`: a live post has no
+ * pending schedule left to move, so zero rows affected means "already live" and
  * returns 409 rather than silently doing nothing.
+ *
+ * `unpublish` is the inverse, and the one action here that acts ON a live post.
+ * It guards on `published = true` and returns 409 NOT_LIVE on zero rows. It is
+ * safe because it has a revalidation story, which is the thing that was missing
+ * when this file first said no such path could exist: /blog, /blog/<slug> and
+ * /sitemap.xml are all statically generated and all gated on `published`, so
+ * revalidating the three of them IS the removal — the /blog/<slug> re-render
+ * calls getPostBySlug, gets null, and the URL starts answering 404.
  */
 
-type Action = "reschedule" | "publish_now" | "cancel";
-const ACTIONS: Action[] = ["reschedule", "publish_now", "cancel"];
+type Action = "reschedule" | "publish_now" | "cancel" | "unpublish";
+const ACTIONS: Action[] = ["reschedule", "publish_now", "cancel", "unpublish"];
 
 const ALREADY_LIVE = {
   error: "That post is already live — its schedule can no longer be changed.",
   code: "already_published",
+};
+
+// Sibling to ALREADY_LIVE, for the one action whose guard runs the other way.
+const NOT_LIVE = {
+  error: "That post is not live — there is nothing to unpublish.",
+  code: "not_published",
 };
 
 export async function PATCH(
@@ -96,10 +107,41 @@ export async function PATCH(
         return NextResponse.json(ALREADY_LIVE, { status: 409 });
       }
 
-      // The one action here that changes what the public site serves.
+      // All three published-gated surfaces: /sitemap.xml is generated from
+      // getAllSlugs(), which filters on published, so it is as stale as /blog is.
       revalidatePath("/blog");
       revalidatePath(`/blog/${rows[0].slug}`);
+      revalidatePath("/sitemap.xml");
       return NextResponse.json({ ok: true, action, published: true });
+    }
+
+    if (action === "unpublish") {
+      // publish_at is cleared in the SAME statement, not a follow-up write. The
+      // 60s tick in publish-due/route.ts is a CATCH-UP query — it matches
+      // `published = false AND publish_at IS NOT NULL AND publish_at <= now()` —
+      // so a row left holding a past publish_at (which is exactly what
+      // publish_now above leaves behind) would be republished, with its own
+      // revalidation, inside a minute. Nulling publish_at is what makes an
+      // unpublish stick. Same principle as cancel, below.
+      const { rows } = await query<{ slug: string }>(
+        `UPDATE blog_posts
+            SET published = false,
+                publish_at = NULL
+          WHERE slug = $1
+            AND published = true
+        RETURNING slug`,
+        [slug]
+      );
+      if (rows.length === 0) {
+        return NextResponse.json(NOT_LIVE, { status: 409 });
+      }
+
+      // Correct revalidation IS the removal — see the docblock. Without these
+      // three the row is unpublished but every reader still sees the cached page.
+      revalidatePath("/blog");
+      revalidatePath(`/blog/${rows[0].slug}`);
+      revalidatePath("/sitemap.xml");
+      return NextResponse.json({ ok: true, action, published: false });
     }
 
     // cancel — back to an ordinary unpublished draft. Clearing publish_at is

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 
 function checkApiKey(request: Request): boolean {
@@ -34,17 +35,22 @@ export async function PUT() {
   );
 }
 
-// DELETE /api/blog/[slug] — delete via API key.
-// TODO(bypass-removal, 2026-07-23): retained deliberately. Gate B found the
-// session-gated admin DELETE (/api/admin/blog/[slug]) deletes rows but does NOT
-// revalidate /blog, and neither does this handler — a deleted post keeps serving
-// from the static cache until the next revalidation. This stays until admin delete
-// covers unpublish WITH revalidation; then remove this key-gated verb too.
+// DELETE /api/blog/[slug] — delete via API key. Retained deliberately.
+// The revalidation gap that used to justify keeping it is now closed: this
+// handler and the session-gated admin DELETE both invalidate the three
+// published-gated surfaces, and the marketing admin has a real Unpublish action.
+// Removing this key-gated verb is a separate decision from fixing its behaviour.
 export async function DELETE(request: Request, { params }: Props) {
   if (!checkApiKey(request)) {
     return NextResponse.json({ error: "Invalid or missing API key" }, { status: 401 });
   }
   const { slug } = await params;
   await query("DELETE FROM blog_posts WHERE slug = $1", [slug]);
+
+  // A deleted row is still a served page until something re-renders it.
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${slug}`);
+  revalidatePath("/sitemap.xml");
+
   return NextResponse.json({ success: true });
 }

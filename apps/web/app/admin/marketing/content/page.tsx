@@ -127,6 +127,13 @@ export default function ContentPage() {
   const [manageError, setManageError] = useState("");
   const [manageActing, setManageActing] = useState(false);
 
+  // Unpublish is two-click inline, not a modal: there is no modal-confirm pattern
+  // anywhere in this admin, and window.confirm is a legacy-admin habit. Holds the
+  // armed slug, so only the card you clicked shows the confirm label.
+  const [unpublishArmed, setUnpublishArmed] = useState<string | null>(null);
+  const [unpublishing, setUnpublishing] = useState(false);
+  const [postsError, setPostsError] = useState("");
+
   const [composeOpen, setComposeOpen] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [slugTouched, setSlugTouched] = useState(false);
@@ -274,6 +281,39 @@ export default function ContentPage() {
     }
   }
 
+  async function unpublish(post: Post) {
+    setUnpublishing(true);
+    setPostsError("");
+    try {
+      const res = await fetch(
+        `/api/admin/marketing/content/${post.slug}/schedule`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "unpublish" }),
+        }
+      );
+      const d = await res.json();
+      if (!res.ok) {
+        // 409 not_published = it stopped being live between arming and
+        // confirming. Surface the server's own wording, not a generic failure.
+        setPostsError(d.error || "Something went wrong.");
+        return;
+      }
+      setBanner({
+        text: `Unpublished /${post.slug} — it is a draft again, and the live URL now returns 404.`,
+      });
+      // Re-read rather than mutate locally: the pill, the header counts and the
+      // schedule state all derive from publish_at, which the server just nulled.
+      await loadPosts();
+    } catch {
+      setPostsError("Network error — nothing was changed.");
+    } finally {
+      setUnpublishing(false);
+      setUnpublishArmed(null);
+    }
+  }
+
   async function submitDraft() {
     setFormError("");
     const slug = form.slug.trim();
@@ -379,7 +419,10 @@ export default function ContentPage() {
               {TABS.map((t) => (
                 <button
                   key={t.key}
-                  onClick={() => setTab(t.key)}
+                  onClick={() => {
+                    setUnpublishArmed(null);
+                    setTab(t.key);
+                  }}
                   className={
                     "px-3 py-1.5 text-[12.5px] font-semibold transition-colors " +
                     (tab === t.key
@@ -402,6 +445,7 @@ export default function ContentPage() {
                   onClick={() => {
                     // Fast path: pre-fill the next recommended calendar slot so
                     // the drawer opens ready to Generate with no typing.
+                    setUnpublishArmed(null);
                     const slot = CONTENT_CALENDAR[0];
                     setGenForm(
                       slot
@@ -417,6 +461,7 @@ export default function ContentPage() {
                 </button>
                 <button
                   onClick={() => {
+                    setUnpublishArmed(null);
                     setForm({
                       ...EMPTY_FORM,
                       date: new Date().toISOString().slice(0, 10),
@@ -464,8 +509,9 @@ export default function ContentPage() {
       ) : null}
 
       <div className="mb-4 rounded-md border border-[#b7c9d6] bg-[#e9f0f4] px-4 py-2.5 text-[12.5px] text-[#3d5a68]">
-        Drafts — human or agent — land in the approval queue. <strong>Approving publishes
-        the post live</strong> in the same transaction; nothing reaches the site unreviewed.
+        Drafts — human or agent — land in the approval queue. <strong>Approving is what
+        puts a post on the site</strong>, immediately or at a scheduled time. Editing an
+        existing post never changes whether it is public; use Unpublish to take one down.
       </div>
 
       {tab === "posts" ? (
@@ -479,6 +525,11 @@ export default function ContentPage() {
           />
         ) : (
           <div className="flex flex-col gap-2">
+            {postsError ? (
+              <div className="rounded-md border border-[#d9b3ad] bg-[#f6e9e7] px-4 py-2.5 text-[12.5px] text-[#8b3a32]">
+                {postsError}
+              </div>
+            ) : null}
             {posts.map((post) => (
               <div
                 key={post.slug}
@@ -514,11 +565,13 @@ export default function ContentPage() {
                   {!post.published && post.publish_at ? (
                     <button
                       onClick={() => {
+                        setUnpublishArmed(null);
                         setManageFor(post);
                         setManageValue(post.publish_at_ny || "");
                         setManageError("");
                       }}
-                      className="shrink-0 text-[12.5px] font-semibold text-[var(--br-gold-dark)] underline"
+                      disabled={unpublishing}
+                      className="shrink-0 text-[12.5px] font-semibold text-[var(--br-gold-dark)] underline disabled:opacity-50"
                     >
                       Schedule →
                     </button>
@@ -543,6 +596,39 @@ export default function ContentPage() {
                       Not public
                     </span>
                   )}
+                  {post.published ? (
+                    <button
+                      onClick={() => {
+                        if (unpublishArmed === post.slug) {
+                          unpublish(post);
+                          return;
+                        }
+                        // Arming only. Clearing any stale error here keeps the
+                        // callout tied to the attempt in front of you.
+                        setPostsError("");
+                        setUnpublishArmed(post.slug);
+                      }}
+                      // Clicking the same button twice never blurs it, so the
+                      // confirm survives exactly as long as it has focus. The
+                      // in-flight guard matters: disabling a focused button
+                      // blurs it, which would disarm mid-request and swap the
+                      // "Working…" label back. finally does the reset instead.
+                      onBlur={() => {
+                        if (unpublishing) return;
+                        setUnpublishArmed((armed) =>
+                          armed === post.slug ? null : armed
+                        );
+                      }}
+                      disabled={unpublishing}
+                      className="rounded-md border border-[var(--br-line)] bg-white/70 px-3 py-1.5 text-[12.5px] font-semibold text-[var(--br-text-mid)] hover:bg-[var(--br-stone)] disabled:opacity-50"
+                    >
+                      {unpublishing && unpublishArmed === post.slug
+                        ? "Working…"
+                        : unpublishArmed === post.slug
+                          ? "Confirm — take it down"
+                          : "Unpublish"}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             ))}

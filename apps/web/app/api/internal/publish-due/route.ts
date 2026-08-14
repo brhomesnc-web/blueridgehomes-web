@@ -72,6 +72,9 @@ export async function POST(request: Request) {
   }
 
   revalidatePath("/blog");
+  // /sitemap.xml is the third published-gated surface — app/sitemap.ts builds it
+  // from getAllSlugs(), which filters on published = TRUE.
+  revalidatePath("/sitemap.xml");
   for (const row of rows) {
     revalidatePath(`/blog/${row.slug}`);
     // The only visibility into an unattended process. journalctl -u brhomes-web

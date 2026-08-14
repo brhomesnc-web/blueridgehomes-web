@@ -7,7 +7,7 @@ type Post = {
   slug: string;
   title: string;
   date: string;
-  published: number;
+  published: boolean;
 };
 
 export default function AdminBlogList() {
@@ -21,17 +21,6 @@ export default function AdminBlogList() {
       .then((d) => { setPosts(d.posts || []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
-
-  async function togglePublished(slug: string, currentState: number) {
-    await fetch(`/api/admin/blog/${slug}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ published: currentState ? false : true }),
-    });
-    setPosts((prev) =>
-      prev.map((p) => (p.slug === slug ? { ...p, published: currentState ? 0 : 1 } : p))
-    );
-  }
 
   async function deletePost(slug: string) {
     if (!confirm("Delete this post? This cannot be undone.")) return;
@@ -82,9 +71,6 @@ export default function AdminBlogList() {
                 </span>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button style={btnSmall} onClick={() => togglePublished(post.slug, post.published)}>
-                  {post.published ? "Unpublish" : "Publish"}
-                </button>
                 <button style={btnSmall} onClick={() => router.push(`/admin/blog/${post.slug}/edit`)}>Edit</button>
                 <button style={{ ...btnSmall, color: "#c0392b", borderColor: "#e0c8c8" }} onClick={() => deletePost(post.slug)}>Delete</button>
               </div>
