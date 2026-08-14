@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeTags } from "@/lib/tags";
@@ -191,6 +191,17 @@ describe("caching surfaces on the published-gated routes", () => {
     // A revalidate window here caches the 404 body and serves it as 200, which
     // is precisely the bug force-dynamic exists to fix.
     expect(read(...SLUG_ROUTE)).not.toMatch(/^export const revalidate/m);
+  });
+
+  it("the blog segment has NO loading.tsx above the page", () => {
+    // A route-level loading.tsx wraps the WHOLE app/blog segment in a Suspense
+    // boundary and streams its fallback before the page component runs. Once any
+    // HTML is flushed the status is locked at 200, so notFound() renders the 404
+    // body and can no longer set the 404 status — and no route config can
+    // override that, because the flush happens a layer above the page. This is
+    // what force-dynamic alone could not fix. Re-adding a segment loading
+    // boundary would silently restore the 200-status bug.
+    expect(existsSync(path.join(WEB, "app", "blog", "loading.tsx"))).toBe(false);
   });
 
   it.each(ISR_ROUTES)("%s exports a revalidate window", (_label, parts) => {
