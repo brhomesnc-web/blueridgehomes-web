@@ -132,6 +132,13 @@ export default function ContentPage() {
   // armed slug, so only the card you clicked shows the confirm label.
   const [unpublishArmed, setUnpublishArmed] = useState<string | null>(null);
   const [unpublishing, setUnpublishing] = useState(false);
+  // Publish-now fired straight from a draft card. Holds the slug rather than a
+  // bare boolean for the same reason unpublishArmed does: the label has to swap
+  // to "Working…" on the card you clicked and no other, and this action has no
+  // arming state to borrow that scoping from. In-flight only, so unlike
+  // unpublishArmed there is nothing to strand and nothing to reset.
+  const [publishingSlug, setPublishingSlug] = useState<string | null>(null);
+  const publishingNow = publishingSlug !== null;
   const [postsError, setPostsError] = useState("");
 
   const [composeOpen, setComposeOpen] = useState(false);
@@ -311,6 +318,46 @@ export default function ContentPage() {
     } finally {
       setUnpublishing(false);
       setUnpublishArmed(null);
+    }
+  }
+
+  // The inverse of unpublish(), and a draft card's one-click way into the
+  // publish_now action. The manage modal already reaches the same action through
+  // manageSchedule, but that modal exists to edit a datetime — a draft has none,
+  // and making someone open a dialog to pick nothing is the gap this closes.
+  // No arming step, unlike unpublish: the card this produces carries Unpublish,
+  // so a mis-click costs one more click rather than a post nobody meant to ship.
+  async function publishNow(post: Post) {
+    setPublishingSlug(post.slug);
+    setPostsError("");
+    try {
+      const res = await fetch(
+        `/api/admin/marketing/content/${post.slug}/schedule`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "publish_now" }),
+        }
+      );
+      const d = await res.json();
+      if (!res.ok) {
+        // 409 already_published = it went live between this render and the
+        // click. Surface the server's own wording, as unpublish does.
+        setPostsError(d.error || "Something went wrong.");
+        return;
+      }
+      setBanner({
+        text: `Published to /blog/${post.slug}`,
+        href: `/blog/${post.slug}`,
+      });
+      // Re-read rather than mutate locally: the pill, the header counts and the
+      // whole action set derive from published/publish_at, and the server just
+      // wrote both.
+      await loadPosts();
+    } catch {
+      setPostsError("Network error — nothing was changed.");
+    } finally {
+      setPublishingSlug(null);
     }
   }
 
@@ -562,15 +609,41 @@ export default function ContentPage() {
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
-                  {!post.published && post.publish_at ? (
+                  {/* Drafts only. A scheduled post already has a publish_at, and
+                      Publish now for that one lives inside its manage modal —
+                      putting a second copy on the card would give the same
+                      action two homes. */}
+                  {!post.published && !post.publish_at ? (
+                    <button
+                      onClick={() => {
+                        setUnpublishArmed(null);
+                        publishNow(post);
+                      }}
+                      disabled={publishingNow || unpublishing}
+                      className="rounded-md border border-[var(--br-gold-dark)] bg-[var(--br-gold)] px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-[var(--br-gold-dark)] disabled:opacity-50"
+                    >
+                      {publishingSlug === post.slug ? "Working…" : "Publish now"}
+                    </button>
+                  ) : null}
+                  {/* Any post that is not live — not just one already carrying a
+                      schedule. The old `&& post.publish_at` gate meant a plain
+                      draft, which is what unpublish, cancel and POST
+                      /api/admin/blog all leave behind, could never open this
+                      modal at all — even though reschedule guards on
+                      `published = false` and would have accepted it all along. */}
+                  {!post.published ? (
                     <button
                       onClick={() => {
                         setUnpublishArmed(null);
                         setManageFor(post);
+                        // NULL for a draft, so the input opens empty. That is
+                        // already handled: manageSchedule("reschedule") refuses
+                        // an empty value with "Pick a date and time first."
+                        // rather than sending a request that cannot succeed.
                         setManageValue(post.publish_at_ny || "");
                         setManageError("");
                       }}
-                      disabled={unpublishing}
+                      disabled={unpublishing || publishingNow}
                       className="shrink-0 text-[12.5px] font-semibold text-[var(--br-gold-dark)] underline disabled:opacity-50"
                     >
                       Schedule →
@@ -619,7 +692,7 @@ export default function ContentPage() {
                           armed === post.slug ? null : armed
                         );
                       }}
-                      disabled={unpublishing}
+                      disabled={unpublishing || publishingNow}
                       className="rounded-md border border-[var(--br-line)] bg-white/70 px-3 py-1.5 text-[12.5px] font-semibold text-[var(--br-text-mid)] hover:bg-[var(--br-stone)] disabled:opacity-50"
                     >
                       {unpublishing && unpublishArmed === post.slug
