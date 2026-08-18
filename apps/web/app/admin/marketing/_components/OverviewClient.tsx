@@ -1,7 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
 import {
-  ResponsiveContainer,
   BarChart,
   Bar,
   LineChart,
@@ -20,7 +19,7 @@ import {
   Legend,
   ReferenceArea,
 } from "recharts";
-import { Card, SectionHeader, KpiCard } from "./ui";
+import { ChartCard, SectionHeader, KpiCard } from "./ui";
 import { BRAND, CHART_COLORS, SEMANTIC } from "./palette";
 import DateRangeSelector, { DEFAULT_RANGE, type DateRange } from "./DateRangeSelector";
 
@@ -78,32 +77,6 @@ function windowFor(preset: DateRange["preset"]): number {
     default:
       return 12;
   }
-}
-
-function ChartCard({
-  title,
-  hint,
-  height = 240,
-  children,
-}: {
-  title: string;
-  hint?: string;
-  height?: number;
-  children: React.ReactElement;
-}) {
-  return (
-    <Card className="p-4">
-      <div className="mb-1 flex items-baseline justify-between">
-        <h3 className="text-[14px] font-semibold text-[var(--br-text)]">{title}</h3>
-        {hint ? <span className="text-[11px] text-[var(--br-text-muted)]">{hint}</span> : null}
-      </div>
-      <div style={{ width: "100%", height }}>
-        <ResponsiveContainer width="100%" height="100%">
-          {children}
-        </ResponsiveContainer>
-      </div>
-    </Card>
-  );
 }
 
 const axisProps = {
