@@ -1508,6 +1508,35 @@ Run manually in app directory:
 
 Resolve code/build issue before restarting the service.
 
+### A 503 that means the opposite of what it says
+
+`/api/internal/ingest-analytics` answers **503 "not available yet"** from a single
+`catch` around its staleness query. Two unrelated faults land there and produce a
+byte-identical response:
+
+1. the DDL genuinely has not been applied (`42P01 undefined_table`); and
+2. the query itself is malformed, on a database where both tables already exist.
+
+The analytics slice was written with exactly that second fault latent. The
+staleness threshold was bound as `($1 || ' hours')::interval`; node-postgres sends
+bind parameters with no type OIDs, so both operands of `||` were `unknown` and
+Postgres raises `operator is not unique: unknown || unknown`. Corrected to
+`($1::int * interval '1 hour')`, which needs no inference.
+
+Worth a named entry because of how it would have failed: every tick would have
+reported "not available yet" against a correctly migrated database, forever — and
+the obvious operator response, re-applying `db/schema/*.sql`, would have confirmed
+the tables were already present without changing the symptom at all. Two
+instruments agreeing with each other rather than with reality.
+
+**The rule this earns.** A catch-all that collapses many causes into one
+operator-facing message must still tell them apart. That route now selects the
+"tables are not present" wording only on `42P01`, says merely "not available yet"
+for anything else, and logs the driver's own message either way. So when a degrade
+path answers 503, read the journal before touching the schema:
+
+    sudo journalctl -u brhomes-web -n 200 --no-pager | grep '\[ingest\]'
+
 ### Nginx test fails
 
 Do not reload nginx.

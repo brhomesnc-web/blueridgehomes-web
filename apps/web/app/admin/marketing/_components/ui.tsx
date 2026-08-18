@@ -1,20 +1,21 @@
-// Presentational primitives for the marketing platform. No hooks, so both server
-// pages and client pages can import them.
+// Presentational primitives for the marketing platform. No hooks / no "use client"
+// so both server pages (Overview) and client pages (Queue, Leads) can import them.
 // Styling: Tailwind v4 utilities + the brand CSS-var palette from globals.css.
 //
-// "use client" as of the analytics slice. ChartCard (lifted here from
-// OverviewClient so Analytics and Overview share one chart frame) wraps
-// Recharts' ResponsiveContainer, and Recharts 3.9.2 ships NO "use client" banner
-// of its own while calling createContext at module scope in 28 files. Six
-// NotBuiltYet server pages import this module, so without a declared boundary
-// their RSC graph stays clean only because Recharts marks those calls
-// /*#__PURE__*/ and sets sideEffects:false, letting the bundler shake the unused
-// import out.
+// ONE CAVEAT, added by the analytics slice: ChartCard (lifted here from
+// OverviewClient so Analytics and Overview share one chart frame) imports
+// Recharts' ResponsiveContainer. Recharts 3.9.2 ships NO "use client" banner of
+// its own and calls createContext at module scope in 28 files. Six server pages
+// import this module for NotBuiltYet alone (ads, assets, email, market-data,
+// reviews, social), so their RSC graph stays clean only because Recharts marks
+// those calls /*#__PURE__*/ and sets sideEffects:false, letting the bundler shake
+// the unused import out.
 //
-// MEASURED, not assumed: `npx next build` DOES compile with this line removed.
-// The directive is here so correctness rests on a boundary we declare rather
-// than on tree-shaking continuing to hold across a Recharts upgrade.
-"use client";
+// MEASURED, not assumed: `npx next build` compiles. A "use client" directive here
+// would make that guarantee independent of tree-shaking, and was deliberately NOT
+// taken — it would turn six server pages into client components today to defend
+// against a Recharts upgrade that may never happen. If one ever does break the
+// shaking, the build fails LOUDLY; add the directive at that point, not before.
 import React from "react";
 import { ResponsiveContainer } from "recharts";
 
