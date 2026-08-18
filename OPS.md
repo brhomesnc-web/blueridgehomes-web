@@ -700,10 +700,16 @@ Fix: **Settings → Capabilities → Code execution → Domain allowlist → All
 
 ### Credential mechanism — and why this entry is no longer a path
 
-**This entry has been wrong twice, in two different ways, because it recorded a PATH.** A path is not
-the unit of truth here. The question is not where a file sits on some disk, it is *what reads it,
-from where, at run time* — and every time that changed, a correct-looking path silently became a
-lie. The mechanism is what survives.
+**This entry went stale because it recorded a PATH.** A path is not the unit of truth here. The
+question is not where a file sits on some disk, it is *what reads it, from where, at run time* — and
+when that changed, a still-correct-looking path silently became a lie. The mechanism is what
+survives.
+
+Precisely, since the distinction is the whole lesson: **two folder-based mechanisms have now been
+tried and both are structurally dead**, but only the first ever reached this file — the entry was
+introduced once, in `72dac1b` (2026-07-23), and changed only by this sweep. The doc was not wrong
+twice; it was wrong once and silent about the second attempt, which is the same failure wearing a
+different coat.
 
 **The working mechanism (2026-08-18).** The API key is attached as a **file on the Cowork project**
 "New BRHOMESNC Website". A **cloud-executing scheduled task** in that project reads it when it fires.
