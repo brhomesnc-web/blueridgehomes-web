@@ -698,13 +698,33 @@ the request never left the sandbox. Do not go digging through systemd, nginx or 
 
 Fix: **Settings → Capabilities → Code execution → Domain allowlist → All domains.**
 
-### Key location
+### Credential mechanism — and why this entry is no longer a path
 
-    C:\Users\wncre\ClaudeShare\brhomes-agent-key.txt      (Brian's Windows machine)
+**This entry has been wrong twice, in two different ways, because it recorded a PATH.** A path is not
+the unit of truth here. The question is not where a file sits on some disk, it is *what reads it,
+from where, at run time* — and every time that changed, a correct-looking path silently became a
+lie. The mechanism is what survives.
 
-A **dedicated single-file folder** granted to Cowork — deliberately not Desktop or Downloads, since
-granting either would expose everything in them. The value is `MARKETING_AGENT_API_KEY`.
-**Never commit the value.**
+**The working mechanism (2026-08-18).** The API key is attached as a **file on the Cowork project**
+"New BRHOMESNC Website". A **cloud-executing scheduled task** in that project reads it when it fires.
+The value is `MARKETING_AGENT_API_KEY`. **Never commit the value.**
+
+**Both folder-based mechanisms are structurally dead** — not misconfigured, and not fixable by
+trying harder:
+
+| Mechanism | Why it cannot work |
+| --- | --- |
+| Session-scoped grant (`remoteSessionFolderGrants`) | Cannot be pre-registered for a session that does not exist yet. A scheduled task creates its session when it fires, so there is nothing to grant against beforehand. |
+| A scheduled task's working-folder field | Setting it **forces the task to run locally** — per Anthropic's docs a task requiring local files runs only locally. That reintroduces the machine dependency the schedule exists to remove. |
+
+Anthropic's documentation states scheduled tasks work with connectors and with files saved to the
+Claude account, and cannot be tied to a folder on a computer.
+[Anthropic docs + Cowork UI, read 2026-08-18 — NOT verifiable from this repo.]
+
+**The superseded answer, kept so it is not re-proposed:** a dedicated single-file folder at
+`C:\Users\wncre\ClaudeShare\`, granted to Cowork rather than Desktop or Downloads (granting
+either would expose everything in them). It is still correct for an **interactive** session. A
+scheduled cloud task never sees it — which is the whole reason the project-file mechanism exists.
 
 ### Security posture
 
@@ -1179,26 +1199,37 @@ typography pass.
 Real issues, deliberately not being fixed right now. Recorded so they are found on purpose rather
 than rediscovered mid-incident. None of these has an owner or a date.
 
-### ⭐ North star — and the fact that it is not being served
+### ⭐ North star — served for the first time on 2026-08-18
 
 **The objective is a Cowork-driven marketing platform that produces content across all modules.**
 
-The Cowork→queue pipe was **proven end to end on 2026-07-23**: key-gated HTTPS direct from the Cowork
-sandbox, no MCP needed. See "Cowork Integration" and the 2026-07-23 Session Log entry.
+**Both halves are now proven.** For four sessions this entry recorded a working pipe with nothing
+going through it. That is no longer the state:
 
-**What is missing is the *producing* half.** Cowork is **not provisioned to generate content on a
-cadence**, so the queue is not being fed and no new content is being produced. The pipe works and
-nothing is going through it.
+- **The pipe** — key-gated HTTPS direct from the Cowork sandbox, no MCP. Proven **2026-07-23**.
+- **The producer** — a **cloud** scheduled task, reading a credential attached to the Cowork project,
+  generating a draft and filing it unattended. Proven **2026-08-18**.
 
-**Four sessions have now gone deep on the Content module's manual admin. None has advanced Cowork
-toward producing.** This note exists so that is impossible to keep missing.
+**The first unattended sandbox-origin POST landed 2026-08-18:** `approval_queue` row **6**, status
+`pending`, generated and filed by a cloud scheduled task with **no human anywhere in the credential
+path**. That is the entire loop closing — a machine nobody prompted, using a credential nobody
+handed it, putting a reviewable draft in front of a person.
+[Operator-reported / VPS-verified 2026-08-18. **The row id and timestamp are UNVERIFIED from this
+repo** — the queue lives in Postgres on the VPS. Operator to confirm with
+`SELECT id, created_at, status, module, action FROM approval_queue ORDER BY id DESC LIMIT 5;` and
+correct this entry if row 6 is not the one.]
 
-**The next session's objective is the shortest path to Cowork putting a real draft in the queue** — a
-**recon** of what is provisioned on the Cowork side today (Project, Skills, scheduled tasks) and the
-gap to weekly production, **before any build**.
+**What this does not yet mean.** One row is not a cadence, and the credential mechanism it depends on
+is a project-attached file — see "Cowork Integration" → "Credential mechanism" for why both folder
+approaches are dead and why the connector route (request headers, now a documented beta) is the
+strictly better end state, since the credential would live server-side and never enter the sandbox at
+all.
 
-SEO, Social, and the other modules remain entirely ahead. This is the item Working Principle 5 exists
-to protect; everything below it in this Horizon is subordinate to it.
+**What is now ahead**, in the order the evidence argues for it: the **service × location** slice —
+the first-ingest baseline shows location intent already outranking service intent two-to-four-fold
+(see `MARKETING_PLATFORM.md` §4 → "Baseline"), so this is indicated by measurement rather than
+preference. SEO, Social, and the remaining modules follow. This is still the item Working Principle 5
+exists to protect; everything below it in this Horizon remains subordinate to it.
 
 ### middleware → proxy convention
 
@@ -1420,15 +1451,34 @@ entries being ignored. See "Cowork Integration".
 - ~~**External Cowork agent → `/api/agent/content`**~~ — **DONE 2026-07-23.** Cowork files drafts
   through the key-gated door and reads state through `/api/agent/{posts,queue}`. See
   "Cowork Integration".
-- **nginx `client_max_body_size`** — full-resolution phone photos (8 MB+) are rejected by **nginx**
-  with `413 Content Too Large` before the request ever reaches the app; small/optimized images upload
-  fine. The upload route itself is not at fault. Fix is an nginx config raise (~`20M`) in the
-  brhomes server block plus a reload — **Brian applies nginx changes himself** per the Safety Rules
-  and the Nginx Safety Procedure; it is deliberately not scripted. Workaround today: resize before
-  uploading.
-- **Client-side 413 handling** — on a 413 the ImagePicker sits on "Uploading…" indefinitely instead
-  of surfacing the error. Small local fix, low priority, but it makes the nginx limit above look like
-  a hang rather than a rejection.
+- ~~**nginx `client_max_body_size`**~~ — **RESOLVED 2026-08-18**, raised to **`25M`**
+  [VPS-verified], not the `~20M` originally proposed here. Full-resolution phone photos were being
+  rejected by nginx with `413 Content Too Large` before the request reached the app; the upload route
+  was never at fault. See Troubleshooting → "Image pipeline".
+- **Client-side upload error surfacing** — still open, and the mechanism is now known rather than
+  guessed: `handleUpload` in `ImagePicker.tsx` has no `try`/`catch` and calls `await res.json()`
+  unconditionally, so nginx's **HTML** 413 body makes `res.json()` throw *before*
+  `setUploading(false)` runs — a permanent "Uploading…" spinner from an unhandled rejection. There is
+  no `res.ok` check either, so a well-formed JSON error also fails silently. Small local fix.
+- **HEIC conversion on upload ingest** — iPhone uploads arrive as HEIC and render in no browser but
+  Safari. The upload route writes bytes verbatim with no format check, and the picker's
+  `accept="image/*"` includes HEIC on iOS. Convert on ingest, or reject with a real message.
+- **Structural tests for the analytics slice** — it shipped with none; see "Testing — what the
+  existing harness can and cannot catch" for the specific rule that would have caught the bug that
+  slipped.
+- **Overview KPI honesty pass** — now urgent rather than cosmetic, because Analytics ships measured
+  numbers one nav item away from Overview's invented ones, under identical `KpiCard` chrome.
+  **Website Visitors** is derivable today from `analytics_daily.sessions` and should be wired.
+  **Blended CPL**, **Marketing ROI** and **Lead → Contract** need spend and contract data that
+  nothing ingests, so those should go **visibly empty**, not stay plausible. **Google Review Avg**
+  pairs with the GBP reviews work.
+- **Connector upgrade path for the Cowork credential** — **Request headers** in *Add custom
+  connector* is now a documented beta. That is strictly better than a project-attached file: the
+  credential would live **server-side and never enter the sandbox at all**. The 2026-07-23 note
+  recording this as unavailable is superseded.
+  [Anthropic docs, read 2026-08-18 — NOT verifiable from this repo.]
+- **Service-account key rotation** — `GOOGLE_SERVICE_ACCOUNT_KEY` has no rotation procedure and no
+  expiry. It joins the existing rotation backlog above.
 - **Untyped `/api/admin/*` fetch boundary** — admin fetches use `r.json()`, which is `any`, so
   object-vs-array shape mismatches are invisible to `tsc`. That is exactly how the ImagePicker
   crash (`5db6f1c`) stayed hidden until runtime. Worth a scoped audit — grep admin fetch sites for
@@ -1443,6 +1493,39 @@ entries being ignored. See "Cowork Integration".
 
 Standing caution: any VPS-side edit made outside git is lost when `deploy.sh` re-syncs the box to
 `origin/main`. Commit changes to the repo, or they vanish on the next deploy.
+
+---
+
+## Testing — what the existing harness can and cannot catch
+
+The suite is `vitest run` over `apps/web/tests/`, four files as of 2026-08-18. **Every assertion in
+it reads source TEXT.** There is no DOM harness for the admin client components, no fetch mock, and
+**no harness anywhere that executes SQL**. That is a deliberate limit, but it has to be stated
+plainly or the green run means more than it should.
+
+**The analytics slice (2026-08-18) shipped with no tests at all.** Every prior slice shipped
+structural tests; this one did not. Recorded as a gap, not excused.
+
+**The bug that slipped, and the honest reason a test would not have caught it.** The ingest route
+bound its staleness threshold as:
+
+    ($1 || ' hours')::interval
+
+node-postgres sends bind parameters with **no type OIDs**, so both operands of `||` were `unknown`
+and Postgres raises `operator is not unique: unknown || unknown`. It reached the route's own catch
+and surfaced as a **503 "not available yet"** — byte-identical to the unapplied-DDL response. See
+Troubleshooting → "A 503 that means the opposite of what it says".
+
+**A behaviour test would not have found this**, and claiming otherwise would be the same false
+comfort the bug itself produced: nothing in this repo runs SQL, so no test here can observe Postgres
+refusing to resolve an operator. The catchable rule is **structural**, and it is worth writing as one:
+
+> **Every bind parameter in a SQL string carries an explicit cast** — `$1::int`, `$1::text` — or is
+> consumed by an operator whose other operand is already typed. A bare `$1` beside an untyped literal
+> is a latent `operator is not unique`.
+
+That is greppable and would have failed on the line above. **This is a rule, not claimed coverage:**
+no test currently enforces it. Writing one that does is the Horizon item.
 
 ---
 
@@ -1536,6 +1619,62 @@ for anything else, and logs the driver's own message either way. So when a degra
 path answers 503, read the journal before touching the schema:
 
     sudo journalctl -u brhomes-web -n 200 --no-pager | grep '\[ingest\]'
+
+#### Two more instances of the same shape, both found 2026-08-18
+
+The pattern generalises past that one route: **a check that cannot distinguish the states it is being
+trusted to distinguish.** Two live examples, kept because both cost real time.
+
+**1. A presence check standing in for a correctness check.**
+
+    grep -c -E '^(GA4_PROPERTY_ID|GSC_SITE_URL|GOOGLE_SERVICE_ACCOUNT_KEY)=' .env.local   # → 3
+
+This returned **3**, and one of the three values was **empty**. `grep -c` counts lines matching a
+NAME; it says nothing whatever about the value after the `=`. The check confirmed exactly the thing
+that was not in doubt. **Use a length check:**
+
+    awk -F= '/^(GA4_PROPERTY_ID|GSC_SITE_URL|GOOGLE_SERVICE_ACCOUNT_KEY)=/ {print $1, length($2)}' .env.local
+
+Any line reporting `0` is present-and-empty — which fails at run time exactly like absent, but passes
+every check written to look for the name.
+
+**2. A diagnostic artifact mistaken for the fault.** A `curl` against `/_next/image` returned **400**
+on a file known to be good, and that 400 was read as an app fault. It was not: the 400 was an
+artifact of how the probe was constructed. **The real signal was the optimizer's own `received null`**
+in the journal. When a probe and a log disagree, the log is describing the system and the probe is
+describing the probe.
+
+**The rule, stated once:** before trusting a green check, ask what a *failing* system would return
+from that same check. If the answer is "the same thing", the check is decorative.
+
+### Image pipeline — HEIC, upload size, and one thing that is NOT diagnosed
+
+**HEIC.** iPhone uploads arrive as **HEIC**, which renders in **no browser but Safari**. Nothing in
+this repo converts them: `app/api/admin/upload/route.ts` sanitises the filename and writes the bytes
+**verbatim** with `fs.writeFileSync` — there is no format check, no transcode, and despite the
+`optimized/` path nothing optimises. `ImagePicker.tsx` sets `accept="image/*"` on the file input,
+which on iOS **includes** HEIC. So a HEIC upload succeeds, is stored, and is then invisible to most
+visitors. Conversion-on-ingest is a Horizon item.
+
+**Upload size.** nginx `client_max_body_size` was raised to **25M** [VPS-verified 2026-08-18] after
+full-resolution phone photos were rejected with `413 Content Too Large` **before the request reached
+the app**. This supersedes the `~20M` figure previously proposed under Horizon → "Still open".
+
+**The 413 hid behind a UI defect** — worth reading, because the symptom named the wrong layer.
+`handleUpload` in `ImagePicker.tsx` has **no `try`/`catch`** and calls `await res.json()`
+unconditionally. nginx's 413 body is **HTML**, so `res.json()` **throws** — and it throws *before*
+`setUploading(false)` on the next line. The result is an unhandled rejection in an async event
+handler and a permanent **"Uploading…"** spinner. There is also no `res.ok` check at all, so even a
+well-formed JSON error would fall through `if (data.path)` and do nothing, silently. The rejection
+looked exactly like a hang. Fix is client-side and small; it is a Horizon item.
+
+**`location /optimized/` and `received null` — SUSPECTED, NOT DIAGNOSED.** nginx carries an
+`alias` block for `/optimized/`. Newly added files have been observed producing `received null` from
+the Next image optimizer. **These two facts have not been shown to be cause and effect** and are
+recorded here only so the next person does not rediscover the coincidence and assume it. Note the
+deploy already symlinks `.next/standalone/public/optimized` at the real `public/optimized`, so
+"the file is not visible to the server" is a hypothesis to test, not an explanation to repeat. Do
+not write this up as a cause until someone actually traces it.
 
 ### Nginx test fails
 

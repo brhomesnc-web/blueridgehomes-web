@@ -42,6 +42,28 @@ would carry `x-api-key` is unavailable on this account; it stays an upgrade path
 Operational detail, key location, the egress fix and the security posture live in `OPS.md` →
 "Cowork Integration".
 
+**How the credential reaches the sandbox** (established 2026-08-18; supersedes two earlier
+folder-based answers): the API key is attached as a **file on the Cowork project** "New BRHOMESNC
+Website", and a **cloud-executing scheduled task** in that project reads it at run time. The
+credential travels with the project, not with a machine.
+
+**Both folder mechanisms are structurally dead** — not misconfigured, and not fixable by configuring
+them more carefully:
+
+- **Session-scoped grants (`remoteSessionFolderGrants`) cannot be pre-registered for a session that
+  does not exist yet.** A scheduled task creates its session when it fires, so there is nothing to
+  grant against beforehand.
+- **Setting a scheduled task's working-folder field forces the task to run locally.** Anthropic's
+  documentation states a task requiring local files runs only locally — so choosing a folder converts
+  a cloud task into a machine-dependent one, which is precisely the dependency a schedule exists to
+  remove.
+
+Per Anthropic's documentation, scheduled tasks work with connectors and with files saved to the
+Claude account, and **cannot be tied to a folder on a computer**. A file on the project is therefore
+the mechanism, not a workaround.
+[Anthropic docs + Cowork UI, read 2026-08-18 — NOT verifiable from this repo.]
+Full operational detail lives in `OPS.md` → "Cowork Integration" → "Credential mechanism".
+
 **This is NOT the old `/marketing/` static SPA.** That is a separate, pre-existing artifact
 served directly by nginx from `/var/www/brhomes-marketing/`, superseded by this platform and
 pending decommission. See `OPS.md` → "VPS Artifacts — Pending Decommission". Nothing in this
@@ -200,12 +222,31 @@ not fix it.
 | Ads | `/admin/marketing/ads` | Placeholder — "Not built yet". |
 | Email | `/admin/marketing/email` | Placeholder — "Not built yet". |
 | Reviews | `/admin/marketing/reviews` | Placeholder — "Not built yet". |
-| Analytics | `/admin/marketing/analytics` | Placeholder — "Not built yet". |
+| Analytics | `/admin/marketing/analytics` | **Built 2026-08-18.** Every number is measured — no representative series anywhere on this page. GSC top queries and top landing pages (clicks / impressions / CTR / impression-weighted position), GA4 sessions by channel, over a trailing 28-day window. Requires `db/schema/analytics_daily.sql` and `db/schema/search_console_daily.sql` applied on the VPS; until then it renders `EmptyState`, never a zero. See §4 → "The analytics ingest". |
 | Market Data | `/admin/marketing/market-data` | Placeholder — "Not built yet". |
 | Assets | `/admin/marketing/assets` | Placeholder — "Not built yet". |
 
-Every nav item has a home; the eight placeholders render a branded slot so the shell is complete
-and no link dead-ends.
+Every nav item has a home; the seven remaining placeholders render a branded slot so the shell is
+complete and no link dead-ends.
+
+### Content house rules — what a generated draft must and must not contain
+
+Binding on every producer, human or agent. These are editorial constraints, not lint rules; nothing
+in the codebase enforces them today, which is exactly why they are written down.
+
+- **No dollar figures, percentages, or lead times stated as fact.** A generated draft does not know
+  what a kitchen costs in Weaverville. Write the claim as `[VERIFY: typical range for a mid-tier
+  kitchen remodel, WNC, 2026]` inline and leave it for a human to resolve or cut.
+- **No opening title heading.** The blog template owns the `<h1>`; a draft that opens with one
+  renders two titles stacked. Start at `##`.
+- **Tags: 3–6.** Fewer under-files the post; more dilutes every tag it touches.
+
+**Known violation, uncorrected:** the live post `kitchen-remodel-cost-western-north-carolina`
+breaks the first two rules. Recorded rather than quietly fixed so the rules have a worked example
+and so the correction is a deliberate editorial pass, not a silent edit.
+[Operator-reported 2026-08-18 — the post lives in `blog_posts` on the VPS, NOT in this repo, so it
+is NOT verifiable from source. Confirm with
+`SELECT slug, LEFT(content, 200) FROM blog_posts WHERE slug = 'kitchen-remodel-cost-western-north-carolina';`]
 
 ---
 
@@ -294,6 +335,95 @@ Stage mapping from the existing `submissions.status`:
 invented. AI fit-scoring is likewise absent. Both arrive with the v2 enrichment layer, which
 gets its own table.
 
+### The analytics ingest — `analytics_daily` + `search_console_daily`
+
+Shipped 2026-08-18. The first measured-data path in the platform; everything before it was either a
+read-through of `submissions` or representative.
+
+**Two tables**, both keyed so a re-ingest of the same day updates rather than duplicates:
+
+| Table | Grain | Columns beyond the key |
+| --- | --- | --- |
+| `analytics_daily` | `(date, channel)` | `sessions`, `users`, `conversions`, `ingested_at` |
+| `search_console_daily` | `(date, query, page)` | `clicks`, `impressions`, `ctr`, `position`, `ingested_at` |
+
+`channel` is GA4's `sessionDefaultChannelGroup` verbatim — not normalised, so the admin panel and the
+GA4 UI agree. `ctr` is stored as GSC returns it, a **0..1 fraction, not a percentage**.
+
+**Auth — no Google SDK.** `lib/googleAuth.ts` signs a JWT assertion with **`jose`** (already a
+dependency for admin session cookies) and exchanges it at `oauth2.googleapis.com/token` for a
+short-lived access token, cached in module scope until shortly before expiry. Neither `googleapis`
+nor `google-auth-library` is installed and this slice deliberately did not add them. Scopes are
+`analytics.readonly` and `webmasters.readonly` — both read-only.
+
+**Ingest.** `lib/analyticsIngest.ts` calls GA4 `runReport`
+(`analyticsdata.googleapis.com/v1beta/properties/{id}:runReport`) and Search Console
+`searchanalytics.query`
+(`searchconsole.googleapis.com/webmasters/v3/sites/{siteUrl}/searchAnalytics/query`), then upserts
+each into its table with `ON CONFLICT DO UPDATE`.
+
+**Why a trailing window rather than "yesterday".** Search Console lags 2–3 days **and back-fills** —
+the row for a given date keeps changing for days afterward. Ingesting only yesterday would
+permanently record partial numbers. Every run therefore re-walks a trailing **7-day** window
+(`DEFAULT_TRAILING_DAYS`) and lets `ON CONFLICT` overwrite, so late-arriving clicks land.
+
+**The GA4 metric is `keyEvents`, not `conversions`** — Google renamed it in 2024 and retired the old
+name. `ingestGa4` requests `keyEvents` and falls back **once** to `conversions` on a 400, so a
+property still answering to the legacy name keeps working. **The database column stays
+`conversions`**: the schema should not churn because a vendor renamed a metric.
+
+**`rowLimit` is capped at 25,000** (`GSC_ROW_LIMIT`, the API maximum) and **pagination is NOT
+implemented**. A response arriving exactly at the cap logs a truncation warning naming `startRow`
+rather than silently reporting a clean row count. At this site's volume the cap is headroom, not a
+limit.
+
+**The door.** `app/api/internal/ingest-analytics/route.ts`, POST only, gated by
+`checkApiKey(request, process.env.PUBLISH_SCHEDULER_KEY)`. **The existing scheduler key is reused
+deliberately** — both doors are the same trust boundary (a timer in this same process, reading the
+same `EnvironmentFile`), and a second secret is a second thing to forget to set. Returns
+`{ok, ga4Rows, gscRows}`; 503 when the DDL is unapplied, matching how `publish-due` degrades.
+
+**The timer, and why it is hourly rather than daily.** `register()` in `instrumentation.ts` gained a
+second `setInterval` at **1 hour**. `setInterval` has **no calendar semantics** and its clock
+restarts from zero on **every deploy** — on a box that gets deployed most days, a naked 24h timer
+would fire approximately never. So the tick is hourly and cheap, and **the route itself no-ops
+unless the newest `ingested_at` is older than ~20 hours**. The last-run marker therefore lives **in
+the table, not in process memory**, and survives the restart that resets the clock.
+
+#### Environment
+
+| Variable | Form | Trap |
+| --- | --- | --- |
+| `GA4_PROPERTY_ID` | numeric property id | **Not** the `G-` measurement id. |
+| `GSC_SITE_URL` | URL-prefix, with scheme and trailing slash | `sc-domain:` is a **different resource**. Pointing at the wrong one returns **empty rows, not an error** — the ingest looks like it worked. |
+| `GOOGLE_SERVICE_ACCOUNT_KEY` | base64 of the service-account JSON, one line | See below. |
+
+**`GOOGLE_SERVICE_ACCOUNT_KEY` is the first base64-encoded secret in this repo**, and the encoding is
+load-bearing rather than cosmetic: the service-account JSON contains a PEM private key with
+**embedded newlines**, and `EnvironmentFile=` cannot carry them — systemd reads one `KEY=value` per
+line. Base64 flattens the whole document to a single line. Re-encode with `base64 -w0 key.json` and
+store it **unquoted**, same rule as every other value in `.env.local`.
+
+#### Baseline — first ingest, 2026-08-18
+
+Recorded as a dated baseline so later movement is measurable against something rather than asserted.
+**This is evidence, not opinion**, and it is the justification for the service × location slice.
+
+- **768 impressions / 28 days, average position 42.3, ~0 clicks.** The site is indexed and
+  essentially never seen — position 42 is page four.
+- **Homepage carries 399 impressions at position 36.3** — over half of all impressions land on the
+  one page that ranks for nothing specific.
+- **Service-area pages outrank service pages, decisively:** weaverville **32.1**, hendersonville
+  **33.5**, black-mountain **34.8** — against custom-homes **74.9** and consulting **51.2**.
+- **Best service pages:** additions **24.8**, remodeling **25.6**.
+
+**What it argues.** Location intent is already ranking two to four times better than service intent.
+The pages that exist are competing on the hardest, broadest terms while the terms the site actually
+places for have no dedicated page. Service × location is therefore the indicated next slice on
+evidence, not on preference.
+[VPS-verified 2026-08-18 by operator, read from `search_console_daily` after the first ingest — NOT
+verifiable from this repo.]
+
 ---
 
 ## 5. Deferred / v2 Backlog
@@ -368,6 +498,25 @@ Both are done by hand on the VPS, deliberately, outside any build or deploy:
   column is backward-compatible so early application is safe, whereas the reverse order gives you a
   live app querying a column that does not exist. Note the `ALTER` was required *in addition to* the
   `CREATE` block edit — see §2 → Database.
+
+- [ ] **(d) Analytics ingest prerequisites** — **outstanding as of 2026-08-18.** Same ordering rule
+  as (c): DDL and env **first**, deploy **second**.
+
+        # 1. the two tables
+        psql -p 5433 -d brhomes -f /var/www/brhomes/apps/web/db/schema/analytics_daily.sql
+        psql -p 5433 -d brhomes -f /var/www/brhomes/apps/web/db/schema/search_console_daily.sql
+
+        # 2. three values appended to .env.local, unquoted
+        GA4_PROPERTY_ID=<numeric property id, not the G- measurement id>
+        GSC_SITE_URL=<URL-prefix form, with scheme and trailing slash>
+        GOOGLE_SERVICE_ACCOUNT_KEY=<base64 -w0 of the service-account JSON, one line>
+
+  **Verify the values with a LENGTH check, not a presence check** — `grep -c` counts NAMES and
+  returns 3 for three variables one of which is empty. See `OPS.md` → "A 503 that means the opposite
+  of what it says". No new key is needed: the route reuses `PUBLISH_SCHEDULER_KEY`.
+
+  Until applied, the route answers 503 and the Analytics panel renders `EmptyState`. Nothing else
+  breaks.
 
 When these flip to done, tick them here — that is the only doc follow-up a deploy requires.
 
