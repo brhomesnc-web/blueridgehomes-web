@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       `SELECT LEAST(
                 COALESCE((SELECT max(ingested_at) FROM analytics_daily),       'epoch'::timestamptz),
                 COALESCE((SELECT max(ingested_at) FROM search_console_daily),  'epoch'::timestamptz)
-              ) < now() - ($1 || ' hours')::interval AS is_stale,
+              ) < now() - ($1::int * interval '1 hour') AS is_stale,
               to_char(
                 LEAST(
                   COALESCE((SELECT max(ingested_at) FROM analytics_daily),      'epoch'::timestamptz),
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
                 ) AT TIME ZONE 'America/New_York',
                 'YYYY-MM-DD HH24:MI'
               ) AS last_ingest`,
-      [String(STALE_AFTER_HOURS)]
+      [STALE_AFTER_HOURS]
     );
     staleness = rows[0];
   } catch (err) {
