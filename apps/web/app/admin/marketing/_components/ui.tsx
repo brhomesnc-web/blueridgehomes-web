@@ -1,7 +1,22 @@
-// Presentational primitives for the marketing platform. No hooks / no "use client"
-// so both server pages (Overview) and client pages (Queue, Leads) can import them.
+// Presentational primitives for the marketing platform. No hooks, so both server
+// pages and client pages can import them.
 // Styling: Tailwind v4 utilities + the brand CSS-var palette from globals.css.
+//
+// "use client" as of the analytics slice. ChartCard (lifted here from
+// OverviewClient so Analytics and Overview share one chart frame) wraps
+// Recharts' ResponsiveContainer, and Recharts 3.9.2 ships NO "use client" banner
+// of its own while calling createContext at module scope in 28 files. Six
+// NotBuiltYet server pages import this module, so without a declared boundary
+// their RSC graph stays clean only because Recharts marks those calls
+// /*#__PURE__*/ and sets sideEffects:false, letting the bundler shake the unused
+// import out.
+//
+// MEASURED, not assumed: `npx next build` DOES compile with this line removed.
+// The directive is here so correctness rests on a boundary we declare rather
+// than on tree-shaking continuing to hold across a Recharts upgrade.
+"use client";
 import React from "react";
+import { ResponsiveContainer } from "recharts";
 
 /* ── Surfaces ── */
 
@@ -142,6 +157,43 @@ export function KpiCard({
         {delta ? (
           <span className={`text-[12px] font-semibold ${deltaColor}`}>{delta}</span>
         ) : null}
+      </div>
+    </Card>
+  );
+}
+
+/* ── Chart frame ── */
+
+/**
+ * The shared frame around every Recharts chart: card, title row, optional hint,
+ * fixed height, ResponsiveContainer.
+ *
+ * Lifted verbatim out of OverviewClient (where it was file-local and unexported)
+ * when Analytics needed the same frame. Presentation is byte-for-byte what
+ * Overview already rendered — if you change the markup here, you are changing
+ * the Overview dashboard too.
+ */
+export function ChartCard({
+  title,
+  hint,
+  height = 240,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  height?: number;
+  children: React.ReactElement;
+}) {
+  return (
+    <Card className="p-4">
+      <div className="mb-1 flex items-baseline justify-between">
+        <h3 className="text-[14px] font-semibold text-[var(--br-text)]">{title}</h3>
+        {hint ? <span className="text-[11px] text-[var(--br-text-muted)]">{hint}</span> : null}
+      </div>
+      <div style={{ width: "100%", height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          {children}
+        </ResponsiveContainer>
       </div>
     </Card>
   );
