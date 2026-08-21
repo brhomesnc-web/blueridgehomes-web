@@ -188,6 +188,62 @@ describe("the five routes are in the sitemap", () => {
   });
 });
 
+describe("no service x location page is an orphan", () => {
+  /**
+   * The parent /services/<slug>/page.tsx files hardcode these hrefs rather than
+   * deriving them from serviceLocations -- those five pages are literal-JSX clones
+   * and interpolating one paragraph out of an array would refactor a third of them.
+   * Hardcoding is only safe with a guard in BOTH directions, which is what these two
+   * tests are: nothing in the data module goes unlinked, and nothing linked is
+   * missing from the data module.
+   */
+  const parentSource = new Map(
+    Array.from(new Set(serviceLocations.map((e) => e.service))).map((service) => [
+      service,
+      read("app", "services", service, "page.tsx"),
+    ])
+  );
+
+  it.each(serviceLocations.map((e) => [`${e.service}/${e.town}`, e] as const))(
+    "%s is linked from its parent services page",
+    (_label, entry) => {
+      const src = parentSource.get(entry.service) as string;
+      expect(
+        src,
+        `app/services/${entry.service}/page.tsx does not link /services/${entry.service}/${entry.town}`
+      ).toContain(`href="/services/${entry.service}/${entry.town}"`);
+    }
+  );
+
+  it("every service x location href on a parent page resolves to an entry", () => {
+    const known = new Set(serviceLocations.map((e) => `/services/${e.service}/${e.town}`));
+    for (const [service, src] of parentSource) {
+      const found = Array.from(
+        src.matchAll(/href="(\/services\/[a-z0-9-]+\/[a-z0-9-]+)"/g)
+      );
+      for (const match of found) {
+        const href = match[1];
+        expect(known.has(href), `${service}/page.tsx links ${href}, which is not an entry`).toBe(
+          true
+        );
+      }
+    }
+  });
+
+  it("no town is linked twice on the same parent page", () => {
+    // A town promoted to a service x location page must not also keep its
+    // /service-areas/<town> link on the same page -- two comma-lists of the same
+    // place names side by side is the duplicate navigation this slice merged away.
+    for (const entry of serviceLocations) {
+      const src = parentSource.get(entry.service) as string;
+      expect(
+        src.includes(`href="/service-areas/${entry.town}"`),
+        `${entry.service}/page.tsx links ${entry.town} both deep and shallow`
+      ).toBe(false);
+    }
+  });
+});
+
 describe("the reciprocal links this slice adds", () => {
   it("the page links up to /services/<service>", () => {
     expect(PAGE).toContain("href={`/services/${entry.service}`}");

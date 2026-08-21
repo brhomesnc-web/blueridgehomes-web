@@ -247,7 +247,9 @@ export default function CustomHomesPage() {
             <div className="br-container">
               <p className="br-lead" style={{ textAlign: "center", maxWidth: 760, margin: "0 auto" }}>
                 We build custom homes in{" "}
-                <Link href="/service-areas/weaverville">Weaverville</Link>,{" "}
+                <Link href="/services/custom-homes/asheville">Asheville</Link>{" and "}
+                <Link href="/services/custom-homes/weaverville">Weaverville</Link>, with a closer
+                look at what building in each involves. We also build in{" "}
                 <Link href="/service-areas/hendersonville">Hendersonville</Link>,{" "}
                 <Link href="/service-areas/black-mountain">Black Mountain</Link>,{" "}
                 <Link href="/service-areas/mills-river">Mills River</Link>,{" "}
