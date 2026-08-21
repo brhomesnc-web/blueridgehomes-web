@@ -57,12 +57,14 @@ const KNOWN_PROJECT_SLUGS = [
  * Every specific factual claim in lib/serviceLocations.ts that no cited public
  * source settles is left wrapped as a marker for the owner. This number only ever
  * goes DOWN. It was 26 when the slice shipped; the public-record patch closed ten
- * of them against City of Asheville, Buncombe County, and NC code sources.
+ * against City of Asheville, Buncombe County, and NC code sources, and the C1/C2/C3
+ * pass closed two more by phone -- permit review time and driveway grade -- while
+ * replacing the ICF inspection question with a narrower one about scheduling.
  *
  * Fails high: someone added an unsourced claim. Fails low: someone resolved a
  * marker -- good, lower this number in the same commit so the ratchet keeps holding.
  */
-const EXPECTED_UNRESOLVED = 16;
+const EXPECTED_UNRESOLVED = 14;
 
 describe("the services segment has no loading boundary", () => {
   it("app/services/loading.tsx does NOT exist", () => {
@@ -253,6 +255,22 @@ describe("the [VERIFY:] ratchet", () => {
       expect(DATA, `resolved item came back as a marker: ${gone}`).not.toContain(
         `[VERIFY: ${gone}`
       );
+    }
+  });
+
+  it("provenance tags stay in comments and never reach rendered copy", () => {
+    // Resolved items carry an operator-reported / confirmed-with date so the claim
+    // can be re-checked later. That belongs beside the code, not in front of a
+    // homeowner: every such line must be a comment.
+    // String.fromCharCode(10) rather than a regex literal: this assertion has
+    // been mangled once by backslash handling in the tooling that wrote it, and
+    // it carries no backslash now so it cannot be mangled again. trim() drops the
+    // carriage return along with the indentation.
+    for (const raw of DATA.split(String.fromCharCode(10))) {
+      const line = raw.trim();
+      if (line.toLowerCase().includes("operator-reported")) {
+        expect(line.startsWith("//"), line).toBe(true);
+      }
     }
   });
 
