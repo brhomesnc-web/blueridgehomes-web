@@ -80,6 +80,10 @@ export const serviceLocations: ServiceLocation[] = [
     // Review-time figure: operator-reported, confirmed with the City of Asheville
     // 2026-08-21. The city publishes no review-time target; this came from asking
     // Development Services directly.
+    // NEC 230.79(C) as adopted in NC sets a minimum rating for the service
+    // DISCONNECTING MEANS at 100 A, 3-wire — not a minimum service size. Actual size
+    // comes from the Article 220 load calculation. Copy states the decision rather
+    // than a typical amperage for this reason.
     localDetail:
       "Asheville’s terrain shapes a remodel as much as it shapes new construction. Sloped lots mean crawl spaces and daylight basements rather than slabs, and that is usually where a renovation finds its surprises: moisture, undersized framing, and mechanical runs that were never meant to be permanent." +
       "\n\n" +
@@ -89,7 +93,7 @@ export const serviceLocations: ServiceLocation[] = [
       "\n\n" +
       "The city also has fourteen National Register historic districts, and those are not the same thing. A contributing structure in a National Register district is not subject to Historic Resources Commission design review at all; it is eligible for historic rehabilitation tax credits instead. Same words, opposite practical effect — one adds a review step, the other adds a funding option. Getting that wrong costs either a month of unnecessary process or a rejected permit." +
       "\n\n" +
-      "Electrical service is the other thing we assess early on older housing stock, and it is less about what a given vintage of house “usually” carries than about what the new load needs. Induction cooking, a heat-pump water heater, or an EV charger can push a house past what the existing panel and service will carry, and a service upgrade is a line item that belongs in the scope rather than in a change order at rough-in. [VERIFY: the minimum service size the NC Residential Code requires for a one-family dwelling, and the service size a modern kitchen or whole-home remodel load commonly requires]" +
+      "Electrical service is the other thing we assess early on Asheville’s older housing stock, and there is no typical amperage for a given vintage worth quoting. The code floor is a 100-amp service disconnect; actual size comes from a load calculation, not a rule of thumb. What matters on an older house is that the calculation gets run before demo, not after. Induction cooking, a heat-pump water heater, or an EV charger each add substantial load, and a panel that was adequate for the house as built often isn’t for the house as remodeled. A service upgrade is a scoped line item when that’s the case — not something discovered at rough-in." +
       "\n\n" +
       "Plaster-and-lath walls change both the demolition method and what can realistically be done for insulation. None of this is a reason not to remodel. It is a reason to have it priced honestly before demolition rather than discovered after.",
     faqs: [
@@ -197,8 +201,15 @@ export const serviceLocations: ServiceLocation[] = [
     // sequence to enumerate, because the structural engineer’s third-party report
     // is the approval of record and the county inspector performs a presence check.
     // Only the scheduling mechanics remain open; see the marker in the copy.
+    // Wind speed: Table R301.2(5), ULTIMATE DESIGN WIND SPEED FOR MOUNTAIN REGIONS,
+    // Chapter 3 (Building Planning), 2018 North Carolina Residential Code — the
+    // edition Asheville enforces for plans submitted on or after 2019-01-01. Note:
+    // UpCodes serves the 2018 NCRC at a URL path ending "irc-2015" because it is
+    // based on the 2015 IRC; the path is not an edition mismatch. Corroborated
+    // against Buncombe County’s commercial plan-review checklist (115 mph floor,
+    // elevation-dependent above).
     localDetail:
-      "Mountain sites are where ICF makes its clearest case. Temperature swings are wide here, and the thermal mass of a concrete core flattens them, so the mechanical system cycles less. On exposed ridge lots wind loading matters too — and in these mountains the design wind speed is not one countywide number. Since the 2018 code cycle it is determined by the first-floor finish elevation, and the code assigns special wind regions near mountainous terrain to local jurisdiction determination. Buncombe County’s own plan-review materials give a base figure and then immediately qualify it by elevation, so the speed that governs your house is settled with the county at plan review rather than looked up in a table. [VERIFY: the base design wind speed Buncombe County applies, and the elevation above which a higher category takes over] That is worth saying plainly, because it is true here and not true in the Piedmont." +
+      "Mountain sites are where ICF makes its clearest case. Temperature swings are wide here, and the thermal mass of a concrete core flattens them, so the mechanical system cycles less. On exposed ridge lots wind loading matters too, and wind design in Buncombe County is set by elevation rather than by a single county-wide number. The 2018 North Carolina Residential Code, Table R301.2(5), keys the ultimate design wind speed to first-floor finish elevation: 115 mph below 2,700 feet, then 120 mph to 3,000, 130 mph to 3,500, 140 mph to 4,500, and 150 mph at or above that. Asheville sits at roughly 2,100 feet, so most homes in the city and the surrounding valley fall in the 115 mph band — but a ridge lot a few miles away can land a category or two higher, and that changes framing connections, sheathing attachment, and window DP ratings. It is confirmed at plan review against the finish floor elevation, which is a reason to have it settled before framing is priced." +
       "\n\n" +
       "Because ICF often pairs with a full basement or a daylight foundation on a sloped Asheville lot, the same crew and the same forming system can carry from footing to roof line, which is part of where the cost efficiency comes from. Where the budget will not carry a full envelope, a concrete-core lower level under conventional framing above is a common compromise." +
       "\n\n" +
@@ -246,6 +257,10 @@ export const serviceLocations: ServiceLocation[] = [
       "Preston Court is our whole-home remodel in Weaverville — a complete interior renovation rather than a surface refresh. That is most of what we do here: kitchens taken back to the framing, baths rebuilt from the drain up, and walls removed with the beam work to carry what they were holding." +
       "\n\n" +
       "We have built extensively in this area, which is a practical advantage on a renovation rather than a sentimental one. We know which subcontractors show up, how the inspections schedule, and what the houses in a given neighborhood tend to be hiding.",
+    // NEC 230.79(C) as adopted in NC sets a minimum rating for the service
+    // DISCONNECTING MEANS at 100 A, 3-wire — not a minimum service size. Actual size
+    // comes from the Article 220 load calculation. Copy states the decision rather
+    // than a typical amperage for this reason.
     localDetail:
       "Jurisdiction is the first thing to establish on a Weaverville remodel, and it is two offices in sequence rather than one. Inside the town limits, the Town of Weaverville approves zoning first, before a permit application can proceed — the same arrangement applies in Biltmore Forest and Woodfin. The building permit and the inspections then come from Buncombe County Permits and Inspections in Asheville, which serves the unincorporated county and, by contractual agreement, those three towns. There is no separate Weaverville building department." +
       "\n\n" +
@@ -253,7 +268,7 @@ export const serviceLocations: ServiceLocation[] = [
       "\n\n" +
       "Many homes outside the town center are on well and septic rather than public utilities, and that matters more on a remodel than people expect. A septic system’s design capacity is rated in bedrooms — not in square feet, and not in fixtures. A system permitted for a three-bedroom house cannot serve a fourth bedroom without an expansion, and an expansion goes through Buncombe County Environmental Health on essentially the same path as new construction, with the added step of locating the existing tank, drain field, and repair area, usually from the original permit on file. Adding a bathroom generally does not change the bedroom count and often triggers none of this. Adding a bedroom does. That is the distinction homeowners get wrong when they scope an addition, and it is worth settling before a wall is drawn rather than after." +
       "\n\n" +
-      "Sloped lots are common through Reems Creek and Settlers Cove, so crawl spaces and daylight basements are the norm, and that is where moisture and framing issues surface first on a walkthrough. On older homes closer to the town center, electrical service is the other early assessment — not because a given vintage “usually” carries a particular size, but because a modern kitchen load, a heat-pump water heater, or an EV charger may exceed what the existing panel and service can carry. [VERIFY: the minimum service size the NC Residential Code requires for a one-family dwelling, and the service size a modern remodel load commonly requires]",
+      "Sloped lots are common through Reems Creek and Settlers Cove, so crawl spaces and daylight basements are the norm, and that is where moisture and framing issues surface first on a walkthrough. On older homes closer to the town center, electrical service is the other early assessment. The code floor is a 100-amp service disconnect, but the size that actually applies comes out of a load calculation rather than a rule of thumb, and the calculation belongs before demo rather than after. Add induction cooking, a heat-pump water heater, or an EV charger and the load climbs; a panel that suited the house as built often won’t suit it as remodeled. Where that happens we scope the service upgrade as a line item up front, instead of surfacing it at rough-in.",
     faqs: [
       {
         q: "Do you work in Weaverville often, or mostly in Asheville?",
