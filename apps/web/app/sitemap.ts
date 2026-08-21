@@ -26,6 +26,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/service-areas/black-mountain`, changeFrequency: "monthly" as const, priority: 0.7 },
     { url: `${base}/service-areas/mills-river`, changeFrequency: "monthly" as const, priority: 0.7 },
     { url: `${base}/service-areas/brevard`, changeFrequency: "monthly" as const, priority: 0.7 },
+    // Service x location pages — app/services/[service]/[town]. Hardcoded,
+    // like everything else in this list: the sitemap is not filesystem-walked,
+    // so a new route family never appears on its own. Keep in sync with
+    // lib/serviceLocations.ts; tests/service-locations.test.ts asserts each pair.
+    { url: `${base}/services/remodeling/asheville`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${base}/services/custom-homes/asheville`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${base}/services/icf-construction/asheville`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${base}/services/remodeling/weaverville`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${base}/services/custom-homes/weaverville`, changeFrequency: "monthly" as const, priority: 0.8 },
   ];
   const projectSlugs = [
     "breezeway", "green-river", "195-meadow-creek", "23-woodbine-rd",
