@@ -247,7 +247,9 @@ export default function RemodelingPage() {
             <div className="br-container">
               <p className="br-lead" style={{ textAlign: "center", maxWidth: 760, margin: "0 auto" }}>
                 We offer whole home remodeling in{" "}
-                <Link href="/service-areas/weaverville">Weaverville</Link>,{" "}
+                <Link href="/services/remodeling/asheville">Asheville</Link>{" and "}
+                <Link href="/services/remodeling/weaverville">Weaverville</Link>, where we have
+                written up what a remodel in each actually involves. We also work in{" "}
                 <Link href="/service-areas/hendersonville">Hendersonville</Link>,{" "}
                 <Link href="/service-areas/black-mountain">Black Mountain</Link>,{" "}
                 <Link href="/service-areas/mills-river">Mills River</Link>,{" "}

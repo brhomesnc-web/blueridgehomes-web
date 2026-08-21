@@ -247,6 +247,8 @@ export default function ICFConstructionPage() {
             <div className="br-container">
               <p className="br-lead" style={{ textAlign: "center", maxWidth: 760, margin: "0 auto" }}>
                 We offer ICF construction in{" "}
+                <Link href="/services/icf-construction/asheville">Asheville</Link>, where most of
+                our ICF work has been, and in{" "}
                 <Link href="/service-areas/weaverville">Weaverville</Link>,{" "}
                 <Link href="/service-areas/hendersonville">Hendersonville</Link>,{" "}
                 <Link href="/service-areas/black-mountain">Black Mountain</Link>,{" "}
