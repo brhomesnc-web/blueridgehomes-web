@@ -51,6 +51,19 @@ const KNOWN_PROJECT_SLUGS = [
   "robin-porch",
 ];
 
+/**
+ * The [VERIFY:] ratchet.
+ *
+ * Every specific factual claim in lib/serviceLocations.ts that no cited public
+ * source settles is left wrapped as a marker for the owner. This number only ever
+ * goes DOWN. It was 26 when the slice shipped; the public-record patch closed ten
+ * of them against City of Asheville, Buncombe County, and NC code sources.
+ *
+ * Fails high: someone added an unsourced claim. Fails low: someone resolved a
+ * marker -- good, lower this number in the same commit so the ratchet keeps holding.
+ */
+const EXPECTED_UNRESOLVED = 16;
+
 describe("the services segment has no loading boundary", () => {
   it("app/services/loading.tsx does NOT exist", () => {
     // Identical reasoning to the blog guard at tests/unpublish.test.ts:196-205.
@@ -208,5 +221,46 @@ describe("the reciprocal links this slice adds", () => {
     for (const href of expected) {
       expect(weaverville).toContain(href);
     }
+  });
+});
+
+describe("the [VERIFY:] ratchet", () => {
+  const DATA = read("lib", "serviceLocations.ts");
+  const markers = DATA.match(/\[VERIFY:[^\]]*\]/g) ?? [];
+
+  it(`lib/serviceLocations.ts carries exactly ${EXPECTED_UNRESOLVED} unresolved markers`, () => {
+    expect(markers).toHaveLength(EXPECTED_UNRESOLVED);
+  });
+
+  it("every marker states an actual claim, not an empty placeholder", () => {
+    for (const marker of markers) {
+      expect(marker.length, marker).toBeGreaterThan(30);
+    }
+  });
+
+  it("the resolved public-record items did not come back as markers", () => {
+    // These ten were closed against cited sources. A marker reappearing here means
+    // someone reverted a resolution without lowering EXPECTED_UNRESOLVED.
+    for (const gone of [
+      "the permit office with jurisdiction over",
+      "which Asheville neighborhoods carry local historic district",
+      "whether Asheville applies a steep-slope or hillside development ordinance",
+      "the disturbed-area threshold that triggers",
+      "which permitting authority has jurisdiction",
+      "whether adding a bedroom or bathroom to a septic-served home",
+      "the typical soil evaluation and septic permit process and duration",
+    ]) {
+      expect(DATA, `resolved item came back as a marker: ${gone}`).not.toContain(
+        `[VERIFY: ${gone}`
+      );
+    }
+  });
+
+  it("no marker leaks into the page, the sitemap, or the town page", () => {
+    // The page renders markers out of the data module; none should be hardcoded
+    // into a component, where the ratchet above would never see it.
+    expect(PAGE).not.toContain("[VERIFY:");
+    expect(SITEMAP).not.toContain("[VERIFY:");
+    expect(read("app", "service-areas", "weaverville", "page.tsx")).not.toContain("[VERIFY:");
   });
 });
