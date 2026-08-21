@@ -89,6 +89,19 @@ export default function WeavervillePage() {
             </div>
           </section>
 
+          {/* Reciprocal links to the service x location pages. Before this slice
+              the town -> service link count in this repo was zero. */}
+          <section className="br-section" style={{ paddingBottom: 0 }}>
+            <div className="br-container">
+              <p className="br-lead" style={{ textAlign: "center", maxWidth: 760, margin: "0 auto" }}>
+                Go deeper on what we build here:{" "}
+                <Link href="/services/custom-homes/weaverville">custom home building in Weaverville</Link>
+                {" and "}
+                <Link href="/services/remodeling/weaverville">whole-home remodeling in Weaverville</Link>.
+              </p>
+            </div>
+          </section>
+
           <section className="br-section">
             <div className="br-container">
               <h2 className="br-title br-title-center">Our Work in Weaverville</h2>
