@@ -103,7 +103,7 @@ export const serviceLocations: ServiceLocation[] = [
       },
       {
         q: "How long does a whole-home remodel in Asheville take?",
-        a: "Duration is driven by scope and by how much the house surprises us once it is open. A full interior renovation typically runs [VERIFY: typical duration of a whole-home interior renovation, in months]. Permitting sits in front of that, not inside it.",
+        a: "Four to nine months, depending on the size of the house and how deep the remodel goes. A kitchen and two baths sits at the short end; taking a house down to studs and reworking the layout sits at the long end. Permitting sits in front of that, not inside it.",
       },
       {
         q: "Can you work from my architect’s or designer’s drawings?",
@@ -144,7 +144,7 @@ export const serviceLocations: ServiceLocation[] = [
     localDetail:
       "Most buildable land left inside Asheville is sloped, and slope is the cost driver. Cut-and-fill, retaining walls, and a driveway that has to climb the lot are line items that never appear on a stock plan. Asheville sets residential driveway grade in two tiers: 10% maximum across the first ten feet at the street, and 14% maximum beyond the apron. Variances are granted regularly and steeper drives exist throughout the city, but the apron figure is the harder of the two to design around — it’s a fixed constraint at the property edge rather than something you can spread over the run. On a lot that drops away from the road, it often decides where the driveway can enter at all." +
       "\n\n" +
-      "Worth knowing early: the driveway is usually the largest single cut on a steep site, so it drives the disturbed-area total and can pull a project across the one-acre erosion permit threshold on its own. Where it meets a state road it also pulls an NCDOT encroachment review. Rock is the other wildcard — [VERIFY: how commonly rock is encountered on Asheville building lots, and the typical cost impact of removal]." +
+      "Worth knowing early: the driveway is usually the largest single cut on a steep site, so it drives the disturbed-area total and can pull a project across the one-acre erosion permit threshold on its own. Where it meets a state road it also pulls an NCDOT encroachment review. Rock is the other wildcard. We hit rock on roughly three lots in ten. What it costs depends entirely on what kind: rock a trackhoe can move is a schedule item, rock that has to be hammered out is a different conversation. That is why we will not quote a rock allowance as a flat figure — the range between those two cases is wider than any average would suggest. What we do instead is look at the lot before you are committed to a foundation plan." +
       "\n\n" +
       "New residential construction inside the city is permitted through the City of Asheville Development Services Department at the Permit Application Center, which handles new houses and accessory dwelling units alongside additions and remodels. Sewer is a separate authority: the Metropolitan Sewerage District of Buncombe County runs its own approval procedure and has to be contacted independently of the city. That one catches people who assume a single application covers the whole site." +
       "\n\n" +
@@ -162,11 +162,11 @@ export const serviceLocations: ServiceLocation[] = [
       },
       {
         q: "What does a custom home cost per square foot in Asheville?",
-        a: "Per-square-foot is the wrong unit on a mountain site, because two identical houses on two different lots do not cost the same — site work, foundation type, and access can separate them substantially. For a current range on comparable builds, see [VERIFY: current custom home cost range per square foot for the Asheville market]. We price from the actual site and the actual plan.",
+        a: "Custom homes in the Asheville market currently run $300 to $500 per square foot, and above that where site conditions or finish level push it. The spread is mostly site and selections, not framing. Per-square-foot is still the wrong unit to plan from on a mountain site, because two identical houses on two different lots do not cost the same — site work, foundation type, and access can separate them substantially. We price from the actual site and the actual plan.",
       },
       {
         q: "How long does a custom home take to build?",
-        a: "From permit to final inspection, plan on [VERIFY: typical construction duration for a custom home in the Asheville market, in months], with design and permitting ahead of that. Weather, inspection scheduling, and long-lead material items are the usual variables.",
+        a: "Nine to twelve months from groundbreaking to certificate of occupancy for a typical custom home, with design and permitting ahead of that. Weather, inspection scheduling, and long-lead material items are the usual variables.",
       },
       {
         q: "Do you provide the plans, or do I bring my own?",
@@ -193,7 +193,7 @@ export const serviceLocations: ServiceLocation[] = [
     intro:
       "Insulated concrete forms build a wall as one assembly: rigid foam on both faces, steel-reinforced concrete in the middle, poured in place. There are no studs to bridge heat across, no cavities to fill imperfectly, and no gaps at the plate lines. What the homeowner notices is not the wall — it is that the rooms hold an even temperature and the house is quiet." +
       "\n\n" +
-      "The Breezeway is our ICF build in South Asheville: a contemporary home with wood and steel exterior accents and floor-to-ceiling glass, on an ICF envelope. From the street it reads as a custom home, which is the point. ICF accepts stone, siding, stucco, and brick, and nothing about the finished exterior announces the wall system behind it." +
+      "We built our first ICF structure in 2006 and have been building with the system for twenty years. The Breezeway is our ICF build in South Asheville: a contemporary home with wood and steel exterior accents and floor-to-ceiling glass, on an ICF envelope. From the street it reads as a custom home, which is the point. ICF accepts stone, siding, stucco, and brick, and nothing about the finished exterior announces the wall system behind it." +
       "\n\n" +
       "ICF is not the right answer for every project or every budget, and we will say so. It earns its cost on sites where comfort, energy use, sound, and storm resistance are all worth paying for at once — and it is a decision that has to be made before the foundation, not after.",
     // ICF wall inspection: operator-reported 2026-08-21. This one inverted the
@@ -208,18 +208,26 @@ export const serviceLocations: ServiceLocation[] = [
     // based on the 2015 IRC; the path is not an edition mismatch. Corroborated
     // against Buncombe County’s commercial plan-review checklist (115 mph floor,
     // elevation-dependent above).
+    // Energy: percentage deliberately not published. Sources range 4-60% and split
+    // along funding lines; see the marker patch document. Copy argues envelope control
+    // and thermal mass instead, per owner direction 2026-08-21.
+    // 2006 ICF start date, owner-reported 2026-08-21.
     localDetail:
       "Mountain sites are where ICF makes its clearest case. Temperature swings are wide here, and the thermal mass of a concrete core flattens them, so the mechanical system cycles less. On exposed ridge lots wind loading matters too, and wind design in Buncombe County is set by elevation rather than by a single county-wide number. The 2018 North Carolina Residential Code, Table R301.2(5), keys the ultimate design wind speed to first-floor finish elevation: 115 mph below 2,700 feet, then 120 mph to 3,000, 130 mph to 3,500, 140 mph to 4,500, and 150 mph at or above that. Asheville sits at roughly 2,100 feet, so most homes in the city and the surrounding valley fall in the 115 mph band — but a ridge lot a few miles away can land a category or two higher, and that changes framing connections, sheathing attachment, and window DP ratings. It is confirmed at plan review against the finish floor elevation, which is a reason to have it settled before framing is priced." +
       "\n\n" +
       "Because ICF often pairs with a full basement or a daylight foundation on a sloped Asheville lot, the same crew and the same forming system can carry from footing to roof line, which is part of where the cost efficiency comes from. Where the budget will not carry a full envelope, a concrete-core lower level under conventional framing above is a common compromise." +
       "\n\n" +
-      "ICF walls aren’t inspected the way framing is. The rebar layout and concrete specification are designed by a structural engineer, and on most jobs the engineer’s third-party inspection report is what constitutes the approval of record. The county inspector’s role at the wall is a presence check — confirming the steel is in before the pour. Practically, that means the engineering has to be lined up before the forms go up, and the report has to arrive; it isn’t something the county catches for you if it’s missing. What is left open is scheduling mechanics only — [VERIFY: whether the pre-pour is scheduled as one inspection or two in Buncombe County]." +
+      "ICF walls aren’t inspected the way framing is. The rebar layout and concrete specification are designed by a structural engineer, and the engineer’s third-party report is the approval of record for them. The county’s part is one inspection: an inspector confirms the steel is in before the pour. Practically, that means the engineering has to be lined up before the forms go up, and the report has to arrive; it isn’t something the county catches for you if it’s missing." +
       "\n\n" +
-      "On energy performance, be careful with the numbers you read anywhere, including here. Published comparisons of ICF against conventional wood framing range from roughly 10 percent to 44 percent savings depending on who funded the study, and the industry-sponsored figures sit at the top of that range while the independent ones sit near the bottom. We would rather describe the mechanism, which nobody disputes: continuous insulation with no thermal bridging through studs, a tight envelope, and thermal mass that flattens the daily swing. If you want a number, ask us for a real utility history from a finished house. [VERIFY: whether to publish an energy-savings percentage at all and, if so, which single source to name in the sentence — the published range is not reconcilable and an unattributed figure is a liability]",
+      "R-value is the number the industry argues about, and it is the least interesting thing about an ICF wall. Published energy-savings comparisons range from single digits to over fifty percent depending on who commissioned the study, which is a good reason not to quote one." +
+      "\n\n" +
+      "What actually distinguishes the assembly is that air, moisture, and airborne contaminants do not pass through it. Every intake and exhaust in an ICF house is mechanical and deliberate — you know what is entering the building, at what rate, and through what filter. A framed wall leaks by design and the leakage is managed afterward. That is an indoor air quality difference before it is an energy difference, and it is the one people notice living in the house." +
+      "\n\n" +
+      "The concrete core adds thermal mass: it absorbs heat and releases it slowly, so the interior tracks the daily temperature swing far more gently than an R-value comparison predicts. Steady-state R testing measures a wall at equilibrium, a condition that does not occur in a real climate — which is part of why those published figures scatter so widely. And with no studs bridging the assembly, the rated insulation value is close to what you actually get, where a framed wall’s effective performance falls below its nominal rating.",
     faqs: [
       {
         q: "How much more does ICF cost than conventional framing?",
-        a: "The wall assembly costs more than a stick-framed wall, and part of that comes back in a smaller mechanical system and in operating cost over the life of the house. Published ranges cluster around three to ten percent of total build cost, but those are national and Canadian figures from builders and manufacturers, and what sits in the denominator shifts from source to source. We have built ICF here and would rather quote our own delta than a brochure range. [VERIFY: our own cost premium for an ICF wall assembly versus conventional framing, taken from the Breezeway and Green River jobs]",
+        a: "ICF costs more than stick framing up front. We will not publish a percentage — our ICF builds predate the material cost swings of the last several years, and a number from then would mislead you now. It is priced per project against current concrete and lumber, alongside the framed alternative, so you are comparing today’s numbers.",
       },
       {
         q: "Does an ICF house look different from the outside?",
@@ -235,7 +243,7 @@ export const serviceLocations: ServiceLocation[] = [
       },
       {
         q: "How long have you been building with ICF?",
-        a: "Blue Ridge Homes has been building with insulated concrete forms since [VERIFY: the year Blue Ridge Homes began building with ICF], which is early for this market. That matters mostly because ICF is unforgiving of inexperience at the pour.",
+        a: "We built our first ICF structure in 2006 and have been building with the system for twenty years, which is early for this market. That matters mostly because ICF is unforgiving of inexperience at the pour.",
       },
     ],
     metaTitle: "ICF Construction in Asheville, NC",
@@ -272,7 +280,7 @@ export const serviceLocations: ServiceLocation[] = [
     faqs: [
       {
         q: "Do you work in Weaverville often, or mostly in Asheville?",
-        a: "Both. We have completed multiple custom homes and remodels throughout the Weaverville area — Reems Creek, Settlers Cove, and the surrounding North Buncombe communities. You can see several of them on our Weaverville service area page.",
+        a: "Both. We have completed multiple custom homes and remodels throughout the Weaverville area — Reems Creek and the surrounding North Buncombe communities, along with Settlers Cove, parts of which sit across the line in Madison County. You can see several of them on our Weaverville service area page.",
       },
       {
         q: "My house is on well and septic. Does that limit what I can remodel?",
@@ -312,19 +320,17 @@ export const serviceLocations: ServiceLocation[] = [
       "\n\n" +
       "One builder carries the whole sequence: site evaluation, grading, foundation, framing, the trades, the inspections, and the punch list. That is the difference between a schedule that holds and a schedule that gets rebuilt every time a subcontractor drops.",
     localDetail:
-      "Most of the desirable land here is sloped, and the site work is where a Weaverville build separates from a flat-lot build. Cut-and-fill, retaining, and driveway grade come first, and they are priced from the ground rather than from the plan. Rock is the wildcard — [VERIFY: how commonly rock is encountered on building lots in the Reems Creek and Settlers Cove areas, and the typical cost impact of removal]." +
+      "Most of the desirable land here is sloped, and the site work is where a Weaverville build separates from a flat-lot build. Cut-and-fill, retaining, and driveway grade come first, and they are priced from the ground rather than from the plan. Rock is the wildcard. We hit rock on roughly three lots in ten across the area. Reems Creek runs about average; the Madison County side runs higher. What it costs depends on what kind — rock a trackhoe can move is a schedule item, rock that has to be hammered out is a different conversation — which is why we look at the lot before you are committed to a foundation plan rather than quoting an allowance." +
       "\n\n" +
-      "Permitting depends on which side of the town line the lot sits on, and the two paths are not the same. Inside the town limits, the Town of Weaverville approves zoning first, then Buncombe County Permits and Inspections issues the building permit and runs the inspections, and water comes from Town of Weaverville Public Works. In unincorporated North Buncombe there is no town step: county zoning governs, the county permits and inspects, and water comes from whichever county utility serves the parcel or from a private well under a county well permit." +
+      "Weaverville addresses straddle two counties. Inside the town limits and through most of Reems Creek you are in Buncombe: town zoning approval first, then Buncombe County Permits and Inspections for the permit and the inspections, and Buncombe Environmental Health for septic. North and west of there — including parts of Settlers Cove — the same mailing address sits in Madison County, and every one of those offices is different. Establishing which county a lot is actually in is the first thing we do, before design, because it changes the permitting path, the erosion thresholds, and the septic review." +
       "\n\n" +
-      "Two separate permits govern moving dirt, with two different thresholds. An erosion control permit is required at one acre or more of land disturbance — or at a quarter acre or more if the property sits in a Hillside Subdivision as defined by the county subdivision ordinance. Regardless of size, silt fence and a stabilized construction entrance have to be in place to keep sediment off neighboring property, and plan review fees double if disturbance begins before the permit issues. Review runs up to twenty days for a new plan and fifteen for a revision. A stormwater permit is separate and engages at one acre of residential disturbance, counting the house, the utilities, the septic, the grading, and the road together; plans have to be sealed by a licensed engineer or landscape architect, and where the overall scope will eventually pass an acre the permit has to be in hand before construction starts." +
-      "\n\n" +
-      "Settlers Cove sits on the one-acre trigger, not the quarter-acre Hillside Subdivision one. That still leaves very little headroom. On lots of roughly an acre, disturbing the whole lot lands right at the line rather than comfortably under it, so the disturbed-area total is something we scope deliberately on those jobs instead of assuming it away." +
+      "In Buncombe County, two separate permits govern moving dirt, with two different thresholds. An erosion control permit is required at one acre or more of land disturbance — or at a quarter acre or more if the property sits in a Hillside Subdivision as defined by the county subdivision ordinance. Regardless of size, silt fence and a stabilized construction entrance have to be in place to keep sediment off neighboring property, and plan review fees double if disturbance begins before the permit issues. Review runs up to twenty days for a new plan and fifteen for a revision. A stormwater permit is separate and engages at one acre of residential disturbance, counting the house, the utilities, the septic, the grading, and the road together; plans have to be sealed by a licensed engineer or landscape architect, and where the overall scope will eventually pass an acre the permit has to be in hand before construction starts." +
       "\n\n" +
       "Outside the town center most lots are served by well and septic, and septic comes first in the sequence — not as paperwork, but because the drain field placement constrains where the house and the driveway can go rather than the other way around. It runs in two steps through Buncombe County Environmental Health. An Improvement Permit comes first, applied for with the parcel identification number, a plat or tax map, and the proposed bedroom count; a soil and site evaluation follows, performed by a county environmental health specialist or a licensed soil scientist, and the permit confirms whether the site will support a system and what type. An Authorization to Construct is issued once the design is verified against code — and no building permit is issued for a new structure until that authorization exists." +
       "\n\n" +
       "Two details there are worth planning around. The permit is valid for sixty months where a complete site plan is submitted, and without expiration where a complete plat is submitted, so what you hand in determines how long the approval lives. And the site has to be prepared before the evaluation: every proposed structure staked or flagged — house, deck, porch, garage, and driveway — with undergrowth cleared to give roughly fifty feet of visibility. An unprepared site can draw a re-visit fee and put you back in the queue. On mountain parcels in Buncombe, Henderson, and Haywood, shallow bedrock and steep terrain frequently push a site onto the engineered-design pathway, which is a longer and costlier route than a conventional system. The county publishes the steps but not a timeline; how long the sequence actually takes depends on the queue and on the site, which is why it is the first thing we try to get moving on a rural lot." +
       "\n\n" +
-      "Platted subdivisions such as Settlers Cove may also carry recorded covenants governing materials, height, or setbacks — [VERIFY: whether Settlers Cove and comparable Weaverville subdivisions carry architectural covenants, and what they restrict; these are recorded at the Register of Deeds and are per-subdivision].",
+      "Platted subdivisions such as Settlers Cove carry recorded covenants, and they bind whatever you plan to build — [VERIFY: what the Settlers Cove architectural covenants actually restrict — materials, height, roof pitch, minimum square footage, outbuildings]. They are recorded at the Register of Deeds and are per-subdivision, so we pull them for the specific parcel.",
     faqs: [
       {
         q: "How many homes have you built in Weaverville?",
@@ -340,7 +346,7 @@ export const serviceLocations: ServiceLocation[] = [
       },
       {
         q: "How long does the whole process take, start to finish?",
-        a: "Design and permitting come first and vary the most. Construction itself typically runs [VERIFY: typical construction duration for a custom home in the Weaverville area, in months]. Septic permitting and site work can add meaningful time in front of that on a rural lot.",
+        a: "Nine to twelve months from groundbreaking to certificate of occupancy. Design and permitting come first and vary the most. Septic permitting and site work can add meaningful time in front of that on a rural lot.",
       },
       {
         q: "Can I see a house you built before I commit?",
@@ -349,6 +355,6 @@ export const serviceLocations: ServiceLocation[] = [
     ],
     metaTitle: "Custom Home Building in Weaverville, NC",
     metaDescription:
-      "Custom homes built in Weaverville, NC — Reems Creek, Settlers Cove, and North Buncombe. Site work, permitting, and construction managed by one builder.",
+      "Custom homes in Weaverville, NC — Reems Creek, Settlers Cove, and both Buncombe and Madison counties. Site work, permitting, and construction from one builder.",
   },
 ];

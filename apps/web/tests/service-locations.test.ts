@@ -56,24 +56,18 @@ const KNOWN_PROJECT_SLUGS = [
  *
  * Every specific factual claim in lib/serviceLocations.ts that no cited public
  * source settles is left wrapped as a marker for the owner. This number only ever
- * goes DOWN. It was 26 when the slice shipped; the public-record patch closed ten
- * against City of Asheville, Buncombe County, and NC code sources, and the C1/C2/C3
- * pass closed two more by phone -- permit review time and driveway grade -- while
- * replacing the ICF inspection question with a narrower one about scheduling. The
- * wind/electrical pass then closed three: the Table R301.2(5) elevation bands, and
- * both service-size questions, which turned out to be a code floor on the
- * disconnecting means rather than a typical amperage anyone could quote. The
- * wind/electrical pass then closed three: the Table R301.2(5) elevation bands, and
- * both service-size questions, which turned out to be a code floor on the
- * disconnecting means rather than a typical amperage anyone could quote. The
- * wind/electrical pass then closed three: the Table R301.2(5) elevation bands, and
- * both service-size questions, which turned out to be a code floor on the
- * disconnecting means rather than a typical amperage anyone could quote.
+ * goes DOWN. It was 26 when the slice shipped. The public-record patch closed ten
+ * against City of Asheville, Buncombe County, and NC code sources; the C1/C2/C3
+ * pass closed two more by phone; the wind/electrical pass closed three. The
+ * owner-answers pass then closed the remaining ten -- durations, rock frequency,
+ * cost per square foot, the 2006 ICF start date, and two closed by refusal: the
+ * energy-savings percentage and the ICF cost premium are deliberately not
+ * published, and the copy says so in as many words. One marker remains.
  *
  * Fails high: someone added an unsourced claim. Fails low: someone resolved a
  * marker -- good, lower this number in the same commit so the ratchet keeps holding.
  */
-const EXPECTED_UNRESOLVED = 11;
+const EXPECTED_UNRESOLVED = 1;
 
 describe("the services segment has no loading boundary", () => {
   it("app/services/loading.tsx does NOT exist", () => {
