@@ -71,8 +71,8 @@ export default function MillsRiverPage() {
                     <div className="br-commitment-item">
                       <span className="br-commitment-icon">{"\u2713"}</span>
                       <div>
-                        <h3 className="br-commitment-title">ICF &amp; Energy-Efficient Builds</h3>
-                        <p className="br-commitment-body">{"Insulated concrete form construction for superior energy performance \u2014 an investment that pays off quickly in the valley\u2019s temperature swings."}</p>
+                        <h3 className="br-commitment-title">ICF Construction</h3>
+                        <p className="br-commitment-body">{"Insulated concrete form construction with a concrete core that adds thermal mass \u2014 which moderates the valley\u2019s temperature swings."}</p>
                       </div>
                     </div>
                   </div>

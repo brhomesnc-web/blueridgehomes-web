@@ -5,7 +5,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "ICF Construction in Asheville, NC | Blue Ridge Homes",
   description:
-    "Blue Ridge Homes has been building with insulated concrete forms (ICF) since 2006. Stronger, quieter, more energy-efficient homes in Asheville and Western NC. NC License #56328.",
+    "Blue Ridge Homes has been building with insulated concrete forms (ICF) since 2006. Stronger, quieter homes in Asheville and Western NC. NC License #56328.",
 };
 
 export default function ICFConstructionPage() {
@@ -37,7 +37,7 @@ export default function ICFConstructionPage() {
                   in Asheville, NC
                 </h1>
                 <p className="br-hero-subtitle">
-                  {"Insulated concrete form homes \u2014 stronger, quieter, and more energy-efficient than conventional framing."}
+                  {"Insulated concrete form homes \u2014 stronger and quieter than conventional framing."}
                 </p>
                 <div className="br-button-row">
                   <Link href="/contact" className="br-button br-button-primary">
@@ -55,7 +55,7 @@ export default function ICFConstructionPage() {
                 Building Stronger Homes in Western North Carolina
               </h2>
               <p className="br-lead" style={{ maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
-                {"Insulated concrete forms create a continuous shell of reinforced concrete wrapped in rigid foam insulation. The result is a home that uses significantly less energy, resists severe weather, and stays remarkably quiet. Blue Ridge Homes has been building with ICF since 2006 \u2014 we were one of the first residential builders in the Asheville area to adopt the system."}
+                {"Insulated concrete forms create a continuous shell of reinforced concrete wrapped in rigid foam insulation. The result is a home that resists severe weather and stays remarkably quiet. Blue Ridge Homes has been building with ICF since 2006 \u2014 we were one of the first residential builders in the Asheville area to adopt the system."}
               </p>
             </div>
           </section>
@@ -138,7 +138,7 @@ export default function ICFConstructionPage() {
                 <div style={{ direction: "ltr" }} className="br-commitment-copy">
                   <h2 className="br-title">Why Build With ICF</h2>
                   <p className="br-lead">
-                    {"Homeowners who choose ICF are usually thinking long term. They want lower energy bills, a home that can handle severe weather, and walls that block outside noise almost entirely. In the mountains, where temperatures swing and storms hit hard, those advantages compound."}
+                    {"Homeowners who choose ICF are usually thinking long term. They want a home that can handle severe weather and walls that block outside noise almost entirely. In the mountains, where temperatures swing and storms hit hard, those advantages compound."}
                   </p>
                   <p className="br-lead">
                     {"ICF walls outperform conventional framing on energy, but the published comparisons range from single digits to more than half, depending on who commissioned the study, so we do not quote a figure. What the assembly actually does is close the envelope: air, moisture, and airborne contaminants do not pass through it, so intake and exhaust are mechanical and deliberate. The concrete core adds thermal mass, which moderates the daily temperature swing in a way an R-value comparison does not capture."}
@@ -192,7 +192,7 @@ export default function ICFConstructionPage() {
                     <div className="br-commitment-item">
                       <span className="br-commitment-icon">{"\u2713"}</span>
                       <div>
-                        <h3 className="br-commitment-title">Energy Savings</h3>
+                        <h3 className="br-commitment-title">No Thermal Bridging</h3>
                         <p className="br-commitment-body">
                           A continuous insulated envelope with no thermal bridging through studs, so the mechanical system cycles less. Published comparisons vary too widely to quote; ask us for a real utility history from a finished house.
                         </p>

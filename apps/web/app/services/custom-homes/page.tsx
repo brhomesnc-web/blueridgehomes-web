@@ -212,7 +212,7 @@ export default function CustomHomesPage() {
                       <div>
                         <h3 className="br-commitment-title">ICF Construction</h3>
                         <p className="br-commitment-body">
-                          {"Insulated concrete form builds for superior energy efficiency, strength, and comfort. We\u2019ve been building with ICF since 2006."}
+                          {"Insulated concrete form builds with a continuous insulated envelope and no thermal bridging through studs. We\u2019ve been building with ICF since 2006."}
                         </p>
                       </div>
                     </div>

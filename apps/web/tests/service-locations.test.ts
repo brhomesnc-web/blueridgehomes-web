@@ -350,6 +350,275 @@ describe("the ICF page quotes no unsourced energy percentage", () => {
   });
 });
 
+/**
+ * THE SAME CLAIM, WITHOUT A DIGIT.
+ *
+ * The percentage guard above reads the whole of icf-construction/page.tsx --
+ * metadata export included -- and it was PASSING on 2026-08-22 while four
+ * uncited comparative energy claims sat live on that page: the metadata
+ * description, the hero subtitle, the intro paragraph, and a body want-list.
+ * Every one of them matched the ENERGY_WORD test in the guard above. Every one failed
+ * `numberNextToPercent`, because none carried a digit.
+ *
+ * The surface was never the gap. The PATTERN was. A percentage guard cannot see
+ * "significantly less energy", and the copy that replaced the percentage said
+ * exactly that.
+ *
+ * WHAT THIS GUARD CAN AND CANNOT DO -- stated plainly, because a green check
+ * here is worth only what its weakest half is worth:
+ *
+ *   The DENOMINATOR is real and complete. The candidate set is "every sentence,
+ *   in a rendered text unit, that mentions energy". That is machine-decidable:
+ *   the extractor pulls string literals and JSX text nodes, splits sentences
+ *   INSIDE each unit, and every candidate lands in exactly one of three buckets.
+ *   The buckets are asserted to sum to the total. Nothing is silently skipped.
+ *
+ *   The CLASSIFIER is vocabulary-bounded and therefore incomplete. A comparative
+ *   phrased in words COMPARATIVE does not list lands in the mechanism bucket and
+ *   passes. That is a known false-negative surface, not a solved problem. It is
+ *   mitigated only by the bucket counts being asserted, so a reviewer can see how
+ *   many sentences were waved through rather than being told "clean".
+ *
+ * Sentence splitting happens INSIDE each text unit and never across two. An
+ * earlier draft split the raw source and produced six false positives by running
+ * a "sentence" out of one JSX string and into the regulatory copy in the next.
+ */
+describe("the energy claim carries no uncited comparative", () => {
+  const ENERGY_SURFACE: string[][] = [
+    ["app", "services", "icf-construction", "page.tsx"],
+    ["app", "services", "custom-homes", "page.tsx"],
+    ["app", "service-areas", "hendersonville", "page.tsx"],
+    ["app", "service-areas", "mills-river", "page.tsx"],
+    ["app", "page.tsx"],
+    ["lib", "serviceLocations.ts"],
+  ];
+
+  const ENERGY =
+    /energy|efficien|heating|cooling|HVAC|insulat|thermal|R-value|utility bill|energy bill/i;
+  const COMPARATIVE =
+    /\b(more|less|lower|higher|better|best|superior|greater|reduces?|reduction|saves?|savings|outperforms?|exceeds?|significantly|dramatically|cheaper|far more|pays off)\b|energy-efficient|energy efficiency|energy performance|energy savings|energy bills/i;
+  const REFUSAL =
+    /do not quote|does not quote|too widely to quote|not to quote|will not publish/i;
+
+  /** Rendered text units: quoted string literals and bare JSX text nodes. */
+  function textUnits(src: string): string[] {
+    const units: string[] = [];
+    for (const m of src.matchAll(/"((?:[^"\\]|\\.)*)"/g)) {
+      if (/[a-z]{3}\s+[a-z]{3}/i.test(m[1])) units.push(m[1]);
+    }
+    for (const m of src.matchAll(/>([^<>{}]+)</g)) {
+      const v = m[1].trim();
+      if (/[a-z]{3}\s+[a-z]{3}/i.test(v)) units.push(v);
+    }
+    return units;
+  }
+
+  function classify(src: string) {
+    const sentences = textUnits(src).flatMap((u) =>
+      u.replace(/\s+/g, " ").split(/(?<=[.!?])\s+/)
+    );
+    const candidates = sentences.filter((s) => ENERGY.test(s));
+    return {
+      candidates,
+      refusal: candidates.filter((s) => REFUSAL.test(s)),
+      offenders: candidates.filter((s) => !REFUSAL.test(s) && COMPARATIVE.test(s)),
+      mechanism: candidates.filter((s) => !REFUSAL.test(s) && !COMPARATIVE.test(s)),
+    };
+  }
+
+  /**
+   * ACCEPTED RESIDUE -- a ratchet, same shape as EXPECTED_UNRESOLVED above.
+   *
+   * Four uncited comparative energy claims survive this commit ON PURPOSE, each
+   * for a reason that is not "we did not notice". Listed rather than excluded by
+   * pattern, so they are a worklist instead of a blind spot. THIS NUMBER ONLY
+   * EVER GOES DOWN.
+   *
+   *  1-2. "the mechanical system cycles less" (page) and "far more gently ... and
+   *       the mechanical system cycles less" (module) are wording the numbers-rule
+   *       pass produced. Rewriting them here would re-open a decision that pass
+   *       already made, in a commit scoped to a different job.
+   *    3. "at a lower total cost" is comparative-claims inventory row #45 -- one of
+   *       the two tail-clause misses. It belongs to that batch.
+   *    4. "energy-efficient ICF builds" is a category label in a list of build
+   *       types rather than a performance assertion. Weakest of the four. Left for
+   *       an owner decision rather than resolved unilaterally.
+   */
+  const ACCEPTED = [
+    "so the mechanical system cycles less",
+    "far more gently than an R-value comparison predicts",
+    "at a lower total cost",
+    "energy-efficient ICF builds",
+  ];
+  const EXPECTED_ACCEPTED = 4;
+
+  it("every energy sentence lands in exactly one bucket, and the buckets sum", () => {
+    let total = 0;
+    let sum = 0;
+    for (const parts of ENERGY_SURFACE) {
+      const c = classify(read(...parts));
+      total += c.candidates.length;
+      sum += c.refusal.length + c.offenders.length + c.mechanism.length;
+    }
+    // The denominator claim. If this ever fails, a candidate was double-counted
+    // or dropped and every other number in this describe is worthless.
+    expect(sum, "buckets do not sum to the candidate total").toBe(total);
+    expect(total, "candidate set collapsed to zero -- extractor is broken").toBeGreaterThan(20);
+  });
+
+  it("no unaccepted uncited comparative energy claim on any guarded page", () => {
+    const unaccepted: string[] = [];
+    for (const parts of ENERGY_SURFACE) {
+      const c = classify(read(...parts));
+      for (const s of c.offenders) {
+        if (!ACCEPTED.some((a) => s.includes(a))) {
+          unaccepted.push(`${parts.join("/")}: ${s.trim().slice(0, 160)}`);
+        }
+      }
+    }
+    expect(unaccepted, `uncited comparative energy claim: ${unaccepted.join(" | ")}`)
+      .toEqual([]);
+  });
+
+  it("the accepted-residue ratchet has not been raised", () => {
+    let offenders = 0;
+    for (const parts of ENERGY_SURFACE) offenders += classify(read(...parts)).offenders.length;
+    expect(
+      offenders,
+      "accepted residue changed. Lower EXPECTED_ACCEPTED in the same commit if you resolved one; " +
+        "never raise it."
+    ).toBe(EXPECTED_ACCEPTED);
+  });
+
+  it("the matcher catches every wording this commit removed", () => {
+    // Guards the guard, per OPS.md "Guard Failure Classes -> 1. Guard the guard".
+    // These are the ELEVEN strings removed on 2026-08-22, verbatim. If the regex
+    // is broken by a later edit this fails, rather than the suite going green on
+    // a page that has the claim back.
+    const removed = [
+      "Stronger, quieter, more energy-efficient homes in Asheville and Western NC.",
+      "Insulated concrete form homes - stronger, quieter, and more energy-efficient than conventional framing.",
+      "The result is a home that uses significantly less energy, resists severe weather, and stays remarkably quiet.",
+      "They want lower energy bills, a home that can handle severe weather, and walls that block outside noise almost entirely.",
+      "Insulated concrete form builds for superior energy efficiency, strength, and comfort.",
+      "Insulated concrete form homes in Asheville, NC. Quieter, more efficient, storm-resistant walls on mountain sites.",
+      "One of the few ICF-experienced builders in Western NC. Stronger walls, lower energy bills, and superior comfort.",
+      "New custom builds including insulated concrete form (ICF) construction for superior energy efficiency.",
+      "Insulated concrete form construction for superior energy performance, an investment that pays off quickly.",
+      "Energy Savings",
+      "ICF and Energy-Efficient Builds",
+    ];
+    for (const s of removed) {
+      const c = classify(`<p>${s}</p>`);
+      expect(c.offenders.length, `matcher went blind to: ${s}`).toBeGreaterThan(0);
+    }
+  });
+
+  it("does not fire on the mechanism wording that replaced them", () => {
+    // The planted negative. Every replacement written in this commit, asserted
+    // NOT to trip the guard -- otherwise the fix and the guard disagree.
+    const replacements = [
+      "Stronger, quieter homes in Asheville and Western NC.",
+      "Insulated concrete form homes - stronger and quieter than conventional framing.",
+      "The result is a home that resists severe weather and stays remarkably quiet.",
+      "They want a home that can handle severe weather and walls that block outside noise almost entirely.",
+      "Insulated concrete form builds with a continuous insulated envelope and no thermal bridging through studs.",
+      "Insulated concrete form homes in Asheville, NC. Quieter, storm-resistant walls on mountain sites.",
+      "Stronger walls and superior comfort.",
+      "New custom builds including insulated concrete form (ICF) construction with a continuous insulated envelope and no thermal bridging through studs.",
+      "Insulated concrete form construction with a concrete core that adds thermal mass.",
+      "No Thermal Bridging",
+      "ICF Construction",
+    ];
+    for (const s of replacements) {
+      const c = classify(`<p>${s}</p>`);
+      expect(c.offenders, `guard fires on corrected wording: ${s}`).toEqual([]);
+    }
+  });
+
+  it("does not fire on the refusal wording either page uses", () => {
+    const refusals = [
+      "ICF walls outperform conventional framing on energy, but the published comparisons range from single digits to more than half, so we do not quote a figure.",
+      "Published comparisons vary too widely to quote; ask us for a real utility history from a finished house.",
+    ];
+    for (const s of refusals) {
+      const c = classify(`<p>${s}</p>`);
+      expect(c.offenders, `guard fires on refusal wording: ${s}`).toEqual([]);
+    }
+  });
+});
+
+/**
+ * FIELD PIN over metaDescription and faqs[].a.
+ *
+ * These two field families are the registers that render TWICE and are invisible
+ * to anyone reading the page prose: every metaDescription becomes both the HTML
+ * meta description and `Service.description` in the JSON-LD block, and every FAQ
+ * answer becomes both page copy and `FAQPage.mainEntity[].acceptedAnswer.text`.
+ * The ICF metaDescription carried "more efficient" until this commit and no guard
+ * in this repo read it.
+ *
+ * This one CAN state a true denominator, because the field set is enumerable from
+ * the imported module rather than inferred from prose: N entries, each with
+ * exactly one metaDescription, plus M FAQ answers. Both counts are asserted, so a
+ * new entry cannot arrive unguarded.
+ */
+describe("data-module metadata and FAQ fields are pinned", () => {
+  const EXPECTED_ENTRIES = 5;
+  const EXPECTED_FAQ_ANSWERS = 24;
+
+  const CLAIM =
+    /\b(more|less|lower|higher|better|best|superior|greater|outperforms?|exceeds?|significantly|dramatically|cheaper|pays off)\b|energy-efficient|energy efficiency|energy performance/i;
+  const ENERGY =
+    /energy|efficien|heating|cooling|HVAC|insulat|thermal|R-value/i;
+
+  it("the field denominator is what the guard thinks it is", () => {
+    expect(serviceLocations, "entry count moved -- update both numbers here").toHaveLength(
+      EXPECTED_ENTRIES
+    );
+    const answers = serviceLocations.flatMap((e) => e.faqs.map((f) => f.a));
+    expect(answers, "FAQ answer count moved -- update both numbers here").toHaveLength(
+      EXPECTED_FAQ_ANSWERS
+    );
+    // every entry actually has the field, so the sweep below reads all of them
+    for (const e of serviceLocations) {
+      expect(e.metaDescription.length, `${e.service}/${e.town} metaDescription empty`)
+        .toBeGreaterThan(0);
+    }
+  });
+
+  it("no metaDescription carries a comparative energy claim", () => {
+    const bad = serviceLocations
+      .filter((e) => ENERGY.test(e.metaDescription) && CLAIM.test(e.metaDescription))
+      .map((e) => `${e.service}/${e.town}: ${e.metaDescription}`);
+    expect(bad, `metaDescription renders to SERP AND JSON-LD: ${bad.join(" | ")}`).toEqual([]);
+  });
+
+  it("no FAQ answer carries a comparative energy claim, except the accepted one", () => {
+    // "at a lower total cost" is inventory row #45, on the batch-2 worklist and
+    // listed in the ratchet above. Named here so it is accepted, not invisible.
+    const ACCEPTED_FAQ = "at a lower total cost";
+    const bad = serviceLocations
+      .flatMap((e) => e.faqs.map((f) => ({ e, a: f.a })))
+      .filter(({ a }) => ENERGY.test(a) && CLAIM.test(a) && !a.includes(ACCEPTED_FAQ))
+      .map(({ e, a }) => `${e.service}/${e.town}: ${a.slice(0, 120)}`);
+    expect(bad, `FAQ answer renders to page AND FAQPage JSON-LD: ${bad.join(" | ")}`)
+      .toEqual([]);
+  });
+
+  it("the metaDescription field pin actually fires", () => {
+    // Planted positive: the exact string removed from the ICF entry this commit.
+    const planted =
+      "Insulated concrete form homes in Asheville, NC. Quieter, more efficient, storm-resistant walls on mountain sites.";
+    expect(ENERGY.test(planted) && CLAIM.test(planted), "field pin went blind").toBe(true);
+    // Planted negative: the wording that replaced it.
+    const corrected =
+      "Insulated concrete form homes in Asheville, NC. Quieter, storm-resistant walls on mountain sites.";
+    expect(ENERGY.test(corrected) && CLAIM.test(corrected), "field pin fires on corrected wording")
+      .toBe(false);
+  });
+});
+
 describe("in-prose links are visible", () => {
   /**
    * The service x location pages shipped with inbound links that existed in the DOM
