@@ -58,7 +58,7 @@ export default function HendersonvillePage() {
                       <span className="br-commitment-icon">{"\u2713"}</span>
                       <div>
                         <h3 className="br-commitment-title">Custom Homes &amp; ICF Construction</h3>
-                        <p className="br-commitment-body">{"New custom builds including insulated concrete form (ICF) construction for superior energy efficiency \u2014 especially valuable in Henderson County\u2019s varied climate."}</p>
+                        <p className="br-commitment-body">{"New custom builds including insulated concrete form (ICF) construction with a continuous insulated envelope and no thermal bridging through studs \u2014 especially valuable in Henderson County\u2019s varied climate."}</p>
                       </div>
                     </div>
                     <div className="br-commitment-item">

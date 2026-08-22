@@ -35,7 +35,7 @@ const services = [
   },
   {
     title: "ICF Construction",
-    body: "One of the few ICF-experienced builders in Western NC. Stronger walls, lower energy bills, and superior comfort.",
+    body: "One of the few ICF-experienced builders in Western NC. Stronger walls and superior comfort.",
     href: "/services/icf-construction",
     image: "/optimized/breezeway/modern-house-with-large-windows-at-dusk.jpg",
   },

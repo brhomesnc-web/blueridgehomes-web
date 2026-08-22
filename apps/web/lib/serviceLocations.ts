@@ -378,7 +378,7 @@ export const serviceLocations: ServiceLocation[] = [
     ],
     metaTitle: "ICF Construction in Asheville, NC",
     metaDescription:
-      "Insulated concrete form homes in Asheville, NC. Quieter, more efficient, storm-resistant walls on mountain sites. See our completed ICF build in South Asheville.",
+      "Insulated concrete form homes in Asheville, NC. Quieter, storm-resistant walls on mountain sites. See our completed ICF build in South Asheville.",
   },
 
   // ---------------------------------------------------------------- 4
