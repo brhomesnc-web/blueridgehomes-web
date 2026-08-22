@@ -324,18 +324,27 @@ The two wrong values are rendered to visitors today by `/portfolio/[slug]`. See 
 
 ### Provenance tags are comments, never rendered copy
 
-An operator-reported fact carries a tag naming the source and the date, in a **TS comment above the
-field** — never inside the copy string:
+An operator-reported fact carries a tag naming the source and the date, in a **TS comment
+immediately above the thing it documents** — never inside the copy string. Local detail is a list
+of headed sections rather than one string, so the anchor is the section’s `heading:`, not the
+whole copy field:
 
     // Review-time figure: operator-reported, confirmed with the City of Asheville
     // 2026-08-21. The city publishes no review-time target; this came from asking
     // Development Services directly.
-    localDetail:
+    heading: "Permitting Inside the City",
+    body:
       "Permitting inside the city runs through ..."
 
 Rendering the tag would publish an internal note to a homeowner, which is the opposite of what
-resolving a marker is for. `tests/service-locations.test.ts` enforces it: any line mentioning
-`operator-reported` must start with `//`.
+resolving a marker is for. `tests/service-locations.test.ts` enforces two things. Any line
+mentioning `operator-reported` must start with `//`. And **every** comment block inside the data
+array — citation-style tags for an NEC article or a code table included, not only the
+operator-reported ones — must sit immediately above a field line, with no blank line between. A
+tag that drifts away from the claim it documents fails the suite.
+
+That second rule is deliberately structural rather than a list of tag words. A word list cannot
+see the citation-style comments, and those are exactly as easy to orphan.
 
 The convention exists so a later session does not hunt for a URL that was never there. **A resolved
 figure with no recorded provenance is indistinguishable from an invented one** six months on.
