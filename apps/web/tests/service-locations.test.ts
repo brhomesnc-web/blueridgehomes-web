@@ -350,6 +350,62 @@ describe("the ICF page quotes no unsourced energy percentage", () => {
   });
 });
 
+describe("in-prose links are visible", () => {
+  /**
+   * The service x location pages shipped with inbound links that existed in the DOM
+   * but were visually indistinguishable from body text. globals.css sets
+   * a { color: inherit; text-decoration: none; } near the top of the file, and an
+   * anchor inside .br-lead carries no className of its own, so nothing overrode it.
+   * That was true of the five new links and of roughly 25 pre-existing
+   * /service-areas/ links across all five /services/<slug> pages.
+   *
+   * A link that cannot be seen is not an inbound link. The whole point of the
+   * previous slice was inbound links, and they were shipped invisible.
+   *
+   * Matched on pattern rather than on the exact declaration, so reformatting the rule
+   * or changing the accent token still passes, while deleting it fails.
+   */
+  const GLOBALS = read("app", "globals.css");
+
+  /** Body of the top-level `.br-lead a` rule, or null. Anchored at line start so the
+   *  scoped .br-closing-cta override cannot satisfy it. */
+  function leadLinkRule(css: string): string | null {
+    const m = css.match(/^\.br-lead a\s*\{([^}]*)\}/m);
+    return m ? m[1] : null;
+  }
+
+  it("globals.css styles .br-lead a with both a color and a text-decoration", () => {
+    const body = leadLinkRule(GLOBALS);
+    expect(body, "no top-level .br-lead a rule found in app/globals.css").toBeTruthy();
+    expect(body as string).toMatch(/\bcolor\s*:/);
+    expect(body as string).toMatch(/\btext-decoration\s*:/);
+  });
+
+  it("the matcher fires on a present rule and misses an absent one", () => {
+    // Guards the guard. A regex that silently stops matching is indistinguishable
+    // from a passing test, so plant both directions.
+    const present = ".br-lead a {" + String.fromCharCode(10) +
+      "  color: var(--br-accent);" + String.fromCharCode(10) +
+      "  text-decoration: underline;" + String.fromCharCode(10) + "}";
+    expect(leadLinkRule(present)).toMatch(/\bcolor\s*:/);
+
+    // a different selector must not satisfy it
+    expect(leadLinkRule(".br-blog-prose a { color: red; text-decoration: underline; }")).toBeNull();
+
+    // present but decorative only: the rule exists, the assertions on it still fail
+    const colorless = ".br-lead a {" + String.fromCharCode(10) + "  opacity: 0.5;" +
+      String.fromCharCode(10) + "}";
+    expect(leadLinkRule(colorless)).not.toMatch(/\bcolor\s*:/);
+  });
+
+  it("the dark closing-CTA carries its own scoped anchor rule", () => {
+    // .br-closing-cta .br-lead is white over a photograph; the accent brown would be
+    // unreadable there. No CTA paragraph contains a link today, so this guards a
+    // future one rather than a present bug.
+    expect(GLOBALS).toMatch(/\.br-closing-cta \.br-lead a\s*\{/);
+  });
+});
+
 describe("the [VERIFY:] ratchet", () => {
   const DATA = read("lib", "serviceLocations.ts");
   const markers = DATA.match(/\[VERIFY:[^\]]*\]/g) ?? [];
