@@ -231,10 +231,32 @@ export default async function ServiceLocationPage(
               <h2 className="br-title">
                 {`Building in ${entry.townDisplay}: What the Site Decides`}
               </h2>
-              {paragraphs(entry.localDetail).map((text, i) => (
-                <p key={i} className="br-lead" style={{ maxWidth: 820 }}>
-                  {text}
-                </p>
+              {entry.detail.map((section) => (
+                <div key={section.heading} className="br-detail-block">
+                  <h3 className="br-subhead">{section.heading}</h3>
+                  {paragraphs(section.body).map((text, i) => (
+                    <p key={i} className="br-lead" style={{ maxWidth: 820 }}>
+                      {text}
+                    </p>
+                  ))}
+                  {section.facts ? (
+                    <table className="br-facts">
+                      {section.facts.caption ? (
+                        <caption className="br-facts-caption">
+                          {section.facts.caption}
+                        </caption>
+                      ) : null}
+                      <tbody>
+                        {section.facts.rows.map((row) => (
+                          <tr key={row.label}>
+                            <th scope="row">{row.label}</th>
+                            <td>{row.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : null}
+                </div>
               ))}
             </div>
           </section>

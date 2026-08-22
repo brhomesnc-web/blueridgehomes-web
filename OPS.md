@@ -1511,7 +1511,9 @@ Standing caution: any VPS-side edit made outside git is lost when `deploy.sh` re
 
 ## Testing — what the existing harness can and cannot catch
 
-The suite is `vitest run` over `apps/web/tests/` — **five files, 124 assertions, as of 2026-08-21**.
+The suite is `vitest run` over `apps/web/tests/` — **five files, 140 tests over 174 `expect`
+assertions, as of 2026-08-22**. Both numbers are stated because the earlier figure said
+`assertions` and matched neither count once the suite moved.
 **Almost every assertion in it reads source TEXT.** The one exception is
 `service-locations.test.ts`, which additionally imports `lib/serviceLocations.ts` directly — safe only
 because that module imports nothing itself — and checks the filesystem with `existsSync`. There is no

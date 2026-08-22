@@ -2390,3 +2390,75 @@ img {
 .br-blog-prose th, .br-blog-prose td { padding: 10px 14px; border: 1px solid var(--br-line); text-align: left; }
 .br-blog-prose th { background: var(--br-stone); color: var(--br-heading); font-weight: 600; }
 .br-blog-prose hr { border: none; border-top: 1px solid var(--br-line); margin: 36px 0; }
+
+/* --- Sectioned local detail: subheads and parallel-fact tables --- */
+
+/* .br-title carries margin: 0, so the rhythm between headed sections is set
+   here rather than inherited. 44px between blocks, 26px from the section h2 to
+   the first block. The gap UNDER a subhead is the 18px top margin that the
+   .br-lead rule already puts on the paragraph following it. */
+.br-detail-block + .br-detail-block { margin-top: 44px; }
+.br-title + .br-detail-block { margin-top: 26px; }
+
+.br-subhead {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--br-heading);
+}
+
+/* table-layout: fixed with explicit column widths, NOT an overflow container:
+   every cell here is wrapping prose, so fixed columns cannot overflow at any
+   viewport width, and the label/value pairing that is the point of the table
+   survives on a narrow screen where a stacked layout would lose it. */
+.br-facts {
+  width: 100%;
+  max-width: 820px;
+  margin: 22px 0 0;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 15px;
+  line-height: 1.55;
+  text-align: left;
+}
+
+.br-facts-caption {
+  caption-side: top;
+  margin-bottom: 10px;
+  color: var(--br-text-mid);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.br-facts th,
+.br-facts td {
+  padding: 10px 14px;
+  border: 1px solid var(--br-line);
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+
+.br-facts th {
+  width: 34%;
+  background: var(--br-stone);
+  color: var(--br-heading);
+  font-weight: 600;
+}
+
+.br-facts td {
+  width: 66%;
+  color: var(--br-body);
+}
+
+@media (max-width: 560px) {
+  .br-facts { font-size: 14px; }
+  .br-facts th, .br-facts td { padding: 8px 10px; }
+  .br-facts th { width: 40%; }
+  .br-facts td { width: 60%; }
+  .br-subhead { font-size: 20px; }
+  .br-detail-block + .br-detail-block { margin-top: 36px; }
+}

@@ -462,3 +462,179 @@ describe("the [VERIFY:] ratchet", () => {
     expect(read("app", "service-areas", "weaverville", "page.tsx")).not.toContain("[VERIFY:");
   });
 });
+
+describe("sectioned local detail", () => {
+  /**
+   * Before this slice, nothing in the suite read the local-detail copy field at
+   * all: it could change type and every assertion still passed. These four are
+   * the guard that was missing.
+   */
+  it.each(serviceLocations.map((e) => [`${e.service}/${e.town}`, e] as const))(
+    "%s has at least one section",
+    (_label, entry) => {
+      expect(Array.isArray(entry.detail)).toBe(true);
+      expect(entry.detail.length).toBeGreaterThan(0);
+    }
+  );
+
+  it("every section has a non-empty heading and a non-empty body", () => {
+    for (const entry of serviceLocations) {
+      for (const section of entry.detail) {
+        const where = `${entry.service}/${entry.town}: ${section.heading}`;
+        expect(section.heading.trim().length, where).toBeGreaterThan(0);
+        expect(section.body.trim().length, where).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("every facts row carries a non-empty label and value", () => {
+    let rowsSeen = 0;
+    for (const entry of serviceLocations) {
+      for (const section of entry.detail) {
+        if (!section.facts) continue;
+        const where = `${entry.service}/${entry.town}: ${section.heading}`;
+        expect(section.facts.rows.length, where).toBeGreaterThan(0);
+        for (const row of section.facts.rows) {
+          expect(row.label.trim().length, where).toBeGreaterThan(0);
+          expect(row.value.trim().length, where).toBeGreaterThan(0);
+          rowsSeen += 1;
+        }
+      }
+    }
+    // The field is optional by design -- one entry has no parallel facts worth
+    // tabulating. This only asserts the feature is exercised somewhere.
+    expect(rowsSeen).toBeGreaterThan(0);
+  });
+
+  it("no section heading is duplicated inside one entry", () => {
+    // The page keys on section.heading.
+    for (const entry of serviceLocations) {
+      const headings = entry.detail.map((s) => s.heading);
+      expect(new Set(headings).size, `${entry.service}/${entry.town}`).toBe(headings.length);
+    }
+  });
+});
+
+describe("provenance tags sit with the claim they document", () => {
+  /**
+   * The older guard asserts only that a provenance line is a comment, which is
+   * true of a comment anywhere in the file. Splitting one copy field into several
+   * sections can orphan a tag from the claim it documents without any assertion
+   * noticing.
+   *
+   * This does NOT work from a vocabulary of tag words. A vocabulary decays: the
+   * citation-style comments -- an NEC article, a code table, an ordinance section
+   * -- carry no operator-reported marker at all, and would sit outside any such
+   * list while being exactly as orphanable. They are correctly anchored today,
+   * which is precisely the state that rots without anyone noticing.
+   *
+   * So it classifies EVERY comment block inside the data array and asserts the
+   * classification accounts for all of them. A block is an entry separator, or it
+   * is immediately above a field line, or it is an orphan and the suite fails.
+   */
+  const DATA_LINES = read("lib", "serviceLocations.ts").split(String.fromCharCode(10));
+  const FIELD_LINE = /^[a-zA-Z][a-zA-Z0-9_]*:/;
+  const NAMED_TAG = /operator-reported|owner-reported/i;
+
+  type Block = { first: string; text: string; next: string; separator: boolean };
+
+  /** Every contiguous // run from the data array on, with the line following it. */
+  function commentBlocks(lines: string[]): Block[] {
+    const start = lines.findIndex((l) => l.startsWith("export const serviceLocations"));
+    const out: Block[] = [];
+    let i = start === -1 ? 0 : start;
+    while (i < lines.length) {
+      if (!lines[i].trim().startsWith("//")) {
+        i += 1;
+        continue;
+      }
+      let j = i;
+      while (j + 1 < lines.length && lines[j + 1].trim().startsWith("//")) j += 1;
+      const text = lines.slice(i, j + 1).map((l) => l.trim()).join(" ");
+      out.push({
+        first: lines[i].trim(),
+        text,
+        next: j + 1 < lines.length ? lines[j + 1].trim() : "",
+        // the dashed rule that numbers each entry, which sits above an object brace
+        separator: i === j && text.includes("----"),
+      });
+      i = j + 1;
+    }
+    return out;
+  }
+
+  it("every comment block in the data array is anchored to a field", () => {
+    const all = commentBlocks(DATA_LINES);
+    const separators = all.filter((b) => b.separator);
+    const anchored = all.filter((b) => !b.separator && FIELD_LINE.test(b.next));
+    const orphans = all.filter((b) => !b.separator && !FIELD_LINE.test(b.next));
+
+    // The scan asserts its own completeness rather than trusting the hit list:
+    // every block found is accounted for by exactly one of the three buckets.
+    expect(separators.length + anchored.length + orphans.length).toBe(all.length);
+    expect(separators.length, "one dashed separator per entry").toBe(serviceLocations.length);
+    expect(anchored.length, "no anchored comment blocks found at all").toBeGreaterThan(0);
+    expect(
+      orphans.map((b) => b.first),
+      `comment not adjacent to the field it documents: ${orphans.map((b) => b.first).join(" | ")}`
+    ).toEqual([]);
+  });
+
+  it("the named operator-reported and owner-reported tags survive and are anchored", () => {
+    // The named convention specifically, on top of the structural rule above, so
+    // that deleting every tag cannot pass by leaving nothing to check.
+    const tagged = commentBlocks(DATA_LINES).filter((b) => NAMED_TAG.test(b.text));
+    expect(tagged.length, "the provenance convention has vanished").toBeGreaterThan(0);
+    for (const block of tagged) {
+      expect(FIELD_LINE.test(block.next), block.first).toBe(true);
+    }
+  });
+
+  it("the classifier catches an orphan, a blank-separated tag, and a separator", () => {
+    // Guards the guard, using a CITATION-style comment with no operator-reported
+    // marker in it -- the class the previous vocabulary-based guard could not see.
+    const head = `export const serviceLocations: ServiceLocation[] = [`;
+    const cite = `    // Wind speed: Table R301.2(5), 2018 North Carolina Residential Code.`;
+
+    const anchored = commentBlocks([head, cite, `    heading: "Wind Design",`]);
+    expect(anchored.map((b) => FIELD_LINE.test(b.next))).toEqual([true]);
+
+    const blankSeparated = commentBlocks([head, cite, ``, `    heading: "Wind Design",`]);
+    expect(blankSeparated.map((b) => b.separator)).toEqual([false]);
+    expect(blankSeparated.map((b) => FIELD_LINE.test(b.next))).toEqual([false]);
+
+    const floated = commentBlocks([head, cite, `export type ServiceLocation = {`]);
+    expect(floated.map((b) => FIELD_LINE.test(b.next))).toEqual([false]);
+
+    const sep = commentBlocks([head, `  // ---------------------------------- 1`, `  {`]);
+    expect(sep.map((b) => b.separator)).toEqual([true]);
+  });
+});
+
+describe("the ratchet still counts the way it did", () => {
+  /**
+   * The restructure moved copy between fields. It did not change how the ratchet
+   * counts: the count is taken over the RAW TEXT of the data module, so it is
+   * blind to whether the copy sits in one field or twenty. Pinned here so a later
+   * change to the counting mechanism is visible as a test edit.
+   */
+  const DATA = read("lib", "serviceLocations.ts");
+
+  // Same pattern the ratchet above uses, assembled from a character code so this
+  // file keeps no literal backslash of its own -- the reason the provenance
+  // assertion builds its newline the same way.
+  const BS = String.fromCharCode(92);
+  const PATTERN = BS + "[VERIFY:[^" + BS + "]]*" + BS + "]";
+  const count = (source: string) => (source.match(new RegExp(PATTERN, "g")) ?? []).length;
+
+  it("reads zero against the real file", () => {
+    expect(count(DATA)).toBe(0);
+  });
+
+  it("reads one when one is planted, in a section body or anywhere else", () => {
+    // Fails-at-one, proven without touching the file the ratchet reads.
+    const planted = `      body: "[VERIFY: a claim nobody has sourced yet]",`;
+    expect(count(planted)).toBe(1);
+    expect(count(DATA + String.fromCharCode(10) + planted)).toBe(1);
+  });
+});
