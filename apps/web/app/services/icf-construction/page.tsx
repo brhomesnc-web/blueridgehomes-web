@@ -141,7 +141,7 @@ export default function ICFConstructionPage() {
                     {"Homeowners who choose ICF are usually thinking long term. They want lower energy bills, a home that can handle severe weather, and walls that block outside noise almost entirely. In the mountains, where temperatures swing and storms hit hard, those advantages compound."}
                   </p>
                   <p className="br-lead">
-                    {"ICF homes typically use 40 to 60 percent less energy for heating and cooling compared to conventional wood-frame construction. The concrete mass also moderates temperature swings, so your HVAC system runs less and lasts longer."}
+                    {"ICF walls outperform conventional framing on energy, but the published comparisons range from single digits to more than half, depending on who commissioned the study, so we do not quote a figure. What the assembly actually does is close the envelope: air, moisture, and airborne contaminants do not pass through it, so intake and exhaust are mechanical and deliberate. The concrete core adds thermal mass, which moderates the daily temperature swing in a way an R-value comparison does not capture."}
                   </p>
                   <p className="br-lead">
                     {"We have built ICF homes from full basement foundations to entire above-grade wall systems. Whether you want the full envelope or just a concrete-core first floor, we can design the approach that fits your site and your budget."}
@@ -194,7 +194,7 @@ export default function ICFConstructionPage() {
                       <div>
                         <h3 className="br-commitment-title">Energy Savings</h3>
                         <p className="br-commitment-body">
-                          40 to 60 percent reduction in heating and cooling costs compared to conventional wood-frame construction.
+                          A continuous insulated envelope with no thermal bridging through studs, so the mechanical system cycles less. Published comparisons vary too widely to quote; ask us for a real utility history from a finished house.
                         </p>
                       </div>
                     </div>
