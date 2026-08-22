@@ -2345,6 +2345,31 @@ img {
 .br-blog-prose a { color: var(--br-accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
 .br-blog-prose a:hover { opacity: 0.75; }
 
+/* In-prose links.
+   `a { color: inherit; text-decoration: none; }` at the top of this file means an
+   anchor with no className of its own renders identically to body text. Anchors
+   inside .br-lead carry no className, so every in-prose link on the services and
+   service-areas pages was invisible as a link. Same declarations as
+   .br-blog-prose a above, deliberately. */
+.br-lead a {
+  color: var(--br-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+.br-lead a:hover { opacity: 0.75; }
+
+/* Scoped exception. .br-closing-cta sits on a photographic background
+   (background-image: mountain-footer.jpg) and sets its .br-lead white with a dark
+   text-shadow. var(--br-accent) is #6b4226 and would be near-unreadable there, which
+   is the same defect in reverse. No CTA paragraph contains a link today; this is
+   defensive, so the first one added does not reintroduce it. Inherit keeps the white
+   and the shadow that already make that text legible, and adds only the underline. */
+.br-closing-cta .br-lead a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .br-blog-prose ul, .br-blog-prose ol { margin: 0 0 20px; padding-left: 24px; }
 .br-blog-prose li { margin-bottom: 10px; padding-left: 4px; }
 .br-blog-prose li::marker { color: var(--br-gold-dark); }
