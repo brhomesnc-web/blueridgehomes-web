@@ -291,6 +291,65 @@ describe("the reciprocal links this slice adds", () => {
   });
 });
 
+describe("the ICF page quotes no unsourced energy percentage", () => {
+  /**
+   * app/services/icf-construction/page.tsx carried "40 to 60 percent less energy"
+   * twice -- once as a paragraph, once as an Energy Savings bullet. Neither cited a
+   * source, and the child page at /services/icf-construction/asheville explicitly
+   * refuses to publish a figure because the literature runs from single digits to
+   * more than half depending on who funded the study. Parent and child were one
+   * click apart and contradicted each other.
+   *
+   * This lives here rather than in its own file because this suite already reads the
+   * parent services pages and already owns the no-unsourced-figure rule in the shape
+   * of the VERIFY ratchet. One rule, one home.
+   *
+   * Matched on PATTERN: a number -- digits or spelled out -- next to percent or %,
+   * in a sentence that also mentions energy. A differently worded reintroduction
+   * fails too. The removed copy deliberately says "more than half" rather than
+   * naming a percentage, so that the spelled-out form can be rejected as well.
+   */
+  const ICF = read("app", "services", "icf-construction", "page.tsx");
+
+  const NUMBER_WORD =
+    "one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred";
+  const ENERGY_WORD =
+    "energy|efficien|heating|cooling|savings|utility|utilities|HVAC|insulation|thermal|R-value";
+
+  function offendingSentences(source: string): string[] {
+    const prose = source.replace(/\s+/g, " ");
+    const sentences = prose.split(/(?<=[.!?])\s/);
+    const numberNextToPercent = new RegExp(
+      `(\\d[\\d,.]*|${NUMBER_WORD})\\s*(?:to\\s*(?:\\d[\\d,.]*|${NUMBER_WORD})\\s*)?(?:percent|%)`,
+      "i"
+    );
+    const energy = new RegExp(ENERGY_WORD, "i");
+    return sentences.filter((s) => numberNextToPercent.test(s) && energy.test(s));
+  }
+
+  it("states no percentage-plus-energy claim anywhere on the page", () => {
+    const offenders = offendingSentences(ICF);
+    expect(offenders, `unsourced energy percentage on the ICF page: ${offenders.join(" | ")}`)
+      .toEqual([]);
+  });
+
+  it("the matcher actually catches the claim it was written for", () => {
+    // Guards the guard. If the regex is broken by a later edit, this fails rather
+    // than the suite silently passing on a page that has the claim back.
+    const planted =
+      "ICF homes typically use 40 to 60 percent less energy for heating and cooling.";
+    expect(offendingSentences(planted)).toHaveLength(1);
+    const spelledOut = "An ICF wall cuts energy use by forty percent.";
+    expect(offendingSentences(spelledOut)).toHaveLength(1);
+  });
+
+  it("does not fire on the refusal wording the page now uses", () => {
+    const refusal =
+      "The published comparisons range from single digits to more than half, so we do not quote a figure on energy.";
+    expect(offendingSentences(refusal)).toEqual([]);
+  });
+});
+
 describe("the [VERIFY:] ratchet", () => {
   const DATA = read("lib", "serviceLocations.ts");
   const markers = DATA.match(/\[VERIFY:[^\]]*\]/g) ?? [];
