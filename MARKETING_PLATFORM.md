@@ -234,9 +234,32 @@ complete and no link dead-ends.
 Binding on every producer, human or agent. These are editorial constraints, not lint rules; nothing
 in the codebase enforces them today, which is exactly why they are written down.
 
-- **No dollar figures, percentages, or lead times stated as fact.** A generated draft does not know
-  what a kitchen costs in Weaverville. Write the claim as `[VERIFY: typical range for a mid-tier
-  kitchen remodel, WNC, 2026]` inline and leave it for a human to resolve or cut.
+- **No figure without either a public source or the owner's own records.** This supersedes the
+  earlier rule — "no dollar figures, percentages, or lead times stated as fact" — which was too broad,
+  and which the codebase now contradicts. A statutory threshold with a `.gov` citation behind it is a
+  different class of object from a cost-per-square-foot estimate, and the old rule could not tell them
+  apart. **Sourced figures are publishable**, and should carry their source in a code comment beside
+  the field. **Unsourced figures are marked, refused, or deleted.** Marked looks like
+  `[VERIFY: typical range for a mid-tier kitchen remodel, WNC, 2026]` inline, left for a human to
+  resolve or cut.
+
+  **What enforced it, 2026-08-21.** A *marker ratchet*: an integer constant in
+  `tests/service-locations.test.ts`, asserted against the count of unresolved markers in
+  `lib/serviceLocations.ts` and revised only downward. It ran 26 → 16 → 14 → 11 → 1 → 0 across five
+  passes and is now a permanent floor — the suite fails if a marker is added, and equally if one is
+  removed without lowering the constant in the same commit. Two closures were **refusals** rather than
+  answers: the ICF energy-savings percentage and the ICF cost premium are deliberately not published,
+  and the copy says so in as many words.
+
+  **The live counterexample the rule caught.** `app/services/icf-construction/page.tsx` carried an
+  unsourced **"40 to 60 percent less energy"** claim in **two** places, in two different registers — a
+  body paragraph and an *Energy Savings* bullet — on a page that had been deployed for months. It
+  surfaced only because the new child page at `/services/icf-construction/asheville` refused to publish
+  the same figure, which put the contradiction one click apart. **A string match on the first instance
+  would have missed the second**: the wording differed ("less energy for heating and cooling" against
+  "reduction in heating and cooling costs"). That is the argument for a pattern-based matcher, and for
+  reading the whole file rather than the line named in the brief. **The other four `/services/<slug>`
+  clone pages have not been read with this lens.**
 - **No opening title heading.** The blog template owns the `<h1>`; a draft that opens with one
   renders two titles stacked. Start at `##`.
 - **Tags: 3–6.** Fewer under-files the post; more dilutes every tag it touches.
@@ -247,6 +270,75 @@ and so the correction is a deliberate editorial pass, not a silent edit.
 [Operator-reported 2026-08-18 — the post lives in `blog_posts` on the VPS, NOT in this repo, so it
 is NOT verifiable from source. Confirm with
 `SELECT slug, LEFT(content, 200) FROM blog_posts WHERE slug = 'kitchen-remodel-cost-western-north-carolina';`]
+
+---
+
+### A new route family ships with its inbound links, not just a sitemap entry
+
+Batch one of the service x location pages — five pages, merged 2026-08-21 — shipped with a sitemap
+entry and almost no inbound links. The three Asheville pages had **zero**. A sitemap entry is
+**discovery, not authority**: it tells a crawler the URL exists, not that it matters. The links landed
+in a follow-up commit; they belonged in the same slice.
+
+**The larger finding underneath it.** Asheville was absent from the towns list on **all five**
+`/services/<slug>` pages, not only the new ones. That list had been built by enumerating
+`/service-areas/<town>` routes, and Asheville never had one. The **primary market was unlinked from
+every service page on the site**, and had been for as long as those pages existed.
+
+A full read-only recon of the link graph missed it, because the brief asked for the graph **as it
+stood**. Nothing in that output was wrong — the absence simply had no row to appear in.
+
+> **Recon rule: ask what is missing, not only what exists.** An inventory of what is present cannot
+> surface a gap. For a link graph that means enumerating the entities that *should* be linked and
+> diffing against what is, rather than listing what is.
+
+### A mailing address is not a jurisdiction
+
+**Settlers Cove carries Weaverville mailing addresses but sits in MADISON COUNTY**, not Buncombe. Duck
+Drive is Mars Hill, also Madison. [Operator-reported 2026-08-21 — not verifiable from this repo, which
+holds no county data.] In Western North Carolina the postal town and the permitting county diverge
+routinely, and the facts that matter follow the **county**: the permitting path, the erosion-control
+thresholds, and the septic review are all different on the other side of the line.
+
+**What the pages say, and why.** Project *town labels* stay "Weaverville" — that is the mailing
+address, and it is correct. What changed is the **permitting assertion**. The custom-homes entry now
+states that Weaverville addresses straddle two counties and that establishing which one a lot is in
+comes **before design**. The remodeling entry keeps its in-town / unincorporated-North-Buncombe binary
+because its anchor project is confirmed Buncombe; a comment tag on that entry warns against copying
+the paragraph across, since the custom-homes entry is **not** a binary.
+
+County status of the portfolio rows as of 2026-08-21:
+
+| Project | County | Status |
+|---|---|---|
+| `preston-ct` | Buncombe | Confirmed [Operator-reported 2026-08-21] |
+| `280-settlers-cove` | **Madison** | `location` still reads "Weaverville, NC" — **NOT FIXED** |
+| `660-settlers-cove` | **Madison** | `location` still reads "Weaverville, NC" — **NOT FIXED** |
+| `duck-dr` | **Madison** | `location` reads "Mars Hill, NC", which is correct |
+| `195-meadow-creek` | — | **UNVERIFIED** |
+| `90-covey-dr` | — | **UNVERIFIED** |
+
+The two wrong values are rendered to visitors today by `/portfolio/[slug]`. See section 5 → Open items.
+
+> **Rule: any locality claim in copy needs the county verified, not inferred from the postal town.**
+
+### Provenance tags are comments, never rendered copy
+
+An operator-reported fact carries a tag naming the source and the date, in a **TS comment above the
+field** — never inside the copy string:
+
+    // Review-time figure: operator-reported, confirmed with the City of Asheville
+    // 2026-08-21. The city publishes no review-time target; this came from asking
+    // Development Services directly.
+    localDetail:
+      "Permitting inside the city runs through ..."
+
+Rendering the tag would publish an internal note to a homeowner, which is the opposite of what
+resolving a marker is for. `tests/service-locations.test.ts` enforces it: any line mentioning
+`operator-reported` must start with `//`.
+
+The convention exists so a later session does not hunt for a URL that was never there. **A resolved
+figure with no recorded provenance is indistinguishable from an invented one** six months on.
 
 ---
 
@@ -469,6 +561,44 @@ Explicitly out of scope for slice 1, in rough dependency order:
 
 ---
 
+### Open items — service x location slice (2026-08-21)
+
+Carried out of the slice deliberately rather than fixed inside it, roughly by blast radius.
+
+1. **Two `portfolio_projects` rows carry the wrong locality.** `280-settlers-cove` and
+   `660-settlers-cove` have `location = "Weaverville, NC"`; both are Madison County. Rendered to
+   visitors today by `/portfolio/[slug]`. **Fix through the admin form**, not by hand in the database.
+2. **`195-meadow-creek` and `90-covey-dr` county verification** — unverified in either direction.
+3. **`app/service-areas/weaverville/page.tsx` hardcodes the same error**, lines 115-116, for both
+   Settlers Cove projects. Live on `main`. Same wrong string, second source — fixing the DB rows will
+   not fix this one.
+4. **Comparative-performance claims audit across all five `/services/<slug>` clone pages.** Same
+   species as the energy percentage and stronger. Known instances on `icf-construction` alone:
+   - line 215 — "ICF homes have survived hurricanes and wildfires that destroyed neighboring
+     wood-frame structures". There probably are documented cases; the **implied generality** is what
+     is unsupported.
+   - line 87 — "rated for wind speeds well above what Western North Carolina requires". Now also
+     **inconsistent with its own child page**, which states the requirement is elevation-keyed from
+     115 to 150 mph under 2018 NCRC Table R301.2(5). "Well above" means little against a figure that
+     moves 35 mph with elevation.
+
+   Wants its own pass with a pattern-based guard, not a one-line fix, and it is unlikely these two are
+   the only claims of that shape.
+5. **No image on any of the five new pages has been verified to render.** See section 7 → Deploy Notes
+   for why this cannot be closed off the box.
+6. **`npm ci` reports 10 vulnerabilities (1 low, 9 high)** — `sharp` inheriting `libvips` CVEs, and
+   `npm audit fix --force` wants `next@16.3.2`, outside the stated dependency range. Deferred to a
+   security pass alongside the `brhomes-analytics` service-account key rotation.
+7. **`/service-areas/asheville` does not exist.** The highest-value single URL remaining: the city is
+   the primary market and has no service-area page, which is the root of the missing-links finding in
+   section 3. **The orphan guard carries a dated tripwire** — `SERVICE_AREA_PAGES` in
+   `app/services/[service]/[town]/page.tsx` deliberately omits `asheville`, and the test asserts both
+   that the route is absent and that every town in that set has a real page. Building
+   `/service-areas/asheville` **will fail the suite**. That is intended: it tells whoever builds it
+   that three files need wiring in at the same time.
+
+---
+
 ## 6. Manual VPS Steps Outstanding
 
 Both are done by hand on the VPS, deliberately, outside any build or deploy:
@@ -537,6 +667,24 @@ Deploy is one command — `cd /var/www/brhomes/apps/web && ./deploy.sh`. That sc
 deploy path and owns the pull, install, build, standalone asset copies, and restart. See
 `OPS.md` → "Standard Update / Redeploy Procedure", including the bootstrap note for when
 `deploy.sh` itself changes.
+
+**What it actually does**, read from the script rather than recalled: pulls `main`, runs
+`npm install`, stops `brhomes-web`, **deletes `.next` entirely**, runs `npm run build`, merges
+`public/` into the standalone bundle with `cp -rT`, **replaces `public/optimized` with a symlink** to
+`/var/www/brhomes/apps/web/public/optimized`, copies `.next/static` across, then starts the service.
+Three deploys through it on 2026-08-21. [Operator-reported — the session that produced this slice ran
+three `git merge --no-ff` + `git push origin main` cycles and did **not** itself invoke `deploy.sh`.
+The deploys are the owner's: reported, not observed.]
+
+**That symlink is why `public/optimized/` is gitignored**, and it is load-bearing. Images live on the
+VPS filesystem and are symlinked into the bundle, so an upload is visible immediately without a
+redeploy. It also means **no image on a new page can be confirmed to render before the first VPS
+build** — the directory exists in no checkout, so nothing local can resolve those paths.
+
+**A `curl` status check cannot close that gap.** A 200 on a page says the HTML rendered; it says
+nothing about whether a `next/image` `src` resolved, because the image is a separate request the status
+check never makes. Verifying images requires **eyes on a rendered page**, and there is no automated
+substitute in this repo today.
 
 Build-relevant dependency changes to date: `recharts` (this platform), and **5 TipTap packages**
 added later for the WYSIWYG editor (`@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`,

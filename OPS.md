@@ -824,6 +824,13 @@ These are deliberate operator actions. Nothing in a deploy performs them.
 
       `.env.local` is gitignored and `reset --hard` does not touch untracked files, so env and
       uploads survive.
+- [ ] **(d) Correct two live `portfolio_projects` locality values.** `280-settlers-cove` and
+      `660-settlers-cove` carry `location = "Weaverville, NC"`; both are **Madison County**, and
+      `/portfolio/[slug]` renders that string to visitors today. Fix through the admin form, not by
+      hand in the database. `195-meadow-creek` and `90-covey-dr` counties are **unverified** and want
+      the same check. Full context — including a second hardcoded copy of the same error in
+      `app/service-areas/weaverville/page.tsx` — is in `MARKETING_PLATFORM.md` → section 5 →
+      "Open items — service x location slice (2026-08-21)".
 
 ---
 
@@ -1504,10 +1511,13 @@ Standing caution: any VPS-side edit made outside git is lost when `deploy.sh` re
 
 ## Testing — what the existing harness can and cannot catch
 
-The suite is `vitest run` over `apps/web/tests/`, four files as of 2026-08-18. **Every assertion in
-it reads source TEXT.** There is no DOM harness for the admin client components, no fetch mock, and
-**no harness anywhere that executes SQL**. That is a deliberate limit, but it has to be stated
-plainly or the green run means more than it should.
+The suite is `vitest run` over `apps/web/tests/` — **five files, 124 assertions, as of 2026-08-21**.
+**Almost every assertion in it reads source TEXT.** The one exception is
+`service-locations.test.ts`, which additionally imports `lib/serviceLocations.ts` directly — safe only
+because that module imports nothing itself — and checks the filesystem with `existsSync`. There is no
+DOM harness for the admin client components, no fetch mock, and **no harness anywhere that executes
+SQL**. That is a deliberate limit, but it has to be stated plainly or the green run means more than it
+should.
 
 **The analytics slice (2026-08-18) shipped with no tests at all.** Every prior slice shipped
 structural tests; this one did not. Recorded as a gap, not excused.
@@ -1532,6 +1542,86 @@ refusing to resolve an operator. The catchable rule is **structural**, and it is
 
 That is greppable and would have failed on the line above. **This is a rule, not claimed coverage:**
 no test currently enforces it. Writing one that does is the Horizon item.
+
+---
+
+## Guard Failure Classes — assertions that look green
+
+Four failure modes found on 2026-08-21, in one session, **all of them in verification code rather than
+in the code being verified**. Grouped because they share a root: a check whose green result carries
+less information than its reader assumes. Related from other angles: Horizon → "Chart bake: NaN cells
+slip past both media gates", and Troubleshooting → "A 503 that means the opposite of what it says".
+
+### 1. Guard the guard
+
+Three assertion bugs in one session, every one green-looking:
+
+- A substring assertion on `"/service-areas/asheville"` that **could only ever match a comment**. The
+  page builds that href from a template literal, so the literal path never appears in the source; the
+  sole occurrence was the comment explaining the omission.
+- An `== 1` post-condition on an anchor **the replacement was written to remove**. It failed
+  identically on `0` and on `2`, and its message read "duplicated" for the opposite condition.
+- A note-rewrite whose **own non-vacuity check ran it twice more**, triplicating a docstring.
+
+> **Rule: every guard gets a planted positive proving it fires, and a planted negative proving it does
+> not fire on the correct wording.** A regex that silently stops matching is indistinguishable from a
+> passing test.
+
+Worked example — `tests/service-locations.test.ts` → "the ICF page quotes no unsourced energy
+percentage". Alongside the real assertion, one test plants both `"40 to 60 percent less energy"` and a
+spelled-out `"cuts energy use by forty percent"` and asserts the matcher catches both; a third asserts
+it does **not** fire on the refusal wording the page now uses. Without those two, a broken regex leaves
+the suite green on a page that has the claim back.
+
+### 2. An assertion predicate must survive its own transform
+
+The general form behind two of the three above. **An assertion that references PRE-transform text is
+checking a condition the transform was written to falsify.** Assert on the post-condition, not on the
+anchor.
+
+    # wrong - the replacement deliberately changes "goes DOWN." to "goes DOWN,"
+    assert after.count(OLD_ANCHOR) == 1, "note start duplicated"
+
+    # right - assert what the new text must look like
+    assert after.count(OLD_ANCHOR) == 0, "old note start survived"
+    assert after.count(UNIQUE_IN_NEW) == 1, "new note not written exactly once"
+
+Same shape as Horizon → "Chart bake: NaN cells slip past both media gates", where the gate's predicate
+stopped matching *because* the bake had already replaced the fence it keyed on. There it hid a defect
+in the product; here it hid a defect in the guard. Same mechanism, different victim.
+
+### 3. Verification that corrupts its subject
+
+The non-vacuity check — **the thing proving the gate is real** — was itself the defect. The ratchet
+setter did two jobs in one run: it rewrote a history note *and* set the integer. The non-vacuity
+procedure runs that setter twice more, down one and back, so the note was appended each time. Commit
+`40a4031` shipped the docstring **triplicated**, and no gate caught it because it was a comment.
+
+The fix, recorded as **the assertions rather than the lesson**, because the lesson alone does not
+reproduce:
+
+- **Split the setter from the note-writer** — two tools, one job each.
+- The toggle asserts `after.replace(new, old) == before`, so it is **structurally incapable** of
+  touching prose: any other difference makes the round-trip fail.
+- The note tool asserts `UNIQUE_IN_NEW not in before` and **refuses a second run outright** rather
+  than appending.
+
+Distinct from Troubleshooting → "Two instruments agreeing with each other rather than with reality".
+That entry is a check that **cannot distinguish pass from unrun**. This one is a **verification
+procedure with a side effect on its own subject** — the act of checking changed the thing checked.
+
+### 4. Wrong but stable
+
+A paragraph-separator count was reported as **35** across four commits and asserted against each time.
+It counted `\n\n` **tokens**, two of which sat inside doc comments *describing the convention*; the
+real count of separator **lines** was **33**. It never caused a problem, because it was stable and only
+ever compared against its own previous value.
+
+> **Rule: a metric compared only to its own prior value cannot detect that it was never correct.** When
+> a count has two plausible definitions, track and assert **both**.
+
+The corrected guard asserts tokens **and** lines, with the expected delta of each stated separately, so
+a change that moves one and not the other fails rather than drifting.
 
 ---
 
