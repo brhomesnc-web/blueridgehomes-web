@@ -1549,7 +1549,7 @@ no test currently enforces it. Writing one that does is the Horizon item.
 
 ## Guard Failure Classes — assertions that look green
 
-Four failure modes found on 2026-08-21, in one session, **all of them in verification code rather than
+Failure modes found in live use rather than in review, **all of them in verification code rather than
 in the code being verified**. Grouped because they share a root: a check whose green result carries
 less information than its reader assumes. Related from other angles: Horizon → "Chart bake: NaN cells
 slip past both media gates", and Troubleshooting → "A 503 that means the opposite of what it says".
@@ -1573,7 +1573,12 @@ Worked example — `tests/service-locations.test.ts` → "the ICF page quotes no
 percentage". Alongside the real assertion, one test plants both `"40 to 60 percent less energy"` and a
 spelled-out `"cuts energy use by forty percent"` and asserts the matcher catches both; a third asserts
 it does **not** fire on the refusal wording the page now uses. Without those two, a broken regex leaves
-the suite green on a page that has the claim back.
+the suite green on a page that has the claim back. On 2026-08-22 this guard did exactly that
+with no regex broken at all: four uncited energy claims were live on `icf-construction/page.tsx`,
+every one of them inside the guard's surface and matching its own energy vocabulary, and every
+one of them failing only its digit test. An intact regex aimed at the wrong shape is not a
+weaker version of a broken one — it is invisible to the proof steps above, because it fires
+correctly on every case it was told about. See class 5.
 
 ### 2. An assertion predicate must survive its own transform
 
@@ -1624,6 +1629,33 @@ ever compared against its own previous value.
 
 The corrected guard asserts tokens **and** lines, with the expected delta of each stated separately, so
 a change that moves one and not the other fails rather than drifting.
+
+### 5. Digit-pinned guard, de-quantified rule
+
+A guard written to enforce a rule is pinned to the shape the rule had when the guard
+was written. When the rule changes shape, the guard does not follow, and nothing
+fails — it goes on passing against a rule that no longer exists.
+
+The energy guard was built under the numbers rule: no figure without a public source
+or Brian's own records. Its matcher required an energy term **and** a digit. The
+editorial rule then widened to cover uncited comparatives carrying no number, and the
+guard was never re-read against it. Four live claims sat inside its surface, matched
+its vocabulary, and passed on the missing digit alone. The suite reported 140 passing
+with all four deployed.
+
+**A guard's pattern must be re-read against the rule whenever the rule changes shape,
+not only when the guard fails.** Proving a guard fires — plant a positive, show the
+FAIL, remove it, re-run clean — tests it against cases it already knows. It cannot
+detect a rule that has outgrown it.
+
+Open, and not yet measured: how many other guards in this repo are digit-pinned. The
+question is whether the matcher requires a numeral for a rule whose current wording
+does not, and it has to be asked guard by guard.
+
+The editorial half of this finding is MARKETING_PLATFORM.md → §3 → "An editorial pass
+is scoped by claim, not by file". This entry is the guard mechanic: why a passing suite
+did not catch it. That one is the authoring rule: why the pass left it behind. They are
+deliberately recorded in both places and neither is redundant.
 
 ---
 

@@ -349,6 +349,51 @@ see the citation-style comments, and those are exactly as easy to orphan.
 The convention exists so a later session does not hunt for a URL that was never there. **A resolved
 figure with no recorded provenance is indistinguishable from an invented one** six months on.
 
+### An editorial pass is scoped by claim, not by file
+
+When an editorial rule is about a claim, the pass that applies it visits every place
+the claim occurs, not every line of the files someone thought to name. Scoping by file
+leaves the same claim standing elsewhere, and the two copies then contradict each
+other in public.
+
+The numbers-rule pass reached `app/services/icf-construction/page.tsx`, where it
+produced a sentence explaining that published energy comparisons vary too widely to
+quote. It did not reach `app/services/custom-homes/page.tsx`, which went on asserting
+superior energy efficiency for the same wall assembly. **Two service pages, one click
+apart, gave opposite editorial treatment to one claim for months.** The later
+claim-scoped pass found eleven instances across six files and eight registers, where a
+file-scoped reading of the same rule had found and fixed two.
+
+Registers count as separately as files do. Two of the eleven were `<h3>` headings —
+`Energy Savings` sitting directly above the body paragraph that declines to quantify
+savings — which no prose scan in the recon could see, because a three-word heading has
+no sentence to parse. When enumerating where a claim lives, enumerate registers
+explicitly: heading, bullet, card, FAQ answer, body prose, hero subtitle,
+`metaDescription`, JSON-LD.
+
+The guard-mechanics half of this finding is OPS.md → Guard Failure Classes → "5.
+Digit-pinned guard, de-quantified rule". That entry is why the claim survived a passing
+suite; this one is why the editorial pass missed it in the first place. Both are
+needed, and neither is a duplicate of the other.
+
+---
+
+### Claim scope overrules the file scope named in a handoff
+
+A handoff names the files it expects to matter. That list is a starting hypothesis
+about where a claim lives, never a boundary on the fix.
+
+The energy-remnant commit edited `app/page.tsx`,
+`app/service-areas/hendersonville/page.tsx`, and
+`app/service-areas/mills-river/page.tsx`. All three were explicitly out of scope in the
+handoff that commissioned the work. **Editing them was correct, and stopping at the
+named list would have reproduced exactly the failure the commit existed to fix.**
+
+Record the overrun when it happens and say which rule won. A later reader comparing
+the handoff's scope against the commit's reach will otherwise read a discipline breach
+where there was a decision, and the next handoff will be trusted as a boundary rather
+than as a hypothesis.
+
 ---
 
 ## 4. Data Model
