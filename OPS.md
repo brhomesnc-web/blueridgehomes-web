@@ -1673,9 +1673,9 @@ reworded by the #29 edit, not resolved, and its surviving clause still trips COM
 a structural quantity but asserted against a derived one will be mis-maintained by a reader who
 trusts the name. Defense: the docblock note added in 9b6dc4c, and the assertion message amended in
 this commit, both name what the constant counts (offender count, not list length) — the message at
-the point of use, where a mis-maintainer actually reads it. Pairing: the re-key and this entry
-landed in the same commit as the source edits that forced them — the change that falsifies the
-invariant is the change that lands.
+the point of use, where a mis-maintainer actually reads it. Pairing: the re-key landed in the same
+commit as the source edits that forced it — the change that falsifies the invariant is the change
+that lands. This entry followed in the docs sweep, once the pass it describes was complete.
 
 ---
 
