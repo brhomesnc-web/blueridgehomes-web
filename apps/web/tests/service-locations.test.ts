@@ -434,19 +434,23 @@ describe("the energy claim carries no uncited comparative", () => {
    * pattern, so they are a worklist instead of a blind spot. THIS NUMBER ONLY
    * EVER GOES DOWN.
    *
-   *  1-2. "the mechanical system cycles less" (page) and "far more gently ... and
-   *       the mechanical system cycles less" (module) are wording the numbers-rule
-   *       pass produced. Rewriting them here would re-open a decision that pass
-   *       already made, in a commit scoped to a different job.
-   *    3. "at a lower total cost" is comparative-claims inventory row #45 -- one of
+   * Four offenders, three keys -- entry 1 covers two of them. EXPECTED_ACCEPTED
+   * below is asserted against the OFFENDER count, not against the length of this
+   * list. The two are not the same number and must not be conflated.
+   *
+   *    1. "the mechanical system cycles less" is wording the numbers-rule pass
+   *       produced, surviving in two places: the page writes "so the mechanical
+   *       system cycles less", the module "and the mechanical system cycles
+   *       less". One key covers both. Rewriting them would re-open a decision
+   *       that pass already made, in a commit scoped to a different job.
+   *    2. "at a lower total cost" is comparative-claims inventory row #45 -- one of
    *       the two tail-clause misses. It belongs to that batch.
-   *    4. "energy-efficient ICF builds" is a category label in a list of build
+   *    3. "energy-efficient ICF builds" is a category label in a list of build
    *       types rather than a performance assertion. Weakest of the four. Left for
    *       an owner decision rather than resolved unilaterally.
    */
   const ACCEPTED = [
-    "so the mechanical system cycles less",
-    "far more gently than an R-value comparison predicts",
+    "the mechanical system cycles less",
     "at a lower total cost",
     "energy-efficient ICF builds",
   ];
