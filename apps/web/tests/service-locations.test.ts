@@ -489,16 +489,16 @@ describe("the energy claim carries no uncited comparative", () => {
     for (const parts of ENERGY_SURFACE) offenders += classify(read(...parts)).offenders.length;
     expect(
       offenders,
-      "accepted residue changed. Lower EXPECTED_ACCEPTED in the same commit if you resolved one; " +
-        "never raise it."
+      "accepted residue changed. This counts OFFENDERS, not ACCEPTED list length. Lower " +
+        "EXPECTED_ACCEPTED in the same commit if you resolved one; never raise it."
     ).toBe(EXPECTED_ACCEPTED);
   });
 
   it("the matcher catches every wording this commit removed", () => {
     // Guards the guard, per OPS.md "Guard Failure Classes -> 1. Guard the guard".
-    // These are the ELEVEN strings removed on 2026-08-22, verbatim. If the regex
-    // is broken by a later edit this fails, rather than the suite going green on
-    // a page that has the claim back.
+    // These are the THIRTEEN strings removed on 2026-08-22 and 2026-08-23,
+    // verbatim. If the regex is broken by a later edit this fails, rather than
+    // the suite going green on a page that has the claim back.
     const removed = [
       "Stronger, quieter, more energy-efficient homes in Asheville and Western NC.",
       "Insulated concrete form homes - stronger, quieter, and more energy-efficient than conventional framing.",
@@ -511,6 +511,8 @@ describe("the energy claim carries no uncited comparative", () => {
       "Insulated concrete form construction for superior energy performance, an investment that pays off quickly.",
       "Energy Savings",
       "ICF and Energy-Efficient Builds",
+      "outperform conventional framing on energy",
+      "far more gently than an R-value comparison predicts",
     ];
     for (const s of removed) {
       const c = classify(`<p>${s}</p>`);
@@ -522,12 +524,12 @@ describe("the energy claim carries no uncited comparative", () => {
     // The planted negative. Every replacement written in this commit, asserted
     // NOT to trip the guard -- otherwise the fix and the guard disagree.
     const replacements = [
-      "Stronger, quieter homes in Asheville and Western NC.",
-      "Insulated concrete form homes - stronger and quieter than conventional framing.",
+      "Quiet, storm-rated homes in Asheville and Western NC.",
+      "Insulated concrete form homes — a steel-reinforced concrete core wrapped in continuous insulation.",
       "The result is a home that resists severe weather and stays remarkably quiet.",
-      "They want a home that can handle severe weather and walls that block outside noise almost entirely.",
+      "They want a home that can handle severe weather and mass walls that measurably reduce outside noise.",
       "Insulated concrete form builds with a continuous insulated envelope and no thermal bridging through studs.",
-      "Insulated concrete form homes in Asheville, NC. Quieter, storm-resistant walls on mountain sites.",
+      "Insulated concrete form homes in Asheville, NC. Quiet, storm-rated walls on mountain sites.",
       "Stronger walls and superior comfort.",
       "New custom builds including insulated concrete form (ICF) construction with a continuous insulated envelope and no thermal bridging through studs.",
       "Insulated concrete form construction with a concrete core that adds thermal mass.",

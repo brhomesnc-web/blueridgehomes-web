@@ -396,6 +396,27 @@ than as a hypothesis.
 
 ---
 
+### The claim-scoped rule extends to claims that carry no number
+
+The figures rule (no figure without a public source or Brian's own records) was extended this
+pass to comparative-performance claims that carry no number and therefore slip every numeric
+guard — "survives where wood-frame fails," "well above what the code requires," "one of the
+few." 34 edit sites across five service pages and serviceLocations.ts: unfalsifiable claims
+deleted, comparative wrappers dropped to leave the mechanism, the ICF wind claim rewritten to
+the R301.2(5) elevation band (115–150 mph by first-floor finish elevation) so the parent page
+and the /asheville child page state the same requirement, and the license claims attributed to
+NC Licensing Board standing. The parent/child wind contradiction that opened the audit is closed
+in served HTML, confirmed by curl against the live page.
+
+Scope of the energy guard, made explicit: it matches energy comparatives only (ENERGY ∧
+COMPARATIVE ∧ ¬REFUSAL). The storm, standing, acoustic, and permitting comparatives this pass
+also removed carry no energy vocabulary and cannot enter its removed-list; backstopping them
+would need a second matcher with its own surface. That is a deliberate deferral — the editorial
+record is their backstop for now, not a keyword guard, which would reproduce the vocabulary-pinned
+blindness this audit exists to catch.
+
+---
+
 ## 4. Data Model
 
 ### `approval_queue` (new — the only table this platform adds)
