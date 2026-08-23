@@ -138,7 +138,7 @@ export default function AdditionsPage() {
                 <div style={{ direction: "ltr" }} className="br-commitment-copy">
                   <h2 className="br-title">The Hard Part Is Where It Meets</h2>
                   <p className="br-lead">
-                    {"Anyone can frame a new room. The challenge is tying it into an existing structure so the rooflines align, the foundation settles evenly, and the siding matches. That transition is where most additions fail \u2014 and where experience matters most."}
+                    {"Anyone can frame a new room. The challenge is tying it into an existing structure so the rooflines align, the foundation settles evenly, and the siding matches."}
                   </p>
                   <p className="br-lead">
                     {"We match existing roof pitches, siding profiles, and trim details so the addition reads as original construction. On mountain lots, that also means dealing with grade changes, drainage, and foundation types that vary from one side of the house to the other."}

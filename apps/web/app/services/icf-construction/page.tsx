@@ -5,7 +5,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "ICF Construction in Asheville, NC | Blue Ridge Homes",
   description:
-    "Blue Ridge Homes has been building with insulated concrete forms (ICF) since 2006. Stronger, quieter homes in Asheville and Western NC. NC License #56328.",
+    "Blue Ridge Homes has been building with insulated concrete forms (ICF) since 2006. Quiet, storm-rated homes in Asheville and Western NC. NC License #56328.",
 };
 
 export default function ICFConstructionPage() {
@@ -37,7 +37,7 @@ export default function ICFConstructionPage() {
                   in Asheville, NC
                 </h1>
                 <p className="br-hero-subtitle">
-                  {"Insulated concrete form homes \u2014 stronger and quieter than conventional framing."}
+                  {"Insulated concrete form homes \u2014 a steel-reinforced concrete core wrapped in continuous insulation."}
                 </p>
                 <div className="br-button-row">
                   <Link href="/contact" className="br-button br-button-primary">
@@ -52,10 +52,10 @@ export default function ICFConstructionPage() {
           <section className="br-section">
             <div className="br-container">
               <h2 className="br-title br-title-center">
-                Building Stronger Homes in Western North Carolina
+                Building ICF Homes in Western North Carolina
               </h2>
               <p className="br-lead" style={{ maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
-                {"Insulated concrete forms create a continuous shell of reinforced concrete wrapped in rigid foam insulation. The result is a home that resists severe weather and stays remarkably quiet. Blue Ridge Homes has been building with ICF since 2006 \u2014 we were one of the first residential builders in the Asheville area to adopt the system."}
+                {"Insulated concrete forms create a continuous shell of reinforced concrete wrapped in rigid foam insulation. The result is a home that resists severe weather and stays remarkably quiet. Blue Ridge Homes has been building with ICF since 2006."}
               </p>
             </div>
           </section>
@@ -75,7 +75,7 @@ export default function ICFConstructionPage() {
                       <div>
                         <h3 className="br-commitment-title">Continuous Insulation</h3>
                         <p className="br-commitment-body">
-                          No thermal bridging from studs. The foam-concrete-foam sandwich eliminates the weak points found in conventional framing.
+                          No thermal bridging from studs. The foam-concrete-foam sandwich forms a continuous wall with no thermal bridging at studs and no cavities to fill.
                         </p>
                       </div>
                     </div>
@@ -84,7 +84,7 @@ export default function ICFConstructionPage() {
                       <div>
                         <h3 className="br-commitment-title">Reinforced Concrete Core</h3>
                         <p className="br-commitment-body">
-                          {"Steel-reinforced concrete walls rated for wind speeds well above what Western North Carolina requires \u2014 built to last generations."}
+                          {"Steel-reinforced concrete walls engineered to the ultimate design wind speed the 2018 North Carolina Residential Code sets by first-floor finish elevation \u2014 115 to 150 mph under Table R301.2(5)."}
                         </p>
                       </div>
                     </div>
@@ -138,10 +138,10 @@ export default function ICFConstructionPage() {
                 <div style={{ direction: "ltr" }} className="br-commitment-copy">
                   <h2 className="br-title">Why Build With ICF</h2>
                   <p className="br-lead">
-                    {"Homeowners who choose ICF are usually thinking long term. They want a home that can handle severe weather and walls that block outside noise almost entirely. In the mountains, where temperatures swing and storms hit hard, those advantages compound."}
+                    {"Homeowners who choose ICF are usually thinking long term. They want a home that can handle severe weather and mass walls that measurably reduce outside noise. In the mountains, where temperatures swing and storms hit hard, those advantages compound."}
                   </p>
                   <p className="br-lead">
-                    {"ICF walls outperform conventional framing on energy, but the published comparisons range from single digits to more than half, depending on who commissioned the study, so we do not quote a figure. What the assembly actually does is close the envelope: air, moisture, and airborne contaminants do not pass through it, so intake and exhaust are mechanical and deliberate. The concrete core adds thermal mass, which moderates the daily temperature swing in a way an R-value comparison does not capture."}
+                    {"ICF walls combine continuous insulation with thermal mass, and the published comparisons range from single digits to more than half, depending on who commissioned the study, so we do not quote a figure. What the assembly actually does is close the envelope: air, moisture, and airborne contaminants do not pass through it, so intake and exhaust are mechanical and deliberate. The concrete core adds thermal mass, which moderates the daily temperature swing in a way an R-value comparison does not capture."}
                   </p>
                   <p className="br-lead">
                     {"We have built ICF homes from full basement foundations to entire above-grade wall systems. Whether you want the full envelope or just a concrete-core first floor, we can design the approach that fits your site and your budget."}
@@ -186,7 +186,7 @@ export default function ICFConstructionPage() {
                 <div className="br-commitment-copy">
                   <h2 className="br-title">The Finished Product</h2>
                   <p className="br-lead">
-                    {"From the inside, an ICF home feels different before you know why. The walls are solid and quiet. There are no drafts. The temperature stays even from room to room. Visitors notice it immediately \u2014 they just cannot always put their finger on what is different."}
+                    {"From the inside, an ICF home feels different before you know why. The walls are solid and quiet. Visitors notice it immediately \u2014 they just cannot always put their finger on what is different."}
                   </p>
                   <div className="br-commitment-list">
                     <div className="br-commitment-item">
@@ -203,7 +203,7 @@ export default function ICFConstructionPage() {
                       <div>
                         <h3 className="br-commitment-title">Sound Reduction</h3>
                         <p className="br-commitment-body">
-                          {"Concrete walls block outside noise far more effectively than wood framing \u2014 ideal for properties near roads or in exposed locations."}
+                          {"Sound attenuation through a wall is largely a function of mass, and a concrete wall has a great deal of it \u2014 ideal for properties near roads or in exposed locations."}
                         </p>
                       </div>
                     </div>
@@ -212,7 +212,7 @@ export default function ICFConstructionPage() {
                       <div>
                         <h3 className="br-commitment-title">Storm and Fire Resistance</h3>
                         <p className="br-commitment-body">
-                          {"Reinforced concrete walls rated for extreme wind and fire exposure. ICF homes have survived hurricanes and wildfires that destroyed neighboring wood-frame structures."}
+                          {"Reinforced concrete walls rated for extreme wind and fire exposure."}
                         </p>
                       </div>
                     </div>

@@ -93,7 +93,7 @@ export default function ConsultingPage() {
                       <div>
                         <h3 className="br-commitment-title">Pre-Purchase Inspections</h3>
                         <p className="br-commitment-body">
-                          {"Walking a property with you to identify structural concerns, deferred maintenance, and renovation potential that a standard home inspection might miss."}
+                          {"Walking a property with you to identify structural concerns, deferred maintenance, and renovation potential that falls outside the scope of a standard home inspection."}
                         </p>
                       </div>
                     </div>
@@ -138,7 +138,7 @@ export default function ConsultingPage() {
                 <div style={{ direction: "ltr" }} className="br-commitment-copy">
                   <h2 className="br-title">Mountain Building Is Different</h2>
                   <p className="br-lead">
-                    {"Building in Western North Carolina is not the same as building on flat land in a planned subdivision. Steep grades, rocky soil, long driveways, well and septic requirements, and weather exposure all add cost and complexity that do not show up in standard construction estimates."}
+                    {"Building in Western North Carolina is not the same as building on flat land in a planned subdivision. Steep grades, rocky soil, long driveways, well and septic requirements, and weather exposure all add cost and complexity that a flat-lot budget does not carry."}
                   </p>
                   <p className="br-lead">
                     {"We have seen buyers close on mountain lots that turned out to cost more to develop than the land itself. We have seen homeowners accept bids that left out tens of thousands in site work. A two-hour consultation can save you from a six-figure mistake."}

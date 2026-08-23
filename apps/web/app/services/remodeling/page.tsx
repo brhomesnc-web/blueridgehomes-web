@@ -55,7 +55,7 @@ export default function RemodelingPage() {
                 Remodeling Done Right in Western North Carolina
               </h2>
               <p className="br-lead" style={{ maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
-                {"A good remodel is harder than a new build. You are working inside an existing structure with hidden conditions, load-bearing walls, outdated wiring, and decades of settling. It takes a builder who understands structure \u2014 not just finishes. At Blue Ridge Homes, we have been renovating mountain homes since 2004, and we bring the same hands-on management to every remodel that we bring to our custom builds."}
+                {"A good remodel carries constraints a new build does not. You are working inside an existing structure with hidden conditions, load-bearing walls, outdated wiring, and decades of settling. It takes a builder who understands structure \u2014 not just finishes. At Blue Ridge Homes, we have been renovating mountain homes since 2004, and we bring the same hands-on management to every remodel that we bring to our custom builds."}
               </p>
             </div>
           </section>
@@ -136,12 +136,12 @@ export default function RemodelingPage() {
             <div className="br-container">
               <div className="br-grid-2 br-commitment-grid" style={{ direction: "rtl" }}>
                 <div style={{ direction: "ltr" }} className="br-commitment-copy">
-                  <h2 className="br-title">Built by a Contractor, Not a Handyman</h2>
+                  <h2 className="br-title">Built by a Licensed General Contractor</h2>
                   <p className="br-lead">
                     {"Remodeling in the mountains means dealing with older construction methods, balloon framing, stone foundations, and systems that were not built to modern code. We know what to look for before the first wall comes down."}
                   </p>
                   <p className="br-lead">
-                    {"Brian personally walks every remodel project before we price it. That means fewer surprises, realistic timelines, and a scope of work that accounts for what is actually behind your walls \u2014 not just what is visible on the surface."}
+                    {"Brian personally walks every remodel project before we price it. That means realistic timelines and a scope of work that accounts for what is actually behind your walls \u2014 not just what is visible on the surface."}
                   </p>
                   <p className="br-lead">
                     {"Every subcontractor we bring in is licensed, insured, and has worked with us before. We do not experiment on your home."}

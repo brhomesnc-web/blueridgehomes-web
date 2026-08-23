@@ -296,9 +296,9 @@ export const serviceLocations: ServiceLocation[] = [
     heading: "ICF Construction in Asheville, NC",
     // 2006 ICF start date, owner-reported 2026-08-21.
     intro:
-      "Insulated concrete forms build a wall as one assembly: rigid foam on both faces, steel-reinforced concrete in the middle, poured in place. There are no studs to bridge heat across, no cavities to fill imperfectly, and no gaps at the plate lines. What the homeowner notices is not the wall — it is that the rooms hold an even temperature and the house is quiet." +
+      "Insulated concrete forms build a wall as one assembly: rigid foam on both faces, steel-reinforced concrete in the middle, poured in place. There are no studs to bridge heat across, no cavities to insulate, and no gaps at the plate lines. What the homeowner notices is not the wall — it is that the rooms hold an even temperature and the house is quiet." +
       "\n\n" +
-      "We built our first ICF structure in 2006 and have been building with the system for twenty years. The Breezeway is our ICF build in South Asheville: a contemporary home with wood and steel exterior accents and floor-to-ceiling glass, on an ICF envelope. From the street it reads as a custom home, which is the point. ICF accepts stone, siding, stucco, and brick, and nothing about the finished exterior announces the wall system behind it." +
+      "We built our first ICF structure in 2006. The Breezeway is our ICF build in South Asheville: a contemporary home with wood and steel exterior accents and floor-to-ceiling glass, on an ICF envelope. From the street it reads as a custom home, which is the point. ICF accepts stone, siding, stucco, and brick, and nothing about the finished exterior announces the wall system behind it." +
       "\n\n" +
       "ICF is not the right answer for every project or every budget, and we will say so. It earns its cost on sites where comfort, energy use, sound, and storm resistance are all worth paying for at once — and it is a decision that has to be made before the foundation, not after.",
     detail: [
@@ -312,7 +312,7 @@ export const serviceLocations: ServiceLocation[] = [
         // elevation-dependent above).
         heading: "Wind Design Is Set by Elevation, Not by County",
         body:
-          "Mountain sites are where ICF makes its clearest case, and on exposed ridge lots wind loading is part of the reason. Wind design in Buncombe County is set by elevation rather than by a single county-wide number. The 2018 North Carolina Residential Code, Table R301.2(5), keys the ultimate design wind speed to first-floor finish elevation." +
+          "Mountain sites are where ICF’s wind and thermal performance matters most, and on exposed ridge lots wind loading is part of the reason. Wind design in Buncombe County is set by elevation rather than by a single county-wide number. The 2018 North Carolina Residential Code, Table R301.2(5), keys the ultimate design wind speed to first-floor finish elevation." +
           PARA +
           "Asheville sits at roughly 2,100 feet, so most homes in the city and the surrounding valley fall in the 115 mph band — but a ridge lot a few miles away can land a category or two higher, and that changes framing connections, sheathing attachment, and window DP ratings. It is confirmed at plan review against the finish floor elevation, which is a reason to have it settled before framing is priced.",
         facts: {
@@ -349,9 +349,9 @@ export const serviceLocations: ServiceLocation[] = [
         body:
           "R-value is the number the industry argues about, and it is the least interesting thing about an ICF wall. Published energy-savings comparisons range from single digits to over fifty percent depending on who commissioned the study, which is a good reason not to quote one." +
           PARA +
-          "What actually distinguishes the assembly is that air, moisture, and airborne contaminants do not pass through it. Every intake and exhaust in an ICF house is mechanical and deliberate — you know what is entering the building, at what rate, and through what filter. A framed wall leaks by design and the leakage is managed afterward. That is an indoor air quality difference before it is an energy difference, and it is the one people notice living in the house." +
+          "What actually distinguishes the assembly is that air, moisture, and airborne contaminants do not pass through it. Every intake and exhaust in an ICF house is mechanical and deliberate — you know what is entering the building, at what rate, and through what filter. A framed wall relies on assembled layers for its air barrier; a monolithic ICF wall does not. That is an indoor air quality difference before it is an energy difference, and it is the one people notice living in the house." +
           PARA +
-          "The concrete core adds thermal mass: it absorbs heat and releases it slowly, so the interior tracks the daily temperature swing far more gently than an R-value comparison predicts and the mechanical system cycles less. Steady-state R testing measures a wall at equilibrium, a condition that does not occur in a real climate — which is part of why those published figures scatter so widely. And with no studs bridging the assembly, the rated insulation value is close to what you actually get, where a framed wall’s effective performance falls below its nominal rating.",
+          "The concrete core adds thermal mass: it absorbs heat and releases it slowly, so the wall moderates the interior against the daily temperature swing and the mechanical system cycles less. Steady-state R testing measures a wall at equilibrium, a condition that does not occur in a real climate — which is part of why those published figures scatter so widely. And with no studs bridging the assembly, the rated insulation value is close to what you actually get.",
       },
     ],
     faqs: [
@@ -373,12 +373,12 @@ export const serviceLocations: ServiceLocation[] = [
       },
       {
         q: "How long have you been building with ICF?",
-        a: "We built our first ICF structure in 2006 and have been building with the system for twenty years, which is early for this market. That matters mostly because ICF is unforgiving of inexperience at the pour.",
+        a: "We built our first ICF structure in 2006. Experience matters here mostly because ICF is unforgiving of inexperience at the pour.",
       },
     ],
     metaTitle: "ICF Construction in Asheville, NC",
     metaDescription:
-      "Insulated concrete form homes in Asheville, NC. Quieter, storm-resistant walls on mountain sites. See our completed ICF build in South Asheville.",
+      "Insulated concrete form homes in Asheville, NC. Quiet, storm-rated walls on mountain sites. See our completed ICF build in South Asheville.",
   },
 
   // ---------------------------------------------------------------- 4
@@ -394,7 +394,7 @@ export const serviceLocations: ServiceLocation[] = [
       "\n\n" +
       "Preston Court is our whole-home remodel in Weaverville — a complete interior renovation rather than a surface refresh. That is most of what we do here: kitchens taken back to the framing, baths rebuilt from the drain up, and walls removed with the beam work to carry what they were holding." +
       "\n\n" +
-      "We have built extensively in this area, which is a practical advantage on a renovation rather than a sentimental one. We know which subcontractors show up, how the inspections schedule, and what the houses in a given neighborhood tend to be hiding.",
+      "We know this area’s building stock and permitting well, which is a practical advantage on a renovation rather than a sentimental one. We know which subcontractors show up, how the inspections schedule, and what the houses in a given neighborhood tend to be hiding.",
     detail: [
       {
         // Preston Court confirmed Buncombe County, owner-reported 2026-08-21. The in-town /
@@ -466,11 +466,11 @@ export const serviceLocations: ServiceLocation[] = [
     ],
     heading: "Custom Home Building in Weaverville, NC",
     intro:
-      "Weaverville is where we have built the most. Meadow Creek, Covey Drive, and two homes in Settlers Cove are all Weaverville builds, and together they cover most of what building here actually involves — sloped lots, mountain views that have to be earned by where the house sits, and finishes that hold up to how people in these mountains actually live." +
+      "We have built repeatedly in the Weaverville area, across both Buncombe and Madison counties. Meadow Creek, Covey Drive, and two homes in Settlers Cove are all Weaverville builds, and together they cover most of what building here actually involves — sloped lots, mountain views that have to be earned by where the house sits, and finishes that hold up to how people in these mountains actually live." +
       "\n\n" +
       "Building on a Weaverville lot starts with the ground. Slope decides the foundation, the driveway approach, and how much of the budget goes into the site before anything is framed. We walk the property first and price from what is there, because a plan and a lot have to be reconciled and it is cheaper to do that on paper." +
       "\n\n" +
-      "One builder carries the whole sequence: site evaluation, grading, foundation, framing, the trades, the inspections, and the punch list. That is the difference between a schedule that holds and a schedule that gets rebuilt every time a subcontractor drops.",
+      "One builder carries the whole sequence: site evaluation, grading, foundation, framing, the trades, the inspections, and the punch list.",
     detail: [
       {
         heading: "Site Work, and Rock",
@@ -510,7 +510,7 @@ export const serviceLocations: ServiceLocation[] = [
         body:
           "What you hand in determines how long the approval lives. The site also has to be prepared before the evaluation: every proposed structure staked or flagged — house, deck, porch, garage, and driveway — with undergrowth cleared to give roughly fifty feet of visibility. An unprepared site can draw a re-visit fee and put you back in the queue." +
           PARA +
-          "On mountain parcels in Buncombe, Henderson, and Haywood, shallow bedrock and steep terrain frequently push a site onto the engineered-design pathway, which is a longer and costlier route than a conventional system. The county publishes the steps but not a timeline; how long the sequence actually takes depends on the queue and on the site, which is why it is the first thing we try to get moving on a rural lot.",
+          "On mountain parcels in Buncombe, Henderson, and Haywood, shallow bedrock and steep terrain frequently push a site onto the engineered-design pathway, which adds time and cost. The county publishes the steps but not a timeline; how long the sequence actually takes depends on the queue and on the site, which is why it is the first thing we try to get moving on a rural lot.",
         facts: {
           caption: "How long an Improvement Permit lasts, by what is submitted.",
           rows: [

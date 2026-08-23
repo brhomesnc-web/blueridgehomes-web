@@ -5,7 +5,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Custom Home Builder in Asheville, NC | Blue Ridge Homes",
   description:
-    "Blue Ridge Homes builds custom homes in Asheville and Western North Carolina. 30+ years experience, NC License #56328, zero complaints since 2004.",
+    "Blue Ridge Homes builds custom homes in Asheville and Western North Carolina. 30+ years experience, NC License #56328, in good standing since 2004.",
 };
 
 export default function CustomHomesPage() {
@@ -75,16 +75,16 @@ export default function CustomHomesPage() {
                       <div>
                         <h3 className="br-commitment-title">Owner on Every Jobsite</h3>
                         <p className="br-commitment-body">
-                          {"Brian personally oversees every project from foundation to final punch list. No project manager buffer \u2014 the owner of the company is on your jobsite."}
+                          {"Brian personally oversees every project from foundation to final punch list."}
                         </p>
                       </div>
                     </div>
                     <div className="br-commitment-item">
                       <span className="br-commitment-icon">{"\u2713"}</span>
                       <div>
-                        <h3 className="br-commitment-title">Zero Complaints Since 2004</h3>
+                        <h3 className="br-commitment-title">Licensed and in Good Standing Since 2004</h3>
                         <p className="br-commitment-body">
-                          Licensed as NC General Contractor #56328 for over twenty years with a spotless record. That comes from setting realistic expectations and following through on every promise.
+                          Licensed as NC General Contractor #56328 since 2004, in good standing with the state Licensing Board. That standing comes from setting realistic expectations and following through on every promise.
                         </p>
                       </div>
                     </div>
@@ -138,10 +138,10 @@ export default function CustomHomesPage() {
                 <div style={{ direction: "ltr" }} className="br-commitment-copy">
                   <h2 className="br-title">Built for Mountain Living</h2>
                   <p className="br-lead">
-                    {"Western North Carolina is not flat suburban land. Mountain lots bring grading challenges, setback requirements, soil conditions, and weather exposure that require experience most builders simply do not have."}
+                    {"Western North Carolina is not flat suburban land. Mountain lots bring grading challenges, setback requirements, soil conditions, and weather exposure."}
                   </p>
                   <p className="br-lead">
-                    {"With over 1,000 building inspections behind us, we understand what local inspectors expect and we build to exceed it. From modern mountain retreats and timber-and-stone family homes to energy-efficient ICF builds, every project is tailored to its site and its owners."}
+                    {"With over 1,000 building inspections behind us, we understand what local inspectors expect. From modern mountain retreats and timber-and-stone family homes to energy-efficient ICF builds, every project is tailored to its site and its owners."}
                   </p>
                   <p className="br-lead">
                     Our service area covers Asheville and Buncombe County, Henderson County, and Haywood County. If you have land and a vision, we would love to talk about what is possible.
