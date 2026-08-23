@@ -1630,6 +1630,10 @@ ever compared against its own previous value.
 The corrected guard asserts tokens **and** lines, with the expected delta of each stated separately, so
 a change that moves one and not the other fails rather than drifting.
 
+A second instance this session: the v2 edit-table ledger printed icf as 10 and serviceLocations as
+12 — both wrong, cancelling to a correct total of 34. Caught by the build diffstat (11/6/3/1/2/11),
+not by re-summing the printed totals; a reconciling sum over wrong components is the signature.
+
 ### 5. Digit-pinned guard, de-quantified rule
 
 A guard written to enforce a rule is pinned to the shape the rule had when the guard
@@ -1656,6 +1660,22 @@ The editorial half of this finding is MARKETING_PLATFORM.md → §3 → "An edit
 is scoped by claim, not by file". This entry is the guard mechanic: why a passing suite
 did not catch it. That one is the authoring rule: why the pass left it behind. They are
 deliberately recorded in both places and neither is redundant.
+
+### 6. A guard asserting a derived quantity under a structural name invites mis-maintenance
+
+`EXPECTED_ACCEPTED` in service-locations.test.ts reads like the length of the `ACCEPTED` list but
+asserts against the offender count. During the comparative-claims pass a deleted accept-list entry
+forced a re-key; the change was proposed and ratified as 4→3 on the reading that the constant
+tracks list length. It was wrong — the offender count was unchanged at 4 (one offender was
+reworded by the #29 edit, not resolved, and its surviving clause still trips COMPARATIVE on
+\bless\b). The suite refused it: expected 3, received 4. Correct change: accept-list 4→3 keys,
+`EXPECTED_ACCEPTED` stays 4. The lesson is not "check the count" — it is that a constant named for
+a structural quantity but asserted against a derived one will be mis-maintained by a reader who
+trusts the name. Defense: the docblock note added in 9b6dc4c, and the assertion message amended in
+this commit, both name what the constant counts (offender count, not list length) — the message at
+the point of use, where a mis-maintainer actually reads it. Pairing: the re-key and this entry
+landed in the same commit as the source edits that forced them — the change that falsifies the
+invariant is the change that lands.
 
 ---
 
