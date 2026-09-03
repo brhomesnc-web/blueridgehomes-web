@@ -1379,17 +1379,55 @@ are logged rather than built.
   an admin tab left open still shows the `Scheduled` pill until the user acts. It reads as a failed
   publish and is not one — nothing polls or revalidates that client surface.
 
-### `/portfolio/[slug]` has the same latent 200-on-404 shape
+### ~~`/portfolio/[slug]` has the same latent 200-on-404 shape~~ — RESOLVED 2026-09-03 (`ad2ab80`)
 
-`apps/web/app/portfolio/loading.tsx` exists and sits above a page that calls `notFound()` — both
-verified 2026-08-14. That is precisely the arrangement `d62d8d4` had to remove from `app/blog`: the
-segment loading boundary streams a fallback, HTML flushes, the status locks at **200**, and
-`notFound()` can then render the 404 body but never set the 404 status.
+`apps/web/app/portfolio/loading.tsx` sat above a page that calls `notFound()` — precisely the
+arrangement `d62d8d4` had to remove from `app/blog`. The segment loading boundary streams a fallback,
+HTML flushes, the status locks at **200**, and `notFound()` then renders the 404 body but can never
+set the 404 status. Next injects `<meta name="robots" content="noindex">`, which is what a crawler
+reports as a soft 404.
 
-**Unaddressed by design** — no portfolio URL needs to 404 today. Recorded so that if one ever does,
-the cause is already named and the fix is known (delete the segment `loading.tsx`). Do **not** fix it
-speculatively: the loading boundary is doing real work on a gallery-heavy page, and removing it costs
-a visible loading state to close a hole nothing is falling through.
+**The premise this entry rested on was false, and that is the part worth keeping.** It said "no
+portfolio URL needs to 404 today" and warned against fixing the boundary speculatively. Six homepage
+cards were linking slugs no `portfolio_projects` row carries, so six URLs needed exactly that. The
+hole was being fallen through for as long as the entry asserted nothing was falling through it — the
+entry was not wrong about the mechanism, it was wrong about the premise that made the mechanism
+harmless, and nothing in it would ever have surfaced that.
+
+**Fixed in `ad2ab80`.** The file is deleted and its absence is pinned by
+`apps/web/tests/portfolioSoft404.test.ts`, alongside the blog guard in `tests/unpublish.test.ts` and
+the services guard in `tests/service-locations.test.ts` — three segments, three guards, same failure
+class. The cost is the one this entry correctly predicted: the portfolio index no longer has a
+loading spinner. That was accepted knowingly.
+
+**Runtime-verified after deploy** [VPS-verified 2026-09-03; deployed commit `ad2ab80`, from
+`git rev-parse` on the box]:
+
+    curl -sI http://127.0.0.1:3001/portfolio/covey-drive | head -1    → 404
+    curl -sI http://127.0.0.1:3001/portfolio/90-covey-dr | head -1    → 200
+
+and the homepage emits only the eight canonical slugs.
+
+#### `getProjectBySlug` filters `published = true` — and what that is NOT yet proven to do
+
+Shipped in the same commit. `getPublishedProjects` filters on `published` and feeds both
+`generateStaticParams` and the portfolio index; `getProjectBySlug` did not, so an unpublished project
+was absent from every listing and still rendered at **200** to anyone holding the URL. Unlisted is not
+unpublished. `getAllProjects` stays deliberately unfiltered — it backs the admin list, which has to
+show drafts.
+
+**The coverage limit, stated rather than glossed.** `portfolio_projects` holds **zero
+`published = false` rows today** [VPS-verified 2026-09-03], so this filter has had **no runtime
+exercise at all**. The test guard is textual: it asserts the WHERE clause reads
+`WHERE slug = $1 AND published = true`, and nothing in this repo executes SQL — see
+"Testing — what the existing harness can and cannot catch". Current coverage is that guard plus this
+query:
+
+    SELECT count(*) FILTER (WHERE published = false) AS unpublished FROM portfolio_projects;
+
+Runtime proof is deferred until an unpublished row exists. When one does, the check is one line —
+`curl -sI http://127.0.0.1:3001/portfolio/<that-slug> | head -1`, expecting **404**. Until then this
+is a fix believed correct by reading, not by observation, and it should be described that way.
 
 ### `ON CONFLICT (slug) DO NOTHING` errors rather than updates
 

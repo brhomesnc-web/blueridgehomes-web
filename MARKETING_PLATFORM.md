@@ -189,8 +189,11 @@ not fix it.
 > bug.** It will look like a harmless loading-state improvement. `tests/unpublish.test.ts` asserts the
 > file's absence for exactly this reason.
 
-`/portfolio/[slug]` has the same latent shape today — a segment `loading.tsx` above a page that calls
-`notFound()`. Unaddressed by design; see `OPS.md` → Horizon.
+`/portfolio/[slug]` **had** the same shape and no longer does. `app/portfolio/loading.tsx` was deleted
+in `ad2ab80` (2026-09-03) once six homepage cards were found linking slugs no `portfolio_projects` row
+carries — the "unaddressed by design" premise had quietly stopped being true.
+`tests/portfolioSoft404.test.ts` pins its absence exactly as `tests/unpublish.test.ts` pins the blog
+one. See `OPS.md` → Horizon for the closed entry and the post-deploy verification.
 
 ### UI
 
@@ -737,6 +740,33 @@ The platform ships as **ordinary routes in the existing Next app**, plus — sin
   **standalone** server (`node .next/standalone/server.js`), not `next start`; these routes ship
   inside the standalone bundle like any other page and need nothing unit-specific.
 - **No new service, no new port.**
+
+### nginx — one site-level change this platform does not own
+
+The bullet above is scoped to **this platform**, which still adds no nginx configuration. nginx itself
+is not frozen, and since 2026-09-03 it carries one change worth knowing about here because it affects
+every URL the platform publishes.
+
+**`www.blueridgehomesnc.com` now 301s to the apex host, on both `:80` and `:443`**
+[VPS-verified 2026-09-03]. No code in this repo has ever emitted a `www` link — the host was found and
+crawled by SEMrush on its own, and until the redirect it served the entire site as a second origin,
+splitting duplicate content across every URL. The redirect is the whole fix; nothing in the app
+changed.
+
+- **Config:** `/etc/nginx/sites-enabled/blueridgehomesnc.com` — **outside this repo.** It is in no
+  checkout, covered by no test, and **not restored by `deploy.sh`**. Nothing in CI or in a local build
+  can tell you it has drifted.
+- **Backup:** `/root/blueridgehomesnc.com.bak.<date>`.
+- **Pattern:** copied from the existing `perfectbike` config on the same box.
+
+> **⚠ certbot renewal may rewrite these server blocks.** Certbot edits the `:443` block it manages, and
+> a renewal can drop or reshape a hand-added redirect. **Re-verify the `www` 301 after the next
+> renewal:**
+>
+>     curl -sI https://www.blueridgehomesnc.com/ | head -1     # expect 301
+>
+> This is the one piece of the slice that can silently revert with nobody touching the repo, and the
+> only signal would be duplicate-content findings reappearing weeks later.
 
 Deploy is one command — `cd /var/www/brhomes/apps/web && ./deploy.sh`. That script is the only
 deploy path and owns the pull, install, build, standalone asset copies, and restart. See
