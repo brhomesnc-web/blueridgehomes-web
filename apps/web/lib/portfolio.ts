@@ -31,8 +31,13 @@ export async function getAllProjects(): Promise<PortfolioProject[]> {
 }
 
 export async function getProjectBySlug(slug: string): Promise<PortfolioProject | null> {
+  // `published = true` is load-bearing, not defensive. getPublishedProjects()
+  // filters on it, and that is what feeds BOTH generateStaticParams and the
+  // portfolio index — so without the same clause here an unpublished project is
+  // absent from every listing yet still renders at 200 to anyone holding the URL.
+  // Unlisted is not unpublished.
   const result = await query<PortfolioProject>(
-    "SELECT * FROM portfolio_projects WHERE slug = $1",
+    "SELECT * FROM portfolio_projects WHERE slug = $1 AND published = true",
     [slug]
   );
   return result.rows[0] ?? null;
