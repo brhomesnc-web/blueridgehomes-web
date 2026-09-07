@@ -836,6 +836,112 @@ These are deliberate operator actions. Nothing in a deploy performs them.
 
 ## Session Log — Shipped
 
+### 2026-09-07 — Next 16.1.6 → 16.3.4, dependency security slice 1 of 3
+
+One commit on a worktree branch, merged `--no-ff` and pushed the same day: slice `ae14fd1`, merge
+`614fc212a040d6692dad460027a4e45f8b448006` — **that merge SHA is the rollback anchor**. Pre-slice
+HEAD was `9230061`. **Deployed and production-verified**, VPS observed at `614fc21` with a clean
+tracked tree. Branch `slice/next-16.3.4` is retained for diagnosis.
+
+Versions, read from `npm ls` on **both** Windows and the VPS rather than from npm's install summary:
+`next 16.3.4`, `eslint-config-next 16.3.4`, `postcss 8.5.23`, `sharp 0.35.4`, `nanoid 3.3.18`.
+Two of those were not in the original handoff. `eslint-config-next` is an **exact pin that must move
+in lockstep** with `next`. `nanoid` had to be **forced**: postcss's `^3.3.16` range permits the
+vulnerable `3.3.16`, so the bump alone left it in place and `npm update nanoid` was required to land
+`3.3.18`. Transitively, `postcss` went to `8.5.23` and `sharp` to `0.35.4` via the lockfile refresh.
+
+#### Advisory delta — three definitions, all tracked
+
+`advisories 44 → 10`, `packages 7 → 3`, `nodes 34 → 30`.
+
+All three are recorded because of **Guard Failure Class 4**: the handoff's "40 → 7" was a count with
+two plausible definitions and no stated one, and a metric compared only against its own prior value
+cannot detect that it was never correct.
+
+The residual is asserted programmatically rather than eyeballed — an explicit `PASS: <pkg> advisories
+absent` for `next`, `postcss`, `sharp` and `nanoid`, **plus a check for residual packages that should
+not be there at all**. That second half is the **Class 5** defence: a guard that only confirms the
+cases it already knows about cannot notice a rule that has outgrown it. Residual is `@tiptap/core`
+(Slice 3), `js-yaml` (unowned, expected open) and `nodemailer` (Slice 2).
+
+#### Gates
+
+`npx tsc --noEmit` exit 0 local **and** VPS, `vitest` 171/171 across 6 files local, `npm test`
+171/171 on the VPS, `git diff --stat` exactly two paths, char/EOL check PASS with its detectors
+proven non-vacuous, **no ERESOLVE anywhere**, including the VPS `npm ci` — the
+Windows-lockfile-meets-linux point where sharp's native rebuild happens, and the likeliest place for
+this slice to have broken.
+
+#### How the gates were read — the reusable part
+
+This is the half worth carrying forward; the version numbers above are just this slice's facts.
+
+- **Lint is RED on both sides, and that is the finding.** 5 errors / 32 warnings at 16.3.4 — and the
+  *identical* rule tally and `file:line` set on the untouched 16.1.6 checkout. A two-minor
+  `eslint-config-next` bump introduced **zero** new failures. The honest assertion is **"delta zero,"**
+  not "lint passes." It cannot break the build either: Next 16.0 removed linting from `next build`,
+  and these same errors are live on the deployed site. **Lint is not a gate this repo has ever met —
+  do not read future red lint as a regression without diffing it against the previous version first.**
+- **The bogus-slug 404s are discriminating only because a positive control was planted.** Three real
+  portfolio slugs and two real blog slugs were fetched on the same routes and returned 200. Without
+  that, a site that 404s *everything* would have produced an identical-looking pass. This is
+  **Class 1** — plant a positive proving the guard fires — and the failure it averts is
+  Troubleshooting → "Two instruments agreeing with each other rather than with reality": a check that
+  cannot distinguish pass from unrun.
+- **The edit-script pattern guard was proven non-vacuous before it was trusted.** `"next": "16.1.6"`
+  excludes the `eslint-config-next` line *only* via its leading quote; the broken variant was shown to
+  match that line (count=1) where the real one does not (count=0). The script also asserts
+  `after.replace(NEW, OLD) == before`, making it **structurally incapable of touching more than those
+  12 bytes** — the Class 3 toggle shape, reused.
+
+#### Runtime confirmations — from the VPS build output and curl, not the source-text suite
+
+The vitest suite is structural (`existsSync` + regex over `readFileSync`); it proves the source still
+*says* `force-dynamic` and that no `loading.tsx` returned, never that Next still **honours** them.
+These are the checks that would actually have caught a regression:
+
+- `ƒ Proxy (Middleware)` in the build output — `middleware.ts` is still loaded at 16.3.4, **not**
+  removed. The rename to `proxy.ts` remains a deprecation, not a migration.
+- `/portfolio/[slug]` prerendered **12 paths**, so the `#95269` empty-`generateStaticParams` risk did
+  not fire. `/blog` and `/sitemap.xml` still ISR at `1m`/`1y`; `/blog/[slug]` still `ƒ` Dynamic.
+- Five service×town pages `200`; bogus service, portfolio and blog slugs `404`.
+- Image optimizer `200`. **The AVIF cycle is a no-op for this app**: a client advertising AVIF still
+  receives `image/webp` (24,084 B against jpeg's 31,589 B), matching the recon's captured
+  `formats: ["image/webp"]`. Static `/backgrounds/page-stone-texture.avif` still serves `200
+  image/avif` straight from `/public`, never through the optimizer. No `_next/image` null on GET —
+  recorded as data, not chased.
+
+#### Handoff corrections now settled
+
+- **The AVIF disable was a 16.3.3-only mitigation, re-enabled at 16.3.4** (PR #97949, which requires
+  `sharp 0.35.4`). There is no image-optimizer behaviour change to plan around; the Slice 1 premise
+  that AVIF stays off was stale by one patch release.
+- **CVE-2026-64642** (= `GHSA-6gpp-xcg3-4w24`): the single-locale precondition is **unmet** — the
+  advisory requires one entry in `config.i18n.locales`, and this app has no i18n config at all.
+  Cleared by the bump regardless, but **do not assert it applied**.
+- **`npm audit` cannot see the August repo-scoped RCEs** (`GHSA-2xp9-vwfh-vxw4`,
+  `GHSA-p293-qw3h-jr36`). Both 404 from GitHub's global advisory DB, OSV and npm. **A zero audit never
+  proves them closed** — `npm ls next` = `16.3.4` is the only proof. The audit-DB floor is `16.2.11`;
+  the reason to be on 16.3.4 is the vendor blog, not the advisory database.
+
+#### Carried and unverified — each needs a home, none block the slice
+
+- **The `published = false` DB-null 404 branch is UNVERIFIED.** Production carries zero unpublished
+  rows (portfolio 12/12, blog 4/4), so it has no live subject. The bogus-slug 404s exercise "row
+  absent," which is a *different* code path. No production test data was manufactured to close this.
+  Verify on the next deploy that carries an unpublished row, or via a staged fixture.
+- **`js-yaml`: 3 advisories (2 high) under `gray-matter@4.0.3`, unowned by any slice.** `3.15.2`
+  satisfies gray-matter's `^3.13.1`, so it is fixable without a major bump — but it belongs to no
+  slice and **will still be open after Slice 3**. Needs its own decision.
+- Stray empty file `apps/web/0` on the VPS, dated 2026-08-22 — 16 days pre-slice and unrelated,
+  likely a redirection artifact. Cleanup candidate; left in place.
+- The local `C:\BlueRidgeHomes` `node_modules` was left at **16.1.6** (npm reports `invalid`). The
+  checkout is at `614fc21` but a local `npm test` there would silently exercise the **old** Next —
+  precisely the green-result-carries-less-information trap. One `npm install` in `apps/web` fixes it.
+
+Rollback, if it ever comes to that: `git revert -m 1 614fc21`, push, redeploy — **do not fix forward
+on `main`**.
+
 ### 2026-08-14 — Unpublish, the 404-status chain, and a forward path for drafts
 
 Five commits on `main` (`0a9cf6e`, `fc5ea9c`, `87d12e7`, `d62d8d4`, `4c961c2`), pushed the same day.
