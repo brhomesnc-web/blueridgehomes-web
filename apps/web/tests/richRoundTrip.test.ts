@@ -71,6 +71,37 @@ const FIXTURE = [
   "",
 ].join("\n");
 
+/**
+ * NESTED LISTS - added with the tiptap 3.31.3 bump.
+ *
+ * tiptap 3.30.6 changed nested-list markdown serialization (nested lists
+ * exported to Markdown now keep their hierarchy when the file is read back by
+ * other Markdown tools). The FIXTURE above carries only FLAT lists, so that
+ * change - and any regression that collapsed nesting - was invisible here:
+ * every test stayed green while a stored post could have lost its hierarchy.
+ *
+ * Written in the CANONICAL indentation tiptap emits, which was measured rather
+ * than assumed: two spaces for a nested bullet, three for a nested ordered
+ * item. A non-canonical width is re-indented on the trip (pinned by the last
+ * test below) - that is CommonMark normalization, not data loss, and it is
+ * idempotent.
+ */
+const NESTED_LIST_FIXTURE = [
+  "- parent bullet one",
+  "  - child bullet a",
+  "  - child bullet b",
+  "- parent bullet two",
+  "",
+  "1. parent step one",
+  "   1. sub-step one",
+  "   2. sub-step two",
+  "2. parent step two",
+  "",
+  "- mixed parent bullet",
+  "  1. nested ordered under a bullet",
+  "",
+].join("\n");
+
 describe("rich editor markdown round-trip", () => {
   it("preserves every construct the generator emits", () => {
     expect(normalize(roundTrip(FIXTURE))).toBe(normalize(FIXTURE));
@@ -111,5 +142,34 @@ describe("rich editor markdown round-trip", () => {
     expect(after.map((f) => f.body)).toEqual(before.map((f) => f.body));
     expect(after.every((f) => f.spec !== null)).toBe(true);
     expect(out).toContain('"[VERIFY: county avg]"');
+  });
+
+  it("preserves nested list hierarchy", () => {
+    expect(normalize(roundTrip(NESTED_LIST_FIXTURE))).toBe(
+      normalize(NESTED_LIST_FIXTURE)
+    );
+  });
+
+  // Structural, not just byte equality: a serializer that flattened the nesting
+  // would still emit perfectly valid markdown and pass a loose comparison, so
+  // assert the indented markers themselves.
+  it("keeps nested items indented rather than flattening them", () => {
+    const out = roundTrip(NESTED_LIST_FIXTURE);
+    expect(out).toContain("\n  - child bullet a");
+    expect(out).toContain("\n   1. sub-step one");
+    expect(out).toContain("\n  1. nested ordered under a bullet");
+    // ...and the parents must not have gained indentation of their own.
+    expect(out.startsWith("- parent bullet one\n")).toBe(true);
+  });
+
+  // Pins the canonicalization itself, so a future version that changes the
+  // emitted indent width fails here instead of silently rewriting stored posts.
+  it("re-indents non-canonical nesting without losing depth", () => {
+    expect(normalize(roundTrip("- parent one\n    - child a\n- parent two\n"))).toBe(
+      normalize("- parent one\n  - child a\n- parent two\n")
+    );
+    expect(normalize(roundTrip("1. first\n    1. sub one\n2. second\n"))).toBe(
+      normalize("1. first\n   1. sub one\n2. second\n")
+    );
   });
 });

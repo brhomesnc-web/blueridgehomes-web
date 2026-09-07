@@ -11,12 +11,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@tiptap/extension-code-block": "^3.28.0",
-    "@tiptap/extension-image": "^3.28.0",
-    "@tiptap/markdown": "^3.28.0",
-    "@tiptap/pm": "^3.28.0",
-    "@tiptap/react": "^3.28.0",
-    "@tiptap/starter-kit": "^3.28.0",
+    "@tiptap/extension-code-block": "3.31.3",
+    "@tiptap/extension-image": "3.31.3",
+    "@tiptap/markdown": "3.31.3",
+    "@tiptap/pm": "3.31.3",
+    "@tiptap/react": "3.31.3",
+    "@tiptap/starter-kit": "3.31.3",
     "@types/pg": "^8.18.0",
     "bcryptjs": "^3.0.3",
     "gray-matter": "^4.0.3",
@@ -45,5 +45,9 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "@tiptap/extension-bubble-menu": "3.31.3",
+    "@tiptap/extension-floating-menu": "3.31.3"
   }
 }
