@@ -836,6 +836,126 @@ These are deliberate operator actions. Nothing in a deploy performs them.
 
 ## Session Log — Shipped
 
+### 2026-09-07 — nodemailer 8.0.2 → 9.1.1, dependency security slice 2 of 3
+
+Second of three security slices, and a runtime-dependency bump only. Slice commit `fa9a3de`,
+merge `51b0f392d923d81efacbaddac530e2be62e1a615` — **that merge SHA is the rollback anchor**.
+Pre-slice HEAD was `170a03d`, whose parent merge is `614fc21`. **Deployed and
+production-verified**, VPS observed at `51b0f39` with a clean tracked tree. Branch
+`slice/nodemailer-9.1.1` is retained.
+
+Versions, verified three ways — `npm ls`, the lockfile, and on-disk — on Windows **and** the
+VPS: `nodemailer 9.1.1` exact, `@types/nodemailer 8.0.1` exact, asserted **not** 10.x and
+**not** a higher 9.1.x. Both carets were dropped deliberately. `deploy.sh` runs `npm install`,
+not `npm ci`, so a caret range would leave the resolved version at the mercy of whatever is
+latest at deploy time — the one thing a security slice must not do.
+
+#### Advisory delta — three definitions, all tracked
+
+`advisories 10 → 4`, `packages 3 → 2`, `nodes 30 → 29`. All three recorded per **Class 4**.
+Residual is `@tiptap/core` (Slice 3) and `js-yaml` (unowned, expected open).
+
+The lockfile diff was **8 lines of 10,750 (0.1%)**, the two packages only, with zero transitive
+churn — nodemailer is pure JS, so the Windows-lockfile-meets-linux rebuild risk that `sharp`
+carried in Slice 1 did not apply. `npm ci` on the VPS: no ERESOLVE.
+
+#### Target reasoning — the advisory floor is a FALSE floor
+
+All six advisories clear at **9.0.1**, so `npm audit` reads clean there. But four post-advisory
+changelog hardenings of the **same vulnerability classes** carry no GHSA and are therefore
+invisible to audit: **9.0.3** STARTTLS and secure-socket handling, **9.0.5** List-* header
+escaping, **9.0.6** URL-fetch hardening, and **9.1.1** the `resolveContent` access-policy
+completion that finishes closing advisory #6, the one high.
+
+**The security floor is 9.1.1, not the 9.0.1 audit floor.** Targeting the audit floor would
+have shipped a provably-green `npm audit` over a still-soft dependency — the Slice 1 pattern
+exactly, and the reason **Class 5** is worth re-reading before every one of these.
+
+10.x was rejected despite Node 20+ being satisfied and `10.0.1` being `latest`: no advisory
+requires it, it is a full TypeScript rewrite on a new dual ESM/CJS build (a large surface for
+a dependency whose whole job here is three SMTP sends), `10.0.1` was published the **same day**
+to fix type bugs in a three-day-old `10.0.0`, and it forces removing `@types/nodemailer`
+because the package ships its own. Filed as its own future slice, to be taken once 10.x has
+settled, doing the `@types` removal there as the deliberate change it deserves to be.
+
+#### Breaking changes crossed — 8 to 10 is two majors, both confirmed inert or satisfied
+
+- **9.0.0** turns on TLS certificate validation by default for remote-content fetches:
+  attachment `href`/`path` URLs, OAuth2 token endpoints, and HTTP/HTTPS proxy CONNECT. It does
+  **not** touch the SMTP delivery connection. Inert on all three call sites — password auth, no
+  `attachments` key, no `proxy`, no `tls` options — confirmed against the production
+  `.env.local` rather than inferred. Near-miss worth recording: `lib/googleAuth.ts` does hit an
+  OAuth2 token endpoint, but it is the analytics JWT-bearer flow built on `jose` + `fetch`,
+  with zero nodemailer involvement.
+- **10.0.0** requires Node >= 20. Not crossed, since the target is 9.1.1 — and satisfied
+  regardless: the VPS runs `node v22.22.2`, which is the exact binary in the systemd
+  `ExecStart`, and Next 16.3.4 already requires Node 20+.
+
+#### `@types/nodemailer` — the lockstep dep the handoff did not name
+
+Bumped `^7.0.11` → `8.0.1`, the Slice 1 `eslint-config-next` lesson applied a second time. No
+9.x or 10.x `@types/nodemailer` exists at all, so 8.0.1 sitting one major behind the runtime is
+the **already-tolerated** skew rather than a new problem — the pre-state was nodemailer 8.0.2
+against `@types` 7.0.11, the same one-major gap.
+
+#### How the gates were made to prove themselves
+
+- **The six GHSAs are asserted absent individually, behind a positive control.** A list of
+  absence checks passes vacuously if the audit never ran, so the four *expected* residual GHSAs
+  were first asserted **present**; only then each of the six nodemailer IDs absent, the
+  `nodemailer` node gone, and zero unexpected residual packages.
+- **The edit-script guard was tested on key SHAPE, not on version coincidence.**
+  `"@types/nodemailer"` contains the substring `nodemailer`, so the two keys are genuinely
+  confusable. The planted negative gave the `@types` line the runtime dep's *own* version
+  string: discriminating pattern → count 0, broken pattern with the leading quote dropped →
+  count 1. Without that, the `==1` would have been passing only because today's two versions
+  happen to differ — a coincidence, not a property.
+- **`tsc` clean proves nothing if the import resolved to `any`.** A deliberately-broken usage
+  file was planted and tsc rejected it naming `TransportOptions`,
+  `Transport<unknown, TransportOptions>`, `SentMessageInfo` and `Address` — proving
+  `@types/nodemailer@8.0.1` is the type source actually in use under `skipLibCheck: true`,
+  not merely that tsc failed to object. Removed, re-run clean. Never staged.
+
+#### Live-send verification — delivery, not HTTP status
+
+The three routes swallow send errors (`catch { console.error }`) and two of them return success
+regardless, so a broken send looks exactly like a passing request. The gate had to be receipt.
+
+`transporter.verify()` returned **true** — a full connect, STARTTLS upgrade and AUTH against
+`smtp.gmail.com:587`, which is the path 9.0.3 hardened and this slice's top risk. `sendMail`
+then drew `250 2.0.0 OK` from Gmail with one accepted and zero rejected, and **arrival was
+confirmed in the `brhomesnc@gmail.com` INBOX** at 14:25:07Z. One test message remains there;
+its body says it is safe to delete. The service journal across the whole window carried zero
+error, exception or TLS lines — and the first journal query returned real lines, so that empty
+grep is a genuine empty rather than an unrun check.
+
+#### Carried and unverified
+
+- **The route wrappers end-to-end are NOT verified** — form → Turnstile → DB insert →
+  `sendMail`. Both public routes require a server-verified Cloudflare Turnstile token, and the
+  reply route requires an admin JWT *and* emails a real customer row (only two submissions
+  exist, both real, both from March). Forging the control or emailing a customer was refused.
+  The substitute covered the transport, using the routes' byte-identical option shape, and
+  module load — three distinct in-handler errors prove nodemailer 9.1.1 imported cleanly with
+  no ESM/CJS interop break — but **not** the pre-send plumbing. It closes with a one-minute
+  browser pass: submit the live contact and feedback forms, then send one admin reply against
+  the row your own post creates, and verify arrival plus the journal. No DB writes occurred
+  during the smoke tests (submissions still 2, feedback 0, latest row March).
+- `js-yaml` under `gray-matter` (2 highs) is still unowned and will remain open after Slice 3.
+- The local `C:\BlueRidgeHomes` `node_modules` is still `next@16.1.6 invalid` from Slice 1;
+  dev-machine only, one `npm install` in `apps/web` fixes it.
+
+#### Infra footgun — the next person will hit this
+
+**`. ./.env.local` in bash is UNSAFE on this box.** The Gmail app password contains unquoted
+spaces, so sourcing the file executes part of the value as a command (`ixvs: command not
+found`) and yields an **empty `SMTP_PASS`** — silently, with the rest of the file appearing to
+load fine. systemd's `EnvironmentFile=` takes the remainder of the line verbatim, which is why
+the app itself works. Any script or shell reading that file must parse it the systemd way and
+never source it. This is the exact trap waiting for the next "verify SMTP from the shell" task.
+
+Rollback: `git revert -m 1 51b0f39`, push, redeploy — **do not fix forward on `main`**.
+
 ### 2026-09-07 — Next 16.1.6 → 16.3.4, dependency security slice 1 of 3
 
 One commit on a worktree branch, merged `--no-ff` and pushed the same day: slice `ae14fd1`, merge
