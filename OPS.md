@@ -836,6 +836,138 @@ These are deliberate operator actions. Nothing in a deploy performs them.
 
 ## Session Log — Shipped
 
+### 2026-09-07 — @tiptap/* tree 3.28.0 → 3.31.3, dependency security slice 3 of 3
+
+Third and final security slice. Shipped and production-verified. Coordinated whole-tree
+(30-package) bump plus one test fixture. **Reverse-chron note: three slices share 2026-09-07;
+this one landed last**, so it sits at the top of the Shipped section above Slice 2 (nodemailer)
+and Slice 1 (next).
+
+**SHAs** — pre-slice HEAD `63f9f6b` (Slice-2 docs), parent merge `51b0f39` · slice commit
+`10b1eef` · merge/rollback `37626d8`. **Deployed (VPS-observed, tracked tree clean) `37626d8`.**
+
+**Versions** — all 30 `@tiptap/*` at `3.31.3`, enumerated per-package (`npm ls` shows only the 6
+direct deps) on Windows **and** VPS. Root deps pinned **exact** (`^3.28.0` → `3.31.3`), matching
+Slices 1-2 and because `deploy.sh` runs `npm install` not `npm ci`, so a caret would let a future
+3.31.x/3.32.x drift in at deploy time.
+
+**Advisory delta (Class 4):** advisories 29 → 1 · tiptap tree cleared · nodes 29 → 1. Residual is
+`js-yaml` (1 high, under `gray-matter`, unowned — expected open, survives this slice).
+
+#### Why 3.31.3, not the advisory floor — the audit-invisible driver
+
+The named advisory `GHSA-cp6q-959q-f8rh` (`@tiptap/core` `mergeAttributes` prototype-pollution
+→ XSS) is **inert** on this app (see the exposure verdict below) and its floor is `3.30.4`. That
+floor is **not** why we shipped. The real driver is `GHSA-c8x8-7fp4-3x9w`: `prosemirror-view`
+`<1.42.3` paste-crafted-HTML XSS, a **live** path in the admin editor, and **invisible to
+`npm audit`** (404s from GitHub's global DB, 0 hits from OSV). `pm@3.30.4` declares
+`prosemirror-view ^1.41.9` and permits the unfixed `1.42.1`; only `pm@3.31.3` (`^1.42.3`) forces
+the fix. **Targeting the floor would have closed a vulnerability we are not exposed to while
+leaving a reachable one open.** Same "audit floor is not the security floor" lesson as Slice 2,
+reached from the opposite direction. The load-bearing proof is the installed `prosemirror-view`
+version, **not** a clean audit — audit cannot see either advisory here.
+
+#### Exposure verdict on the named advisory — largely inert, established not asserted
+
+Every link in the `mergeAttributes` → serialize chain is broken. No vulnerable-path API
+(`generateHTML` / `getHTML` / `mergeAttributes` / `addAttributes` / `renderHTML` / `parseHTML`) is
+called anywhere in app source. The editor (`BlogEditorRich`) is `"use client"`, mounted only
+behind middleware's JWT gate on `/admin/:path*`. The public post page renders via `react-markdown`
+(raw HTML dropped, no `rehype-raw`), with TipTap absent from its import graph. **Markdown is the
+single source of truth** — `emit_blog_post` emits CommonMark, stored as `text`, and the editor
+round-trips markdown with `getHTML` never called — so no JSON attribute object exists to carry a
+`__proto__` key. The one `.extend()` (`MediaCodeBlock`) overrides `addNodeView` only. Hygiene,
+not incident.
+
+#### The resolver deadlock — the brief's Step 2 premise was wrong
+
+The brief blamed the two caret optional menu deps (`extension-bubble-menu` /
+`extension-floating-menu`) as the skew source. That is true of the reverted `npm audit fix`, and
+**not** of this bump. All four candidate approaches were measured against the HEAD lockfile before
+anything was re-touched:
+
+    6 exact root pins                     -> ERESOLVE (starter-kit@3.28.0 vs code-block@3.31.3)
+    8 exact pins (menus promoted)         -> ERESOLVE (react@3.28.0 vs bubble-menu@3.31.3)
+    npm i <all 6>@3.31.3 one command      -> ERESOLVE
+    6 exact root pins + overrides         -> RESOLVES
+
+**Root cause: every extension exact-peer-pins `core`/`pm`, so no valid intermediate tree exists
+between two versions.** The family must move **atomically**, and with the old lockfile present npm
+evaluates the new root constraints against the **old** tree and deadlocks. `overrides` forces a
+global tree rebuild instead of an incremental negotiation. The brief's parenthetical `overrides`
+path was taken rather than promoting the menus: they are imported **nowhere** in app source, so a
+`dependencies` entry would assert a usage that does not exist, while `overrides` states the actual
+intent — force a transitive version. Applied:
+
+    "overrides": {
+      "@tiptap/extension-bubble-menu": "3.31.3",
+      "@tiptap/extension-floating-menu": "3.31.3"
+    }
+
+#### The nested-list fixture was load-bearing, not precautionary (Class 5 gap closed)
+
+`richRoundTrip.test.ts` covered only **flat** lists; 3.30.6 changed nested-list markdown
+serialization — the exact construct the guard could not see, over content where **markdown is the
+stored artifact**. Three nested cases were added and run against the still-stale `3.28.0`
+`node_modules` **first**: all three failed, isolating the delta — **nested ordered items moved
+2 → 3 spaces**. A 2-space child under a 3-character `1. ` marker is not a valid CommonMark child;
+other parsers read it as a sibling and lose the hierarchy, which is precisely what 3.30.6 fixed.
+That proves the guard **discriminates the real version delta** rather than passing vacuously. The
+assertions were also proven to fail on flattened output before being trusted.
+
+#### Behavior changes in range (extensions in use), none breaking
+
+3.30.0 `extension-list` ListKeymap `Tab` shortcut (sinks a paragraph after a list into it); 3.30.6
+nested-list markdown hierarchy (the fixture); 3.29.0 `code-block` `ArrowUp`; 3.31.0 `react`
+`selected` / `selectionInside` realignment — `MediaBlockView` does not read `selected`, so the one
+real API risk did not fire and `tsc` stayed clean. `image` / `markdown` / `pm` patch-only. Same
+major, no hard API break.
+
+#### Gates
+
+`npm ci` on linux exit 0 (**no ERESOLVE** — the primary lockstep signal). 30/30 `@tiptap` at
+`3.31.3` local **and** VPS, per-package, no nested duplicates. `prosemirror-view 1.42.3`, single
+deduped copy via `pm@3.31.3`. **Lockfile delta exactly 31 version changes, zero added or removed**
+— no collateral movement. `npm audit` 29 → 1, asserted programmatically with `js-yaml` as the
+positive control so the absence check cannot pass on an unrun audit. `tsc --noEmit` exit 0 both
+sides. `vitest` **174/174 across 6 files** both sides (171 + 3 new). `git diff --stat` exactly 3
+paths (`package.json`, `package-lock.json`, `tests/richRoundTrip.test.ts`; the test file 60
+insertions / **0 deletions**). Char/EOL PASS, every detector fired against a planted positive and
+a clean control first. Deploy exit 0; `ƒ Proxy (Middleware)`, 12 portfolio paths, `/blog` ISR
+`1m`/`1y`, `/blog/[slug]` dynamic — matches the Slice-1 baseline. Public: 7/7 blog `200`, bogus
+slug `404` (planted control), admin gate `307`, login `200`, posts render headings/lists/images
+with zero "Media pending" leaks.
+
+#### Correction to the brief
+
+`GHSA-cp6q-959q-f8rh` is **6.4 MEDIUM** (CVSS v4 only, no v3 score, no CVE) per GitHub's advisory
+API — npm's "moderate" **matches** it, and the Slice-1 log's "moderate" was right. The brief's
+"8.1 HIGH" is not what GitHub publishes. **No discrepancy existed to resolve.**
+
+#### Carried / unverified
+
+- **Steps 9b-9d need an authenticated admin browser session** and cannot be driven headless:
+  editor loads and chart/photo node-views render, a nested list survives Save → reload, and
+  `Tab`-in-a-list under the new 3.30.0 ListKeymap shortcut. **Open — the only unverified surface
+  on shipped code.**
+- No published post contains a nested list (all 7 rendered pages checked), so the indent change
+  has **no live subject** — **but that check cannot distinguish "none authored" from "authored and
+  already flattened by the old 2-space form"**, and the direct DB query needed a credential and
+  was correctly blocked. Unverified from that angle.
+- Stray `apps/web/0` on the VPS, still untouched (pre-existing, 2026-08-22, unrelated).
+- **Slice-1's carried item is now RESOLVED:** local `C:\BlueRidgeHomes` `node_modules` was stuck at
+  an invalid `next@16.1.6`. Syncing the main checkout after this merge (`npm ci`) brought it to
+  `next@16.3.4` and `npm ls next` is clean. Dev-machine only, but the note should not outlive the
+  condition.
+
+**Rollback:** `git revert -m 1 37626d8`, push, redeploy. Branch `slice/tiptap-3.31.3` retained.
+
+**Three-slice remediation complete** — next, nodemailer and tiptap all shipped, logged and
+verified. `js-yaml` is now the last open security item: unowned, fixable inside `gray-matter`'s
+`^3.13.1` at `3.15.2`, and deserving its own recon rather than an afterthought. Given today's
+resolver deadlock, **that recon should start with an `npm install` dry-run against the HEAD
+lockfile** — a transitive bump under `gray-matter` may or may not negotiate cleanly the same way.
+
 ### 2026-09-07 — nodemailer 8.0.2 → 9.1.1, dependency security slice 2 of 3
 
 Second of three security slices, and a runtime-dependency bump only. Slice commit `fa9a3de`,
